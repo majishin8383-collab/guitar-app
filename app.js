@@ -8,6 +8,7 @@ import {
   resetDrillProgress
 } from "./progress.js";
 import { renderHome, renderGenre, renderPractice, renderSkill } from "./render.js";
+import { createMetronome } from "./metronome.js";
 
 const app = document.getElementById("app");
 const C = window.CONTENT;
@@ -89,6 +90,37 @@ const progress = {
   reset: (s, d) => resetDrillProgress(s, d, persist)
 };
 
+// --- Metronome (Dose 1.2) ---
+const metro = createMetronome();
+// Track which drill "owns" the metronome right now (UI only)
+const metroState = {
+  drillId: null
+};
+
+function metroToggle(drillId, bpm) {
+  // If same drill is running -> stop. Otherwise start for this drill.
+  if (metro.isRunning() && metroState.drillId === drillId) {
+    metro.stop();
+    metroState.drillId = null;
+    return;
+  }
+  metroState.drillId = drillId;
+  metro.start(bpm);
+}
+
+function metroSetBpmIfActive(drillId, bpm) {
+  if (!metro.isRunning()) return;
+  if (metroState.drillId !== drillId) return;
+  metro.setBpm(bpm);
+}
+
+function metroStopIfOwnedBy(drillId) {
+  if (!metro.isRunning()) return;
+  if (metroState.drillId !== drillId) return;
+  metro.stop();
+  metroState.drillId = null;
+}
+
 function ctx() {
   return {
     app,
@@ -99,7 +131,13 @@ function ctx() {
     progress,
     handednessLabel,
     ensureMirrorDefault,
-    videoBlock
+    videoBlock,
+    // metronome
+    metro,
+    metroState,
+    metroToggle,
+    metroSetBpmIfActive,
+    metroStopIfOwnedBy
   };
 }
 
