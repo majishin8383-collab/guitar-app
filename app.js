@@ -1,30 +1,11 @@
-// app.js
+// app.js (module)
+import { loadState, saveState, nowTs, clamp } from "./storage.js";
+
 const app = document.getElementById("app");
 const C = window.CONTENT;
 
-// --- persistent state helpers ---
-const STORAGE_KEY = "guitar_trainer_state_v3";
-
-function loadState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
-}
-
-function saveState() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch {
-    // ignore storage failures
-  }
-}
-
 // --- app state ---
-let state = loadState() || {
+const DEFAULT_STATE = {
   genre: "blues",
   handedness: "right",      // "right" | "left"
   mirrorVideos: false,      // video mirror preference
@@ -33,13 +14,7 @@ let state = loadState() || {
   }
 };
 
-function nowTs() {
-  return Date.now();
-}
-
-function clamp(n, min, max) {
-  return Math.max(min, Math.min(max, n));
-}
+let state = loadState(DEFAULT_STATE);
 
 function getGenre() {
   return C.genres[state.genre];
@@ -50,15 +25,13 @@ function handednessLabel() {
 }
 
 function ensureMirrorDefault() {
-  // Sensible default: left-handed users usually want mirrored demos.
   if (state.handedness === "left" && state.mirrorVideos !== true) {
     state.mirrorVideos = true;
-    saveState();
+    saveState(state);
   }
 }
 
 function safeEmbed(url) {
-  // Only allow YouTube embed links for now (simple safety + predictability).
   if (!url || typeof url !== "string") return null;
   const ok =
     url.startsWith("https://www.youtube.com/embed/") ||
@@ -109,7 +82,7 @@ function getOrInitDrillProgress(drill) {
     lastTs: nowTs()
   };
   state.progress[id] = p;
-  saveState();
+  saveState(state);
   return p;
 }
 
@@ -117,12 +90,12 @@ function setDrillBpm(drill, nextBpm) {
   const cfg = drill.suggestedBpm || { start: 60, step: 5, target: 120 };
   const p = getOrInitDrillProgress(drill);
 
-  const minBpm = Math.max(30, cfg.start); // never below 30, and don't go below suggested start
-  const maxBpm = Math.max(cfg.target, cfg.start); // allow reaching target
+  const minBpm = Math.max(30, cfg.start);
+  const maxBpm = Math.max(cfg.target, cfg.start);
   p.bpm = clamp(Math.round(nextBpm), minBpm, maxBpm);
   p.bestBpm = Math.max(p.bestBpm || p.bpm, p.bpm);
   p.lastTs = nowTs();
-  saveState();
+  saveState(state);
 }
 
 function markCleanRep(drill) {
@@ -131,29 +104,25 @@ function markCleanRep(drill) {
   p.cleanStreak = (p.cleanStreak || 0) + 1;
   p.lastTs = nowTs();
 
-  // Rule: 3 clean reps => bump tempo by step, reset streak to 0
   if (p.cleanStreak >= 3) {
     p.cleanStreak = 0;
     const next = (p.bpm || cfg.start) + (cfg.step || 5);
     setDrillBpm(drill, next);
-    // setDrillBpm saves; but we already changed streak/ts, so ensure saved
-    saveState();
+    saveState(state);
     return { leveledUp: true };
   }
 
-  saveState();
+  saveState(state);
   return { leveledUp: false };
 }
 
 function markSloppyRep(drill) {
   const cfg = drill.suggestedBpm || { start: 60, step: 5, target: 120 };
   const p = getOrInitDrillProgress(drill);
-
-  // Sloppy rep: reset streak and drop tempo by step (but not below start/min)
   p.cleanStreak = 0;
   const next = (p.bpm || cfg.start) - (cfg.step || 5);
   setDrillBpm(drill, next);
-  saveState();
+  saveState(state);
 }
 
 function resetDrillProgress(drill) {
@@ -164,10 +133,10 @@ function resetDrillProgress(drill) {
     bestBpm: cfg.start,
     lastTs: nowTs()
   };
-  saveState();
+  saveState(state);
 }
 
-// --- UI ---
+// --- Screens ---
 function renderHome() {
   ensureMirrorDefault();
 
@@ -209,7 +178,6 @@ function renderHome() {
     </div>
   `;
 
-  // genre list
   const list = document.getElementById("genre-list");
   list.innerHTML = genres.map(g => {
     const active = g.id === state.genre;
@@ -224,12 +192,11 @@ function renderHome() {
   list.querySelectorAll("button[data-genre]").forEach(btn => {
     btn.onclick = () => {
       state.genre = btn.dataset.genre;
-      saveState();
+      saveState(state);
       renderHome();
     };
   });
 
-  // handedness buttons with visual state
   const rightBtn = document.getElementById("hand-right");
   const leftBtn = document.getElementById("hand-left");
 
@@ -243,20 +210,20 @@ function renderHome() {
 
   rightBtn.onclick = () => {
     state.handedness = "right";
-    saveState();
+    saveState(state);
     renderHome();
   };
 
   leftBtn.onclick = () => {
     state.handedness = "left";
     if (!state.mirrorVideos) state.mirrorVideos = true;
-    saveState();
+    saveState(state);
     renderHome();
   };
 
   document.getElementById("toggle-mirror").onclick = () => {
     state.mirrorVideos = !state.mirrorVideos;
-    saveState();
+    saveState(state);
     renderHome();
   };
 
@@ -415,7 +382,6 @@ function renderSkill(skillId, opts = {}) {
       ${skill.drills.map(d => {
         const cfg = d.suggestedBpm || { start: 60, step: 5, target: 120 };
         const p = getOrInitDrillProgress(d);
-
         const media = d.media || null;
         const hasAnyVideo = media && (media.demoUrl || media.dontUrl || media.fixUrl);
 
@@ -442,6 +408,8 @@ function renderSkill(skillId, opts = {}) {
               <button class="secondary small" data-sloppy="${d.id}">😵 Sloppy rep</button>
 
               <button class="secondary small" data-reset="${d.id}">Reset</button>
+
+              <span class="pill">No audio metronome yet</span>
             </div>
 
             <div class="hr"></div>
@@ -486,11 +454,11 @@ function renderSkill(skillId, opts = {}) {
     </div>
   `;
 
-  // Mirror toggle (global setting)
+  // Mirror toggle
   app.querySelectorAll("button[data-toggle-mirror]").forEach(btn => {
     btn.onclick = () => {
       state.mirrorVideos = !state.mirrorVideos;
-      saveState();
+      saveState(state);
       renderSkill(skillId, opts);
     };
   });
@@ -518,11 +486,7 @@ function renderSkill(skillId, opts = {}) {
     };
 
     if (clean) clean.onclick = () => {
-      const res = markCleanRep(d);
-      // subtle feedback: bump happened
-      if (res.leveledUp) {
-        // no alerts; just re-render and let stats show it
-      }
+      markCleanRep(d);
       renderSkill(skillId, opts);
     };
 
