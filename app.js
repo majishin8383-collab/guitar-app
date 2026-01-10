@@ -92,13 +92,9 @@ const progress = {
 
 // --- Metronome (Dose 1.2) ---
 const metro = createMetronome();
-// Track which drill "owns" the metronome right now (UI only)
-const metroState = {
-  drillId: null
-};
+const metroState = { drillId: null };
 
 function metroToggle(drillId, bpm) {
-  // If same drill is running -> stop. Otherwise start for this drill.
   if (metro.isRunning() && metroState.drillId === drillId) {
     metro.stop();
     metroState.drillId = null;
