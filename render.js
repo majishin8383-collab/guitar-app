@@ -1,6 +1,6 @@
 // render.js
 // UI rendering + event wiring (Micro-dose 1.1c)
-// Micro-fix: visible "Level up" feedback when 3/3 resets.
+// Dose 1.2: Audio metronome start/stop + live BPM update.
 
 import { shouldShowLevelUp } from "./progress.js";
 
@@ -261,6 +261,8 @@ export function renderSkill(ctx, skillId, opts = {}) {
           ? `✅ Level up: <b>${p.lastLevelUpFrom}</b> → <b>${p.lastLevelUpTo}</b> bpm`
           : "";
 
+        const metroRunning = ctx.metro.isRunning() && ctx.metroState.drillId === d.id;
+
         const media = d.media || null;
         const hasAnyVideo = media && (media.demoUrl || media.dontUrl || media.fixUrl);
 
@@ -290,7 +292,11 @@ export function renderSkill(ctx, skillId, opts = {}) {
 
               <button class="secondary small" data-reset="${d.id}">Reset</button>
 
-              <span class="pill">No audio metronome yet</span>
+              <button class="${metroRunning ? "" : "secondary"} small" data-metro="${d.id}">
+                ${metroRunning ? "⏹ Metronome" : "▶ Metronome"}
+              </button>
+
+              <span class="pill">${metroRunning ? `Metronome: ON (${ctx.metro.getBpm()} bpm)` : "Metronome: OFF"}</span>
             </div>
 
             <div class="hr"></div>
@@ -298,12 +304,6 @@ export function renderSkill(ctx, skillId, opts = {}) {
             <div style="margin-top:10px;">
               ${d.instructions.map(line => `<div style="opacity:.95">• ${line}</div>`).join("")}
             </div>
-
-            ${
-              d.handednessNotes && d.handednessNotes[state.handedness]
-                ? `<div class="muted" style="margin-top:10px;">Note: ${d.handednessNotes[state.handedness]}</div>`
-                : ""
-            }
 
             <div style="margin-top:14px;">
               <div class="row" style="justify-content:space-between;">
@@ -353,31 +353,47 @@ export function renderSkill(ctx, skillId, opts = {}) {
     const clean = app.querySelector(`button[data-clean="${d.id}"]`);
     const sloppy = app.querySelector(`button[data-sloppy="${d.id}"]`);
     const reset = app.querySelector(`button[data-reset="${d.id}"]`);
+    const metroBtn = app.querySelector(`button[data-metro="${d.id}"]`);
 
     if (down) down.onclick = () => {
       const p = ctx.progress.getOrInit(state, d);
       ctx.progress.setBpm(state, d, (p.bpm || cfg.start) - (cfg.step || 5));
+      const p2 = ctx.progress.getOrInit(state, d);
+      ctx.metroSetBpmIfActive(d.id, p2.bpm);
       renderSkill(ctx, skillId, opts);
     };
 
     if (up) up.onclick = () => {
       const p = ctx.progress.getOrInit(state, d);
       ctx.progress.setBpm(state, d, (p.bpm || cfg.start) + (cfg.step || 5));
+      const p2 = ctx.progress.getOrInit(state, d);
+      ctx.metroSetBpmIfActive(d.id, p2.bpm);
       renderSkill(ctx, skillId, opts);
     };
 
     if (clean) clean.onclick = () => {
       ctx.progress.clean(state, d);
+      const p2 = ctx.progress.getOrInit(state, d);
+      ctx.metroSetBpmIfActive(d.id, p2.bpm);
       renderSkill(ctx, skillId, opts);
     };
 
     if (sloppy) sloppy.onclick = () => {
       ctx.progress.sloppy(state, d);
+      const p2 = ctx.progress.getOrInit(state, d);
+      ctx.metroSetBpmIfActive(d.id, p2.bpm);
       renderSkill(ctx, skillId, opts);
     };
 
     if (reset) reset.onclick = () => {
       ctx.progress.reset(state, d);
+      ctx.metroStopIfOwnedBy(d.id);
+      renderSkill(ctx, skillId, opts);
+    };
+
+    if (metroBtn) metroBtn.onclick = () => {
+      const p = ctx.progress.getOrInit(state, d);
+      ctx.metroToggle(d.id, p.bpm);
       renderSkill(ctx, skillId, opts);
     };
   });
