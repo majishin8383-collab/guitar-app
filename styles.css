@@ -37,9 +37,7 @@ button.secondary {
   margin-bottom: 16px;
 }
 
-.muted {
-  opacity: .85;
-}
+.muted { opacity: .85; }
 
 .row {
   display: flex;
@@ -55,4 +53,52 @@ button.secondary {
   background: rgba(255,255,255,.08);
   font-size: 13px;
   opacity: .9;
+}
+
+/* --- Video blocks --- */
+.videoGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 900px) {
+  .videoGrid {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
+.videoCard {
+  background: #171717;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.videoLabel {
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.videoWrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(255,255,255,.06);
+}
+
+.videoWrap iframe,
+.videoWrap video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* Mirror mode for left-handed viewing */
+.mirror {
+  transform: scaleX(-1);
+  transform-origin: center;
 }
