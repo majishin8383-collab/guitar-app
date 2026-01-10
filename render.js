@@ -1,8 +1,41 @@
 // render.js
-// UI rendering + event wiring (Micro-dose 1.1c)
-// Dose 1.2: Audio metronome start/stop + live BPM update.
+// UI rendering + event wiring
+// Dose 1.3: Role (Lead/Rhythm) + Backing Track Player UI (if audioUrl exists)
 
 import { shouldShowLevelUp } from "./progress.js";
+
+function rolePill(ctx) {
+  return `<span class="pill">Role: ${ctx.roleLabel()}</span>`;
+}
+
+function backingRow(ctx, track) {
+  const hasAudio = !!track.audioUrl;
+  const isCurrent = ctx.backingState.trackId === track.id;
+  const isPlaying = isCurrent && ctx.backingState.isPlaying;
+
+  const btnLabel = !hasAudio
+    ? "No audio yet"
+    : (isPlaying ? "⏸ Pause" : "▶ Play");
+
+  return `
+    <div class="card" style="background:#171717; margin-top:10px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+        <div>
+          <div><b>${track.name}</b></div>
+          <div class="muted" style="font-size:14px;">Key ${track.key} • ${track.feel} • ~${track.recommendedBpm} bpm</div>
+          ${track.note ? `<div class="muted" style="font-size:14px; margin-top:6px;">${track.note}</div>` : ""}
+        </div>
+
+        <button
+          class="${hasAudio ? (isPlaying ? "" : "secondary") : "secondary"}"
+          data-bt-play="${track.id}"
+          ${hasAudio ? "" : "disabled"}
+          style="white-space:nowrap;"
+        >${btnLabel}</button>
+      </div>
+    </div>
+  `;
+}
 
 export function renderHome(ctx) {
   ctx.ensureMirrorDefault();
@@ -19,8 +52,18 @@ export function renderHome(ctx) {
     </div>
 
     <div class="card">
+      <h3 style="margin-top:0;">Your Focus</h3>
+      <p class="muted">Pick what you're practicing most right now.</p>
+      <div class="row">
+        <button id="role-rhythm">Rhythm</button>
+        <button id="role-lead">Lead</button>
+        ${rolePill(ctx)}
+      </div>
+    </div>
+
+    <div class="card">
       <h3 style="margin-top:0;">Playing Hand</h3>
-      <p class="muted">All instructions use <b>fretting hand</b> + <b>picking hand</b> (works for both orientations).</p>
+      <p class="muted">All instructions use <b>fretting hand</b> + <b>picking hand</b>.</p>
       <div class="row">
         <button id="hand-right">Right-handed</button>
         <button id="hand-left">Left-handed</button>
@@ -46,6 +89,20 @@ export function renderHome(ctx) {
     </div>
   `;
 
+  // Role buttons
+  const rr = document.getElementById("role-rhythm");
+  const rl = document.getElementById("role-lead");
+  if (state.role === "lead") {
+    rl.classList.remove("secondary");
+    rr.classList.add("secondary");
+  } else {
+    rr.classList.remove("secondary");
+    rl.classList.add("secondary");
+  }
+  rr.onclick = () => { state.role = "rhythm"; ctx.persist(); renderHome(ctx); };
+  rl.onclick = () => { state.role = "lead"; ctx.persist(); renderHome(ctx); };
+
+  // genre list
   const list = document.getElementById("genre-list");
   list.innerHTML = genres.map(g => {
     const active = g.id === state.genre;
@@ -65,6 +122,7 @@ export function renderHome(ctx) {
     };
   });
 
+  // handedness buttons
   const rightBtn = document.getElementById("hand-right");
   const leftBtn = document.getElementById("hand-left");
 
@@ -113,13 +171,18 @@ export function renderGenre(ctx, genreId) {
     <div class="card">
       <h2>${genre.name}</h2>
       <p class="muted">${genre.description}</p>
-      <p class="muted"><strong>Playing hand:</strong> ${ctx.handednessLabel()}</p>
-      <p class="muted"><strong>Video mirror:</strong> ${state.mirrorVideos ? "ON" : "OFF"}</p>
+
+      <div class="row" style="margin:10px 0;">
+        <span class="pill">Hand: ${ctx.handednessLabel()}</span>
+        <span class="pill">Video mirror: ${state.mirrorVideos ? "ON" : "OFF"}</span>
+        ${rolePill(ctx)}
+      </div>
 
       <h3 style="margin-top:16px;">Starter Skills</h3>
       <div id="skill-list"></div>
 
-      <h3 style="margin-top:16px;">Backing Tracks (coming soon)</h3>
+      <h3 style="margin-top:16px;">Backing Tracks</h3>
+      <div class="muted" style="font-size:14px;">(Playable once you add <code>audioUrl</code> in <code>content.js</code>.)</div>
       <div id="bt-list"></div>
 
       <div style="margin-top:16px;" class="row">
@@ -144,11 +207,17 @@ export function renderGenre(ctx, genreId) {
   });
 
   const btList = document.getElementById("bt-list");
-  btList.innerHTML = bts.map(t => `
-    <div style="opacity:.9; margin:8px 0;">
-      • <strong>${t.name}</strong> — Key ${t.key}, ${t.feel}, ~${t.recommendedBpm} bpm
-    </div>
-  `).join("");
+  btList.innerHTML = bts.length
+    ? bts.map(t => backingRow(ctx, t)).join("")
+    : `<div class="muted" style="margin-top:8px;">No backing tracks defined for this genre yet.</div>`;
+
+  btList.querySelectorAll("button[data-bt-play]").forEach(btn => {
+    btn.onclick = () => {
+      const track = bts.find(t => t.id === btn.dataset.btPlay);
+      ctx.backingToggle(track);
+      renderGenre(ctx, genreId);
+    };
+  });
 
   document.getElementById("back-home").onclick = () => ctx.nav.home();
   document.getElementById("go-practice").onclick = () => ctx.nav.practice();
@@ -164,6 +233,9 @@ export function renderPractice(ctx) {
   const skills = genre.starterSkillIds.map(id => C.skills[id]).filter(Boolean);
   const bts = genre.backingTrackIds.map(id => C.backingTracks[id]).filter(Boolean);
 
+  const loopOn = !!ctx.backingState.isLoop;
+  const playingId = ctx.backingState.trackId;
+
   app.innerHTML = `
     <div class="card">
       <h2>Today's Practice</h2>
@@ -173,13 +245,19 @@ export function renderPractice(ctx) {
       <div class="row" style="margin:10px 0;">
         <span class="pill">Hand: ${ctx.handednessLabel()}</span>
         <span class="pill">Video mirror: ${state.mirrorVideos ? "ON" : "OFF"}</span>
+        ${rolePill(ctx)}
       </div>
+
+      <h3 style="margin-top:16px;">Backing Tracks</h3>
+      <div class="row" style="margin:8px 0;">
+        <button id="bt-loop" class="${loopOn ? "" : "secondary"}">${loopOn ? "Loop: ON" : "Loop: OFF"}</button>
+        <button id="bt-stop" class="secondary" ${playingId ? "" : "disabled"}>Stop</button>
+      </div>
+      <div class="muted" style="font-size:14px;">Add <code>audioUrl</code> to tracks in <code>content.js</code> to make them playable.</div>
+      <div id="bt-list"></div>
 
       <h3 style="margin-top:16px;">Starter Skills</h3>
       <div id="skill-list"></div>
-
-      <h3 style="margin-top:16px;">Backing Tracks (coming soon)</h3>
-      <div id="bt-list"></div>
 
       <div style="margin-top:16px;" class="row">
         <button class="secondary" id="back-home">Back</button>
@@ -188,6 +266,32 @@ export function renderPractice(ctx) {
     </div>
   `;
 
+  // Backing tracks list
+  const btList = document.getElementById("bt-list");
+  btList.innerHTML = bts.length
+    ? bts.map(t => backingRow(ctx, t)).join("")
+    : `<div class="muted" style="margin-top:8px;">No backing tracks defined for this genre yet.</div>`;
+
+  btList.querySelectorAll("button[data-bt-play]").forEach(btn => {
+    btn.onclick = () => {
+      const track = bts.find(t => t.id === btn.dataset.btPlay);
+      ctx.backingToggle(track);
+      renderPractice(ctx);
+    };
+  });
+
+  // Loop + Stop
+  document.getElementById("bt-loop").onclick = () => {
+    ctx.backingSetLoop(!loopOn);
+    renderPractice(ctx);
+  };
+
+  document.getElementById("bt-stop").onclick = () => {
+    ctx.backingStop();
+    renderPractice(ctx);
+  };
+
+  // Skills list
   const skillList = document.getElementById("skill-list");
   skillList.innerHTML = skills.map(s => `
     <div class="card" style="background:#171717;">
@@ -201,13 +305,6 @@ export function renderPractice(ctx) {
   skillList.querySelectorAll("button[data-skill]").forEach(btn => {
     btn.onclick = () => ctx.nav.skill(btn.dataset.skill, { backTo: () => ctx.nav.practice() });
   });
-
-  const btList = document.getElementById("bt-list");
-  btList.innerHTML = bts.map(t => `
-    <div style="opacity:.9; margin:8px 0;">
-      • <strong>${t.name}</strong> — Key ${t.key}, ${t.feel}, ~${t.recommendedBpm} bpm
-    </div>
-  `).join("");
 
   document.getElementById("back-home").onclick = () => ctx.nav.home();
   document.getElementById("genre-details").onclick = () => ctx.nav.genre(genre.id);
@@ -246,6 +343,7 @@ export function renderSkill(ctx, skillId, opts = {}) {
         <span class="pill">Level: ${skill.levelBand}</span>
         <span class="pill">Hand: ${ctx.handednessLabel()}</span>
         <span class="pill">Video mirror: ${state.mirrorVideos ? "ON" : "OFF"}</span>
+        ${rolePill(ctx)}
       </div>
 
       <p class="muted" style="margin-top:0;">${handedNote}</p>
