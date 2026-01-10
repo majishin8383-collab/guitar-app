@@ -1,10 +1,11 @@
 // content.js
 // Dose 0.2 — Content Model v1 (+ handedness-safe language)
+// Dose 0.2.2 — Video hooks per drill (demo / mistake / fix)
 //
 // IMPORTANT RULE:
 // - Avoid "left hand / right hand" in instruction text.
 // - Always say "fretting hand" and "picking hand".
-// - If needed, use handednessNotes to clarify for the user's orientation.
+// - Videos can be mirrored for left-handed players.
 
 window.CONTENT = {
   genres: {
@@ -36,7 +37,13 @@ window.CONTENT = {
             "Keep the picking hand relaxed and consistent.",
             "Focus on evenness — not speed."
           ],
-          suggestedBpm: { start: 60, target: 90, step: 5 }
+          suggestedBpm: { start: 60, target: 90, step: 5 },
+          media: {
+            // Replace these with your friend’s videos later.
+            demoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+            dontUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+            fixUrl:  "https://www.youtube.com/embed/dQw4w9WgXcQ"
+          }
         },
         {
           id: "d_shuffle_2",
@@ -47,7 +54,7 @@ window.CONTENT = {
             "Play a simple 12-bar rhythm (even just on one chord).",
             "Count bars out loud if needed.",
             "Goal: no rushing on bar transitions.",
-            "Keep your fretting-hand pressure light to avoid fatigue."
+            "Keep fretting-hand pressure light to avoid fatigue."
           ],
           suggestedBpm: { start: 60, target: 100, step: 5 }
         }
@@ -58,92 +65,4 @@ window.CONTENT = {
       id: "blues_pentatonic_box1",
       genre: "blues",
       name: "Minor Pentatonic (Box 1)",
-      levelBand: "beginner",
-      summary: "Learn the core shape used for riffs, licks, and solos.",
-      drills: [
-        {
-          id: "d_penta_1",
-          name: "Box 1 ascent / descent",
-          durationSec: 180,
-          handednessSafe: true,
-          instructions: [
-            "Play Box 1 up and down clean.",
-            "Use alternate picking (down-up).",
-            "Keep fretting-hand fingers close to the fretboard.",
-            "Aim for even volume between notes."
-          ],
-          suggestedBpm: { start: 60, target: 120, step: 5 }
-        },
-        {
-          id: "d_penta_2",
-          name: "Two-notes-per-string accuracy",
-          durationSec: 180,
-          handednessSafe: true,
-          instructions: [
-            "Play slowly: two notes per string, then move to the next string.",
-            "Listen for buzzes and uneven volume.",
-            "Stay relaxed in both hands.",
-            "Stop immediately if tension creeps in—reset posture."
-          ],
-          suggestedBpm: { start: 50, target: 100, step: 5 }
-        }
-      ]
-    },
-
-    blues_bends_vibrato: {
-      id: "blues_bends_vibrato",
-      genre: "blues",
-      name: "Bends + Vibrato (Core Voice)",
-      levelBand: "beginner",
-      summary: "Blues lead lives or dies by bend pitch and vibrato control.",
-      drills: [
-        {
-          id: "d_bend_1",
-          name: "Quarter/half-step bend checks",
-          durationSec: 180,
-          handednessSafe: true,
-          instructions: [
-            "Pick the target note first (destination pitch).",
-            "Then bend up to match it.",
-            "Hold the pitch steady for 2 seconds.",
-            "Use multiple fretting-hand fingers to support the bend."
-          ],
-          suggestedBpm: { start: 40, target: 70, step: 5 }
-        },
-        {
-          id: "d_vib_1",
-          name: "Slow wide vibrato",
-          durationSec: 180,
-          handednessSafe: true,
-          instructions: [
-            "Hold a note firmly with your fretting hand.",
-            "Rock the wrist slowly for a wide vibrato.",
-            "Keep pitch centered — don’t drift sharp.",
-            "Breathe and stay loose in the picking hand."
-          ],
-          suggestedBpm: { start: 40, target: 80, step: 5 }
-        }
-      ]
-    }
-  },
-
-  backingTracks: {
-    // Metadata only in Dose 0.2. Audio comes later.
-    bt_blues_shuffle_A: {
-      id: "bt_blues_shuffle_A",
-      genre: "blues",
-      name: "Shuffle Groove in A",
-      key: "A",
-      feel: "shuffle",
-      recommendedBpm: 90
-    },
-    bt_blues_slow_12bar_E: {
-      id: "bt_blues_slow_12bar_E",
-      genre: "blues",
-      name: "Slow 12-Bar in E",
-      key: "E",
-      feel: "slow blues",
-      recommendedBpm: 65
-    }
-  }
-};
+      levelBand: "beginne
