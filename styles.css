@@ -30,6 +30,12 @@ button.secondary {
   color: #fff;
 }
 
+button.small {
+  padding: 8px 10px;
+  font-size: 14px;
+  border-radius: 6px;
+}
+
 .card {
   background: #1e1e1e;
   padding: 16px;
@@ -55,6 +61,12 @@ button.secondary {
   opacity: .9;
 }
 
+.hr {
+  height: 1px;
+  background: rgba(255,255,255,.10);
+  margin: 12px 0;
+}
+
 /* --- Video blocks --- */
 .videoGrid {
   display: grid;
@@ -63,9 +75,7 @@ button.secondary {
 }
 
 @media (min-width: 900px) {
-  .videoGrid {
-    grid-template-columns: 1fr 1fr 1fr;
-  }
+  .videoGrid { grid-template-columns: 1fr 1fr 1fr; }
 }
 
 .videoCard {
@@ -101,4 +111,28 @@ button.secondary {
 .mirror {
   transform: scaleX(-1);
   transform-origin: center;
+}
+
+/* --- Practice controls --- */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.statline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.kpi {
+  background: rgba(255,255,255,.06);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 14px;
 }
