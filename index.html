@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Guitar Trainer</title>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=GT-20260110a" />
 </head>
 <body>
   <header>
@@ -17,7 +17,10 @@
     <small>Practice smarter. Play music.</small>
   </footer>
 
-  <script src="content.js"></script>
-  <script type="module" src="app.js"></script>
+  <!-- content is a normal script (global window.CONTENT) -->
+  <script src="content.js?v=GT-20260110a"></script>
+
+  <!-- app is module; it imports render/storage/progress/metronome -->
+  <script type="module" src="app.js?v=GT-20260110a"></script>
 </body>
 </html>
