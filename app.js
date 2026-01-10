@@ -3,7 +3,7 @@ const app = document.getElementById("app");
 const C = window.CONTENT;
 
 // --- persistent state helpers ---
-const STORAGE_KEY = "guitar_trainer_state_v2";
+const STORAGE_KEY = "guitar_trainer_state_v3";
 
 function loadState() {
   try {
@@ -27,8 +27,19 @@ function saveState() {
 let state = loadState() || {
   genre: "blues",
   handedness: "right",      // "right" | "left"
-  mirrorVideos: false       // will auto-enable for left-handed in render
+  mirrorVideos: false,      // video mirror preference
+  progress: {
+    // drillId: { bpm, cleanStreak, bestBpm, lastTs }
+  }
 };
+
+function nowTs() {
+  return Date.now();
+}
+
+function clamp(n, min, max) {
+  return Math.max(min, Math.min(max, n));
+}
 
 function getGenre() {
   return C.genres[state.genre];
@@ -52,7 +63,6 @@ function safeEmbed(url) {
   const ok =
     url.startsWith("https://www.youtube.com/embed/") ||
     url.startsWith("https://youtube.com/embed/");
-
   return ok ? url : null;
 }
 
@@ -67,9 +77,7 @@ function videoBlock(label, url, mirrorOn) {
     `;
   }
 
-  // Apply mirror transform to iframe container (works well for “copy what you see”).
   const mirrorClass = mirrorOn ? "mirror" : "";
-
   return `
     <div class="videoCard">
       <div class="videoLabel">${label}</div>
@@ -86,6 +94,80 @@ function videoBlock(label, url, mirrorOn) {
   `;
 }
 
+// --- Progress helpers (Dose 1.1) ---
+function getOrInitDrillProgress(drill) {
+  const id = drill.id;
+  const cfg = drill.suggestedBpm || { start: 60, step: 5, target: 120 };
+  const existing = state.progress[id];
+
+  if (existing && typeof existing.bpm === "number") return existing;
+
+  const p = {
+    bpm: cfg.start,
+    cleanStreak: 0,
+    bestBpm: cfg.start,
+    lastTs: nowTs()
+  };
+  state.progress[id] = p;
+  saveState();
+  return p;
+}
+
+function setDrillBpm(drill, nextBpm) {
+  const cfg = drill.suggestedBpm || { start: 60, step: 5, target: 120 };
+  const p = getOrInitDrillProgress(drill);
+
+  const minBpm = Math.max(30, cfg.start); // never below 30, and don't go below suggested start
+  const maxBpm = Math.max(cfg.target, cfg.start); // allow reaching target
+  p.bpm = clamp(Math.round(nextBpm), minBpm, maxBpm);
+  p.bestBpm = Math.max(p.bestBpm || p.bpm, p.bpm);
+  p.lastTs = nowTs();
+  saveState();
+}
+
+function markCleanRep(drill) {
+  const cfg = drill.suggestedBpm || { start: 60, step: 5, target: 120 };
+  const p = getOrInitDrillProgress(drill);
+  p.cleanStreak = (p.cleanStreak || 0) + 1;
+  p.lastTs = nowTs();
+
+  // Rule: 3 clean reps => bump tempo by step, reset streak to 0
+  if (p.cleanStreak >= 3) {
+    p.cleanStreak = 0;
+    const next = (p.bpm || cfg.start) + (cfg.step || 5);
+    setDrillBpm(drill, next);
+    // setDrillBpm saves; but we already changed streak/ts, so ensure saved
+    saveState();
+    return { leveledUp: true };
+  }
+
+  saveState();
+  return { leveledUp: false };
+}
+
+function markSloppyRep(drill) {
+  const cfg = drill.suggestedBpm || { start: 60, step: 5, target: 120 };
+  const p = getOrInitDrillProgress(drill);
+
+  // Sloppy rep: reset streak and drop tempo by step (but not below start/min)
+  p.cleanStreak = 0;
+  const next = (p.bpm || cfg.start) - (cfg.step || 5);
+  setDrillBpm(drill, next);
+  saveState();
+}
+
+function resetDrillProgress(drill) {
+  const cfg = drill.suggestedBpm || { start: 60, step: 5, target: 120 };
+  state.progress[drill.id] = {
+    bpm: cfg.start,
+    cleanStreak: 0,
+    bestBpm: cfg.start,
+    lastTs: nowTs()
+  };
+  saveState();
+}
+
+// --- UI ---
 function renderHome() {
   ensureMirrorDefault();
 
@@ -161,14 +243,12 @@ function renderHome() {
 
   rightBtn.onclick = () => {
     state.handedness = "right";
-    // don't force mirror off; user can choose.
     saveState();
     renderHome();
   };
 
   leftBtn.onclick = () => {
     state.handedness = "left";
-    // default mirror on for left-handed (if not already)
     if (!state.mirrorVideos) state.mirrorVideos = true;
     saveState();
     renderHome();
@@ -331,17 +411,40 @@ function renderSkill(skillId, opts = {}) {
       <p class="muted" style="margin-top:0;">${handedNote}</p>
 
       <h3>Drills</h3>
+
       ${skill.drills.map(d => {
+        const cfg = d.suggestedBpm || { start: 60, step: 5, target: 120 };
+        const p = getOrInitDrillProgress(d);
+
         const media = d.media || null;
         const hasAnyVideo = media && (media.demoUrl || media.dontUrl || media.fixUrl);
 
         return `
           <div class="card" style="background:#171717;">
             <h4 style="margin:0 0 6px 0;">${d.name}</h4>
+
             <div class="muted" style="font-size:14px;">
-              Suggested BPM: ${d.suggestedBpm.start} → ${d.suggestedBpm.target} (step ${d.suggestedBpm.step})
+              Suggested BPM: ${cfg.start} → ${cfg.target} (step ${cfg.step})
               • Duration: ~${Math.max(1, Math.round(d.durationSec / 60))} min
             </div>
+
+            <div class="statline">
+              <div class="kpi"><b>Current:</b> ${p.bpm} bpm</div>
+              <div class="kpi"><b>Clean reps:</b> ${p.cleanStreak}/3</div>
+              <div class="kpi"><b>Best:</b> ${p.bestBpm} bpm</div>
+            </div>
+
+            <div class="controls">
+              <button class="secondary small" data-bpm-down="${d.id}">− ${cfg.step}</button>
+              <button class="secondary small" data-bpm-up="${d.id}">+ ${cfg.step}</button>
+
+              <button class="small" data-clean="${d.id}">✅ Clean rep</button>
+              <button class="secondary small" data-sloppy="${d.id}">😵 Sloppy rep</button>
+
+              <button class="secondary small" data-reset="${d.id}">Reset</button>
+            </div>
+
+            <div class="hr"></div>
 
             <div style="margin-top:10px;">
               ${d.instructions.map(line => `<div style="opacity:.95">• ${line}</div>`).join("")}
@@ -356,7 +459,7 @@ function renderSkill(skillId, opts = {}) {
             <div style="margin-top:14px;">
               <div class="row" style="justify-content:space-between;">
                 <h4 style="margin:0;">Video Examples</h4>
-                <button class="secondary" data-toggle-mirror="${d.id}">
+                <button class="secondary small" data-toggle-mirror="1">
                   ${state.mirrorVideos ? "Mirroring ON" : "Mirroring OFF"}
                 </button>
               </div>
@@ -383,11 +486,53 @@ function renderSkill(skillId, opts = {}) {
     </div>
   `;
 
-  // Per-skill view toggle (global toggle, but accessible here)
+  // Mirror toggle (global setting)
   app.querySelectorAll("button[data-toggle-mirror]").forEach(btn => {
     btn.onclick = () => {
       state.mirrorVideos = !state.mirrorVideos;
       saveState();
+      renderSkill(skillId, opts);
+    };
+  });
+
+  // Drill controls
+  skill.drills.forEach(d => {
+    const cfg = d.suggestedBpm || { start: 60, step: 5, target: 120 };
+
+    const down = app.querySelector(`button[data-bpm-down="${d.id}"]`);
+    const up = app.querySelector(`button[data-bpm-up="${d.id}"]`);
+    const clean = app.querySelector(`button[data-clean="${d.id}"]`);
+    const sloppy = app.querySelector(`button[data-sloppy="${d.id}"]`);
+    const reset = app.querySelector(`button[data-reset="${d.id}"]`);
+
+    if (down) down.onclick = () => {
+      const p = getOrInitDrillProgress(d);
+      setDrillBpm(d, (p.bpm || cfg.start) - (cfg.step || 5));
+      renderSkill(skillId, opts);
+    };
+
+    if (up) up.onclick = () => {
+      const p = getOrInitDrillProgress(d);
+      setDrillBpm(d, (p.bpm || cfg.start) + (cfg.step || 5));
+      renderSkill(skillId, opts);
+    };
+
+    if (clean) clean.onclick = () => {
+      const res = markCleanRep(d);
+      // subtle feedback: bump happened
+      if (res.leveledUp) {
+        // no alerts; just re-render and let stats show it
+      }
+      renderSkill(skillId, opts);
+    };
+
+    if (sloppy) sloppy.onclick = () => {
+      markSloppyRep(d);
+      renderSkill(skillId, opts);
+    };
+
+    if (reset) reset.onclick = () => {
+      resetDrillProgress(d);
       renderSkill(skillId, opts);
     };
   });
