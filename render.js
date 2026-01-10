@@ -1,5 +1,8 @@
 // render.js
 // UI rendering + event wiring (Micro-dose 1.1c)
+// Micro-fix: visible "Level up" feedback when 3/3 resets.
+
+import { shouldShowLevelUp } from "./progress.js";
 
 export function renderHome(ctx) {
   ctx.ensureMirrorDefault();
@@ -43,7 +46,6 @@ export function renderHome(ctx) {
     </div>
   `;
 
-  // genre list
   const list = document.getElementById("genre-list");
   list.innerHTML = genres.map(g => {
     const active = g.id === state.genre;
@@ -63,7 +65,6 @@ export function renderHome(ctx) {
     };
   });
 
-  // handedness buttons visual state
   const rightBtn = document.getElementById("hand-right");
   const leftBtn = document.getElementById("hand-left");
 
@@ -255,6 +256,11 @@ export function renderSkill(ctx, skillId, opts = {}) {
         const cfg = d.suggestedBpm || { start: 60, step: 5, target: 120 };
         const p = ctx.progress.getOrInit(state, d);
 
+        const showLevelUp = shouldShowLevelUp(p);
+        const levelUpMsg = showLevelUp
+          ? `✅ Level up: <b>${p.lastLevelUpFrom}</b> → <b>${p.lastLevelUpTo}</b> bpm`
+          : "";
+
         const media = d.media || null;
         const hasAnyVideo = media && (media.demoUrl || media.dontUrl || media.fixUrl);
 
@@ -266,6 +272,8 @@ export function renderSkill(ctx, skillId, opts = {}) {
               Suggested BPM: ${cfg.start} → ${cfg.target} (step ${cfg.step})
               • Duration: ~${Math.max(1, Math.round(d.durationSec / 60))} min
             </div>
+
+            ${showLevelUp ? `<div class="kpi" style="margin-top:10px;">${levelUpMsg}</div>` : ""}
 
             <div class="statline">
               <div class="kpi"><b>Current:</b> ${p.bpm} bpm</div>
