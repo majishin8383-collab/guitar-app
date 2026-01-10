@@ -1,6 +1,10 @@
 // content.js
-// Dose 0.2 — Content Model v1
-// Keep this simple. Expand later.
+// Dose 0.2 — Content Model v1 (+ handedness-safe language)
+//
+// IMPORTANT RULE:
+// - Avoid "left hand / right hand" in instruction text.
+// - Always say "fretting hand" and "picking hand".
+// - If needed, use handednessNotes to clarify for the user's orientation.
 
 window.CONTENT = {
   genres: {
@@ -14,22 +18,22 @@ window.CONTENT = {
   },
 
   skills: {
-    // ---- BLUES STARTER SKILLS ----
-
     blues_timing_shuffle: {
       id: "blues_timing_shuffle",
       genre: "blues",
       name: "Shuffle Timing (Foundation)",
       levelBand: "beginner",
-      summary: "Lock in a blues shuffle feel with clean right-hand consistency.",
+      summary: "Lock in a blues shuffle feel with clean picking-hand consistency.",
       drills: [
         {
           id: "d_shuffle_1",
           name: "Muted shuffle strum",
           durationSec: 120,
+          handednessSafe: true,
           instructions: [
-            "Lightly mute strings with fretting hand.",
+            "Lightly mute strings with your fretting hand.",
             "Strum a steady shuffle: long-short, long-short.",
+            "Keep the picking hand relaxed and consistent.",
             "Focus on evenness — not speed."
           ],
           suggestedBpm: { start: 60, target: 90, step: 5 }
@@ -38,10 +42,12 @@ window.CONTENT = {
           id: "d_shuffle_2",
           name: "12-bar rhythm hits",
           durationSec: 180,
+          handednessSafe: true,
           instructions: [
             "Play a simple 12-bar rhythm (even just on one chord).",
             "Count bars out loud if needed.",
-            "Goal: no rushing on bar transitions."
+            "Goal: no rushing on bar transitions.",
+            "Keep your fretting-hand pressure light to avoid fatigue."
           ],
           suggestedBpm: { start: 60, target: 100, step: 5 }
         }
@@ -53,27 +59,31 @@ window.CONTENT = {
       genre: "blues",
       name: "Minor Pentatonic (Box 1)",
       levelBand: "beginner",
-      summary: "Learn the core shape you’ll use for riffs, licks, and solos.",
+      summary: "Learn the core shape used for riffs, licks, and solos.",
       drills: [
         {
           id: "d_penta_1",
-          name: "Box 1 ascent/descent",
+          name: "Box 1 ascent / descent",
           durationSec: 180,
+          handednessSafe: true,
           instructions: [
             "Play Box 1 up and down clean.",
-            "Use alternate picking.",
-            "Keep fingers close to the fretboard."
+            "Use alternate picking (down-up).",
+            "Keep fretting-hand fingers close to the fretboard.",
+            "Aim for even volume between notes."
           ],
           suggestedBpm: { start: 60, target: 120, step: 5 }
         },
         {
           id: "d_penta_2",
-          name: "Two-note-per-string accuracy",
+          name: "Two-notes-per-string accuracy",
           durationSec: 180,
+          handednessSafe: true,
           instructions: [
-            "Play only two notes per string slowly.",
+            "Play slowly: two notes per string, then move to the next string.",
             "Listen for buzzes and uneven volume.",
-            "Stay relaxed."
+            "Stay relaxed in both hands.",
+            "Stop immediately if tension creeps in—reset posture."
           ],
           suggestedBpm: { start: 50, target: 100, step: 5 }
         }
@@ -91,10 +101,12 @@ window.CONTENT = {
           id: "d_bend_1",
           name: "Quarter/half-step bend checks",
           durationSec: 180,
+          handednessSafe: true,
           instructions: [
-            "Pick target note first (destination pitch).",
+            "Pick the target note first (destination pitch).",
             "Then bend up to match it.",
-            "Hold pitch steady for 2 seconds."
+            "Hold the pitch steady for 2 seconds.",
+            "Use multiple fretting-hand fingers to support the bend."
           ],
           suggestedBpm: { start: 40, target: 70, step: 5 }
         },
@@ -102,10 +114,12 @@ window.CONTENT = {
           id: "d_vib_1",
           name: "Slow wide vibrato",
           durationSec: 180,
+          handednessSafe: true,
           instructions: [
-            "Hold a note.",
-            "Rock wrist slowly for wide vibrato.",
-            "Keep pitch centered — don’t drift sharp."
+            "Hold a note firmly with your fretting hand.",
+            "Rock the wrist slowly for a wide vibrato.",
+            "Keep pitch centered — don’t drift sharp.",
+            "Breathe and stay loose in the picking hand."
           ],
           suggestedBpm: { start: 40, target: 80, step: 5 }
         }
