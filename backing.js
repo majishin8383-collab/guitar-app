@@ -1,31 +1,51 @@
-// backing.js — backing track audio engine (hardened)
-// Fixes: URL resolution, ensures volume/mute are correct, adds error logging.
+// backing.js — backing track audio engine (small + stable)
+// - Deterministic UI state (play/pause flips immediately)
+// - Loop + Stop
+// - Volume + Mute (engine only; UI later if desired)
+// - AUDIO FIX: resolve audioUrl against current location (hash-safe) + log load errors
 
 export function createBackingPlayer() {
   const audio = new Audio();
   audio.preload = "auto";
-  audio.volume = 1;
-  audio.muted = false;
 
   const state = {
     trackId: null,
     isPlaying: false,
     isLoop: false,
-    lastError: null
+    volume: 0.85,
+    muted: false
   };
 
-  function absUrl(url) {
-    try {
-      // Make relative paths robust (works with hash routing)
-      return new URL(url, window.location.href).toString();
-    } catch {
-      return url;
-    }
+  function apply() {
+    audio.loop = !!state.isLoop;
+    audio.volume = clamp01(state.volume);
+    audio.muted = !!state.muted;
   }
+
+  audio.addEventListener("ended", () => {
+    if (!state.isLoop) state.isPlaying = false;
+  });
+
+  // NEW: log real audio loading/decoding errors (404, bad path, unsupported format, etc.)
+  audio.addEventListener("error", () => {
+    const code = audio.error ? audio.error.code : "unknown";
+    console.warn("[Backing] audio error:", code, "src:", audio.src);
+    state.isPlaying = false;
+  });
 
   function setLoop(on) {
     state.isLoop = !!on;
-    audio.loop = state.isLoop;
+    apply();
+  }
+
+  function setVolume(v) {
+    state.volume = clamp01(v);
+    apply();
+  }
+
+  function setMuted(on) {
+    state.muted = !!on;
+    apply();
   }
 
   function stop() {
@@ -40,67 +60,61 @@ export function createBackingPlayer() {
     state.isPlaying = false;
   }
 
-  audio.addEventListener("ended", () => {
-    if (!state.isLoop) state.isPlaying = false;
-  });
+  function resolveUrl(url) {
+    try {
+      return new URL(url, window.location.href).toString();
+    } catch {
+      return url;
+    }
+  }
 
-  audio.addEventListener("error", () => {
-    // This fires for 404, decode errors, unsupported formats, etc.
-    const err = audio.error ? `AudioError code ${audio.error.code}` : "Unknown audio error";
-    state.lastError = err;
-    state.isPlaying = false;
-    console.warn("[Backing] audio error:", err, "src:", audio.src);
-  });
-
-  function playTrack(track) {
+  async function playTrack(track) {
     if (!track || !track.audioUrl) return;
 
-    state.lastError = null;
-
-    // Always ensure audible
-    audio.muted = false;
-    audio.volume = 1;
-
-    const url = absUrl(track.audioUrl);
-
-    // New track → load source
     if (state.trackId !== track.id) {
-      audio.src = url;
+      audio.src = resolveUrl(track.audioUrl); // NEW: hash-safe resolution
       try { audio.currentTime = 0; } catch {}
       state.trackId = track.id;
     }
 
-    // Flip state immediately for UI
+    apply();
+
+    // flip immediately so UI can show Pause right away
     state.isPlaying = true;
 
-    const p = audio.play();
-    if (p && typeof p.then === "function") {
-      p.then(() => {
-        // ok
-      }).catch((e) => {
-        state.isPlaying = false;
-        state.lastError = String(e?.message || e);
-        console.warn("[Backing] play() failed:", e, "src:", audio.src);
-      });
+    try {
+      const p = audio.play();
+      if (p && typeof p.then === "function") await p;
+      state.isPlaying = true;
+    } catch (e) {
+      console.warn("[Backing] audio play failed:", e, "src:", audio.src);
+      state.isPlaying = false;
     }
   }
 
   function toggle(track) {
     if (!track || !track.audioUrl) return;
 
-    const sameTrack = state.trackId === track.id;
-
-    if (sameTrack && state.isPlaying) {
-      pause();
-    } else {
-      playTrack(track);
-    }
+    const same = state.trackId === track.id;
+    if (same && state.isPlaying) pause();
+    else playTrack(track);
   }
+
+  apply();
 
   return {
     state,
     toggle,
     stop,
-    setLoop
+    pause,
+    setLoop,
+    setVolume,
+    setMuted
   };
+}
+
+function clamp01(n) {
+  const x = Number(n);
+  if (!Number.isFinite(x)) return 0.85;
+  return Math.max(0, Math.min(1, x));
 }
