@@ -1,11 +1,21 @@
 // render.js
 // UI rendering + event wiring
-// Dose 1.3: Role (Lead/Rhythm) + Backing Track Player UI (if audioUrl exists)
+// Guarded version: Role + Backing UI only appear if ctx provides the APIs.
+// This prevents "header/footer only" when app.js doesn't include role/backing yet.
 
 import { shouldShowLevelUp } from "./progress.js";
 
+function hasRole(ctx) {
+  return typeof ctx.roleLabel === "function" && ctx.state && typeof ctx.state.role === "string";
+}
+
 function rolePill(ctx) {
+  if (!hasRole(ctx)) return "";
   return `<span class="pill">Role: ${ctx.roleLabel()}</span>`;
+}
+
+function hasBacking(ctx) {
+  return !!(ctx.backingState && typeof ctx.backingToggle === "function");
 }
 
 function backingRow(ctx, track) {
@@ -44,13 +54,7 @@ export function renderHome(ctx) {
   const genres = Object.values(C.genres);
   const activeGenre = C.genres[state.genre];
 
-  app.innerHTML = `
-    <div class="card">
-      <h2>Choose Your Genre</h2>
-      <p class="muted">Start focused. Expand later.</p>
-      <div id="genre-list"></div>
-    </div>
-
+  const roleCard = hasRole(ctx) ? `
     <div class="card">
       <h3 style="margin-top:0;">Your Focus</h3>
       <p class="muted">Pick what you're practicing most right now.</p>
@@ -60,6 +64,16 @@ export function renderHome(ctx) {
         ${rolePill(ctx)}
       </div>
     </div>
+  ` : "";
+
+  app.innerHTML = `
+    <div class="card">
+      <h2>Choose Your Genre</h2>
+      <p class="muted">Start focused. Expand later.</p>
+      <div id="genre-list"></div>
+    </div>
+
+    ${roleCard}
 
     <div class="card">
       <h3 style="margin-top:0;">Playing Hand</h3>
@@ -89,18 +103,22 @@ export function renderHome(ctx) {
     </div>
   `;
 
-  // Role buttons
-  const rr = document.getElementById("role-rhythm");
-  const rl = document.getElementById("role-lead");
-  if (state.role === "lead") {
-    rl.classList.remove("secondary");
-    rr.classList.add("secondary");
-  } else {
-    rr.classList.remove("secondary");
-    rl.classList.add("secondary");
+  // Role buttons (only if enabled)
+  if (hasRole(ctx)) {
+    const rr = document.getElementById("role-rhythm");
+    const rl = document.getElementById("role-lead");
+
+    if (state.role === "lead") {
+      rl.classList.remove("secondary");
+      rr.classList.add("secondary");
+    } else {
+      rr.classList.remove("secondary");
+      rl.classList.add("secondary");
+    }
+
+    rr.onclick = () => { state.role = "rhythm"; ctx.persist(); renderHome(ctx); };
+    rl.onclick = () => { state.role = "lead"; ctx.persist(); renderHome(ctx); };
   }
-  rr.onclick = () => { state.role = "rhythm"; ctx.persist(); renderHome(ctx); };
-  rl.onclick = () => { state.role = "lead"; ctx.persist(); renderHome(ctx); };
 
   // genre list
   const list = document.getElementById("genre-list");
@@ -167,6 +185,10 @@ export function renderGenre(ctx, genreId) {
   const skills = genre.starterSkillIds.map(id => C.skills[id]).filter(Boolean);
   const bts = genre.backingTrackIds.map(id => C.backingTracks[id]).filter(Boolean);
 
+  const backingHeader = hasBacking(ctx)
+    ? `<div class="muted" style="font-size:14px;">(Playable once you add <code>audioUrl</code> in <code>content.js</code>.)</div>`
+    : `<div class="muted" style="font-size:14px;">(Backing player not enabled yet.)</div>`;
+
   app.innerHTML = `
     <div class="card">
       <h2>${genre.name}</h2>
@@ -182,7 +204,7 @@ export function renderGenre(ctx, genreId) {
       <div id="skill-list"></div>
 
       <h3 style="margin-top:16px;">Backing Tracks</h3>
-      <div class="muted" style="font-size:14px;">(Playable once you add <code>audioUrl</code> in <code>content.js</code>.)</div>
+      ${backingHeader}
       <div id="bt-list"></div>
 
       <div style="margin-top:16px;" class="row">
@@ -207,17 +229,26 @@ export function renderGenre(ctx, genreId) {
   });
 
   const btList = document.getElementById("bt-list");
-  btList.innerHTML = bts.length
-    ? bts.map(t => backingRow(ctx, t)).join("")
-    : `<div class="muted" style="margin-top:8px;">No backing tracks defined for this genre yet.</div>`;
+  if (hasBacking(ctx)) {
+    btList.innerHTML = bts.length
+      ? bts.map(t => backingRow(ctx, t)).join("")
+      : `<div class="muted" style="margin-top:8px;">No backing tracks defined for this genre yet.</div>`;
 
-  btList.querySelectorAll("button[data-bt-play]").forEach(btn => {
-    btn.onclick = () => {
-      const track = bts.find(t => t.id === btn.dataset.btPlay);
-      ctx.backingToggle(track);
-      renderGenre(ctx, genreId);
-    };
-  });
+    btList.querySelectorAll("button[data-bt-play]").forEach(btn => {
+      btn.onclick = () => {
+        const track = bts.find(t => t.id === btn.dataset.btPlay);
+        ctx.backingToggle(track);
+        renderGenre(ctx, genreId);
+      };
+    });
+  } else {
+    // Metadata-only fallback (old behavior)
+    btList.innerHTML = bts.map(t => `
+      <div style="opacity:.9; margin:8px 0;">
+        • <strong>${t.name}</strong> — Key ${t.key}, ${t.feel}, ~${t.recommendedBpm} bpm
+      </div>
+    `).join("");
+  }
 
   document.getElementById("back-home").onclick = () => ctx.nav.home();
   document.getElementById("go-practice").onclick = () => ctx.nav.practice();
@@ -233,8 +264,15 @@ export function renderPractice(ctx) {
   const skills = genre.starterSkillIds.map(id => C.skills[id]).filter(Boolean);
   const bts = genre.backingTrackIds.map(id => C.backingTracks[id]).filter(Boolean);
 
-  const loopOn = !!ctx.backingState.isLoop;
-  const playingId = ctx.backingState.trackId;
+  const backingControls = hasBacking(ctx)
+    ? `
+      <div class="row" style="margin:8px 0;">
+        <button id="bt-loop" class="${ctx.backingState.isLoop ? "" : "secondary"}">${ctx.backingState.isLoop ? "Loop: ON" : "Loop: OFF"}</button>
+        <button id="bt-stop" class="secondary" ${ctx.backingState.trackId ? "" : "disabled"}>Stop</button>
+      </div>
+      <div class="muted" style="font-size:14px;">Add <code>audioUrl</code> to tracks in <code>content.js</code> to make them playable.</div>
+    `
+    : `<div class="muted" style="font-size:14px;">Backing player not enabled yet.</div>`;
 
   app.innerHTML = `
     <div class="card">
@@ -249,11 +287,7 @@ export function renderPractice(ctx) {
       </div>
 
       <h3 style="margin-top:16px;">Backing Tracks</h3>
-      <div class="row" style="margin:8px 0;">
-        <button id="bt-loop" class="${loopOn ? "" : "secondary"}">${loopOn ? "Loop: ON" : "Loop: OFF"}</button>
-        <button id="bt-stop" class="secondary" ${playingId ? "" : "disabled"}>Stop</button>
-      </div>
-      <div class="muted" style="font-size:14px;">Add <code>audioUrl</code> to tracks in <code>content.js</code> to make them playable.</div>
+      ${backingControls}
       <div id="bt-list"></div>
 
       <h3 style="margin-top:16px;">Starter Skills</h3>
@@ -266,32 +300,41 @@ export function renderPractice(ctx) {
     </div>
   `;
 
-  // Backing tracks list
   const btList = document.getElementById("bt-list");
-  btList.innerHTML = bts.length
-    ? bts.map(t => backingRow(ctx, t)).join("")
-    : `<div class="muted" style="margin-top:8px;">No backing tracks defined for this genre yet.</div>`;
+  if (hasBacking(ctx)) {
+    btList.innerHTML = bts.length
+      ? bts.map(t => backingRow(ctx, t)).join("")
+      : `<div class="muted" style="margin-top:8px;">No backing tracks defined for this genre yet.</div>`;
 
-  btList.querySelectorAll("button[data-bt-play]").forEach(btn => {
-    btn.onclick = () => {
-      const track = bts.find(t => t.id === btn.dataset.btPlay);
-      ctx.backingToggle(track);
+    btList.querySelectorAll("button[data-bt-play]").forEach(btn => {
+      btn.onclick = () => {
+        const track = bts.find(t => t.id === btn.dataset.btPlay);
+        ctx.backingToggle(track);
+        renderPractice(ctx);
+      };
+    });
+
+    const loopBtn = document.getElementById("bt-loop");
+    const stopBtn = document.getElementById("bt-stop");
+
+    if (loopBtn) loopBtn.onclick = () => {
+      ctx.backingSetLoop(!ctx.backingState.isLoop);
       renderPractice(ctx);
     };
-  });
 
-  // Loop + Stop
-  document.getElementById("bt-loop").onclick = () => {
-    ctx.backingSetLoop(!loopOn);
-    renderPractice(ctx);
-  };
+    if (stopBtn) stopBtn.onclick = () => {
+      ctx.backingStop();
+      renderPractice(ctx);
+    };
+  } else {
+    // Metadata-only fallback
+    btList.innerHTML = bts.map(t => `
+      <div style="opacity:.9; margin:8px 0;">
+        • <strong>${t.name}</strong> — Key ${t.key}, ${t.feel}, ~${t.recommendedBpm} bpm
+      </div>
+    `).join("");
+  }
 
-  document.getElementById("bt-stop").onclick = () => {
-    ctx.backingStop();
-    renderPractice(ctx);
-  };
-
-  // Skills list
   const skillList = document.getElementById("skill-list");
   skillList.innerHTML = skills.map(s => `
     <div class="card" style="background:#171717;">
