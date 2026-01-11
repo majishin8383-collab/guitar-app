@@ -19,10 +19,27 @@ const DEFAULT_STATE = {
   role: "rhythm",          // "rhythm" | "lead"
   handedness: "right",     // "right" | "left"
   mirrorVideos: false,     // video mirror preference
-  progress: {}
+  progress: {},
+  backing: {
+    volume: 0.85,
+    muted: false,
+    loop: false
+  }
 };
 
 let state = loadState(DEFAULT_STATE);
+
+// Safety: enforce defaults if storage.js doesn't deep-merge
+if (!state || typeof state !== "object") state = { ...DEFAULT_STATE };
+if (!state.genre) state.genre = DEFAULT_STATE.genre;
+if (!state.role) state.role = DEFAULT_STATE.role;
+if (!state.handedness) state.handedness = DEFAULT_STATE.handedness;
+if (typeof state.mirrorVideos !== "boolean") state.mirrorVideos = DEFAULT_STATE.mirrorVideos;
+if (!state.progress) state.progress = {};
+if (!state.backing) state.backing = { ...DEFAULT_STATE.backing };
+if (typeof state.backing.volume !== "number") state.backing.volume = DEFAULT_STATE.backing.volume;
+if (typeof state.backing.muted !== "boolean") state.backing.muted = DEFAULT_STATE.backing.muted;
+if (typeof state.backing.loop !== "boolean") state.backing.loop = DEFAULT_STATE.backing.loop;
 
 function persist() {
   saveState(state);
@@ -123,9 +140,14 @@ function metroStopIfOwnedBy(drillId) {
   metroState.drillId = null;
 }
 
-// --- Backing Tracks (Dose 1.3) ---
+// --- Backing Tracks ---
 const backing = createBackingPlayer();
 const backingState = backing.state;
+
+// Apply persisted settings at boot
+backing.setVolume(state.backing.volume);
+backing.setMuted(state.backing.muted);
+backing.setLoop(state.backing.loop);
 
 function backingToggle(track) {
   backing.toggle(track);
@@ -136,7 +158,9 @@ function backingStop() {
 }
 
 function backingSetLoop(on) {
-  backing.setLoop(on);
+  state.backing.loop = !!on;
+  persist();
+  backing.setLoop(state.backing.loop);
 }
 
 function ctx() {
