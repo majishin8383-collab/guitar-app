@@ -1,6 +1,7 @@
 // content.js
 // Dose 0.2 — Content Model v1 (+ handedness-safe language)
 // Dose 0.2.2 — Video hooks per drill (demo / mistake / fix)
+// Dose 0.3 — Backing tracks use generator engine (no mp3 files needed)
 //
 // IMPORTANT RULE:
 // - Avoid "left hand / right hand" in instruction text.
@@ -19,8 +20,21 @@ window.CONTENT = {
         "blues_bends_vibrato"
       ],
       backingTrackIds: [
-        "bt_blues_shuffle_A",
-        "bt_blues_slow_12bar_E"
+        // Shuffle (rhythm + lead mixes)
+        "bt_gen_shuffle_A_rhythm",
+        "bt_gen_shuffle_A_lead",
+        "bt_gen_shuffle_E_rhythm",
+        "bt_gen_shuffle_E_lead",
+        "bt_gen_shuffle_G_rhythm",
+        "bt_gen_shuffle_G_lead",
+
+        // Slow blues (rhythm + lead mixes)
+        "bt_gen_slow_E_rhythm",
+        "bt_gen_slow_E_lead",
+        "bt_gen_slow_A_rhythm",
+        "bt_gen_slow_A_lead",
+        "bt_gen_slow_C_rhythm",
+        "bt_gen_slow_C_lead"
       ]
     }
   },
@@ -166,23 +180,136 @@ window.CONTENT = {
   },
 
   backingTracks: {
-    bt_blues_shuffle_A: {
-      id: "bt_blues_shuffle_A",
+    // ---------------------------
+    // SHUFFLE (12-bar) — generator
+    // ---------------------------
+    bt_gen_shuffle_A_rhythm: {
+      id: "bt_gen_shuffle_A_rhythm",
       genre: "blues",
-      name: "Shuffle Groove in A",
+      name: "Shuffle 12-Bar (A) — Rhythm Mix",
       key: "A",
       feel: "shuffle",
-      recommendedBpm: 90,
-      audioUrl: "audio/blues_shuffle_A_90.mp3"
+      recommendedBpm: 92,
+      note: "Drums + bass (no rhythm guitar). Great for rhythm practice.",
+      generator: { style: "blues_shuffle_12bar", bpm: 92, key: "A", mix: "rhythm" }
     },
-    bt_blues_slow_12bar_E: {
-      id: "bt_blues_slow_12bar_E",
+    bt_gen_shuffle_A_lead: {
+      id: "bt_gen_shuffle_A_lead",
       genre: "blues",
-      name: "Slow 12-Bar in E",
+      name: "Shuffle 12-Bar (A) — Lead Mix",
+      key: "A",
+      feel: "shuffle",
+      recommendedBpm: 92,
+      note: "Adds a light rhythm-guitar bed so you can practice lead over it.",
+      generator: { style: "blues_shuffle_12bar", bpm: 92, key: "A", mix: "lead" }
+    },
+
+    bt_gen_shuffle_E_rhythm: {
+      id: "bt_gen_shuffle_E_rhythm",
+      genre: "blues",
+      name: "Shuffle 12-Bar (E) — Rhythm Mix",
+      key: "E",
+      feel: "shuffle",
+      recommendedBpm: 96,
+      note: "Drums + bass (no rhythm guitar).",
+      generator: { style: "blues_shuffle_12bar", bpm: 96, key: "E", mix: "rhythm" }
+    },
+    bt_gen_shuffle_E_lead: {
+      id: "bt_gen_shuffle_E_lead",
+      genre: "blues",
+      name: "Shuffle 12-Bar (E) — Lead Mix",
+      key: "E",
+      feel: "shuffle",
+      recommendedBpm: 96,
+      note: "Lead over a simple rhythm bed.",
+      generator: { style: "blues_shuffle_12bar", bpm: 96, key: "E", mix: "lead" }
+    },
+
+    bt_gen_shuffle_G_rhythm: {
+      id: "bt_gen_shuffle_G_rhythm",
+      genre: "blues",
+      name: "Shuffle 12-Bar (G) — Rhythm Mix",
+      key: "G",
+      feel: "shuffle",
+      recommendedBpm: 90,
+      note: "Drums + bass (no rhythm guitar).",
+      generator: { style: "blues_shuffle_12bar", bpm: 90, key: "G", mix: "rhythm" }
+    },
+    bt_gen_shuffle_G_lead: {
+      id: "bt_gen_shuffle_G_lead",
+      genre: "blues",
+      name: "Shuffle 12-Bar (G) — Lead Mix",
+      key: "G",
+      feel: "shuffle",
+      recommendedBpm: 90,
+      note: "Lead over a simple rhythm bed.",
+      generator: { style: "blues_shuffle_12bar", bpm: 90, key: "G", mix: "lead" }
+    },
+
+    // ---------------------------
+    // SLOW BLUES (12-bar) — generator
+    // ---------------------------
+    bt_gen_slow_E_rhythm: {
+      id: "bt_gen_slow_E_rhythm",
+      genre: "blues",
+      name: "Slow 12-Bar (E) — Rhythm Mix",
       key: "E",
       feel: "slow blues",
-      recommendedBpm: 65,
-      audioUrl: "audio/blues_slow_12bar_E_65.mp3"
+      recommendedBpm: 66,
+      note: "Drums + bass only. Practice clean timing and dynamics.",
+      generator: { style: "blues_slow_12bar", bpm: 66, key: "E", mix: "rhythm" }
+    },
+    bt_gen_slow_E_lead: {
+      id: "bt_gen_slow_E_lead",
+      genre: "blues",
+      name: "Slow 12-Bar (E) — Lead Mix",
+      key: "E",
+      feel: "slow blues",
+      recommendedBpm: 66,
+      note: "Slow bed for bends + vibrato practice.",
+      generator: { style: "blues_slow_12bar", bpm: 66, key: "E", mix: "lead" }
+    },
+
+    bt_gen_slow_A_rhythm: {
+      id: "bt_gen_slow_A_rhythm",
+      genre: "blues",
+      name: "Slow 12-Bar (A) — Rhythm Mix",
+      key: "A",
+      feel: "slow blues",
+      recommendedBpm: 64,
+      note: "Drums + bass only.",
+      generator: { style: "blues_slow_12bar", bpm: 64, key: "A", mix: "rhythm" }
+    },
+    bt_gen_slow_A_lead: {
+      id: "bt_gen_slow_A_lead",
+      genre: "blues",
+      name: "Slow 12-Bar (A) — Lead Mix",
+      key: "A",
+      feel: "slow blues",
+      recommendedBpm: 64,
+      note: "Lead bed for phrasing practice.",
+      generator: { style: "blues_slow_12bar", bpm: 64, key: "A", mix: "lead" }
+    },
+
+    bt_gen_slow_C_rhythm: {
+      id: "bt_gen_slow_C_rhythm",
+      genre: "blues",
+      name: "Slow 12-Bar (C) — Rhythm Mix",
+      key: "C",
+      feel: "slow blues",
+      recommendedBpm: 62,
+      note: "Drums + bass only.",
+      generator: { style: "blues_slow_12bar", bpm: 62, key: "C", mix: "rhythm" }
+    },
+    bt_gen_slow_C_lead: {
+      id: "bt_gen_slow_C_lead",
+      genre: "blues",
+      name: "Slow 12-Bar (C) — Lead Mix",
+      key: "C",
+      feel: "slow blues",
+      recommendedBpm: 62,
+      note: "Lead bed for melodic practice.",
+      generator: { style: "blues_slow_12bar", bpm: 62, key: "C", mix: "lead" }
     }
   }
 };
