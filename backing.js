@@ -1,92 +1,63 @@
-// backing.js
-// Simple backing track engine using HTMLAudioElement.
-// Plays only when a track has `audioUrl`.
+// backing.js — tiny backing track audio engine (Dose 1.3)
+// Plays audioUrl if present. Supports loop + stop.
 
 export function createBackingPlayer() {
+  const audio = new Audio();
+  audio.preload = "none";
+
   const state = {
     trackId: null,
     isPlaying: false,
     isLoop: false
   };
 
-  let audio = null;
-
-  function ensureAudio() {
-    if (audio) return audio;
-    audio = new Audio();
-    audio.preload = "auto";
-    audio.addEventListener("ended", () => {
-      state.isPlaying = false;
-      if (state.isLoop) {
-        try {
-          audio.currentTime = 0;
-          audio.play();
-          state.isPlaying = true;
-        } catch (_) {}
-      }
-    });
-    return audio;
-  }
-
-  function stop() {
-    if (!audio) {
-      state.trackId = null;
-      state.isPlaying = false;
-      return;
-    }
-    try {
-      audio.pause();
-      audio.currentTime = 0;
-    } catch (_) {}
-    state.trackId = null;
-    state.isPlaying = false;
-  }
+  audio.addEventListener("ended", () => {
+    if (!audio.loop) state.isPlaying = false;
+  });
 
   function setLoop(on) {
     state.isLoop = !!on;
-    if (audio) audio.loop = false; // we handle looping ourselves on "ended"
+    audio.loop = state.isLoop;
+  }
+
+  function stop() {
+    try { audio.pause(); } catch {}
+    audio.currentTime = 0;
+    state.isPlaying = false;
+    // keep trackId so UI can still show which track was last selected
+  }
+
+  async function playTrack(track) {
+    if (!track || !track.audioUrl) return;
+
+    if (state.trackId !== track.id) {
+      audio.src = track.audioUrl;
+      audio.loop = state.isLoop;
+      state.trackId = track.id;
+    }
+
+    try {
+      await audio.play();
+      state.isPlaying = true;
+    } catch (e) {
+      // Autoplay restrictions: user must click (we only call from button click anyway)
+      state.isPlaying = false;
+      console.warn("Audio play blocked:", e);
+    }
+  }
+
+  function pause() {
+    try { audio.pause(); } catch {}
+    state.isPlaying = false;
   }
 
   function toggle(track) {
-    // Guard
-    if (!track || !track.id) return;
-    if (!track.audioUrl) return;
+    if (!track || !track.audioUrl) return;
 
-    const a = ensureAudio();
-
-    // Same track: toggle play/pause
-    if (state.trackId === track.id) {
-      if (state.isPlaying) {
-        a.pause();
-        state.isPlaying = false;
-      } else {
-        a.play();
-        state.isPlaying = true;
-      }
-      return;
-    }
-
-    // Different track: stop old, load new
-    try {
-      a.pause();
-    } catch (_) {}
-
-    state.trackId = track.id;
-    a.src = track.audioUrl;
-
-    try {
-      a.currentTime = 0;
-      a.play();
-      state.isPlaying = true;
-    } catch (_) {
-      state.isPlaying = false;
-    }
+    const isSame = state.trackId === track.id;
+    if (isSame && state.isPlaying) pause();
+    else playTrack(track);
   }
 
-  return {
-    state,
-    toggle,
-    stop,
-    setLoop
-  };
+  return { state, toggle, stop, setLoop };
 }
