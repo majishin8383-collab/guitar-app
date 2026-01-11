@@ -1,193 +1,76 @@
-// content.js
-// Content Model v1 (+ handedness-safe language)
-// Video hooks per drill (demo / mistake / fix)
-// Backing tracks: now include audioUrl (so the player UI can actually play something)
-//
-// IMPORTANT RULE:
-// - Avoid "left hand / right hand" in instruction text.
-// - Always say "fretting hand" and "picking hand".
-// - Videos can be mirrored for left-handed players.
+// backing.js — backing track audio engine (FIXED state sync)
+// Ensures UI Play/Pause state is correct immediately after click
 
-window.CONTENT = {
-  genres: {
-    blues: {
-      id: "blues",
-      name: "Blues",
-      description: "Phrasing, bends, vibrato, groove, and the 12-bar language.",
-      starterSkillIds: [
-        "blues_timing_shuffle",
-        "blues_pentatonic_box1",
-        "blues_bends_vibrato"
-      ],
-      backingTrackIds: ["bt_blues_shuffle_A", "bt_blues_slow_12bar_E"]
+export function createBackingPlayer() {
+  const audio = new Audio();
+  audio.preload = "auto";
+
+  const state = {
+    trackId: null,
+    isPlaying: false,
+    isLoop: false
+  };
+
+  audio.addEventListener("ended", () => {
+    if (!state.isLoop) {
+      state.isPlaying = false;
     }
-  },
+  });
 
-  skills: {
-    blues_timing_shuffle: {
-      id: "blues_timing_shuffle",
-      genre: "blues",
-      name: "Shuffle Timing (Foundation)",
-      levelBand: "beginner",
-      summary: "Lock in a blues shuffle feel with clean picking-hand consistency.",
-      drills: [
-        {
-          id: "d_shuffle_1",
-          name: "Muted shuffle strum",
-          durationSec: 120,
-          handednessSafe: true,
-          instructions: [
-            "Lightly mute strings with your fretting hand.",
-            "Strum a steady shuffle: long-short, long-short.",
-            "Keep the picking hand relaxed and consistent.",
-            "Focus on evenness — not speed."
-          ],
-          suggestedBpm: { start: 60, target: 90, step: 5 },
-          media: {
-            // Demo: shuffle rhythm lesson
-            demoUrl: "https://www.youtube.com/embed/iKiRxaRGKcU",
-            // Don’t: common beginner blues mistakes
-            dontUrl: "https://www.youtube.com/embed/CkE7NuEGhhg",
-            // Fix: another beginner-friendly shuffle approach
-            fixUrl: "https://www.youtube.com/embed/H7vCMvUyWpA"
-          }
-        },
-        {
-          id: "d_shuffle_2",
-          name: "12-bar rhythm hits",
-          durationSec: 180,
-          handednessSafe: true,
-          instructions: [
-            "Play a simple 12-bar rhythm (even just on one chord).",
-            "Count bars out loud if needed.",
-            "Goal: no rushing on bar transitions.",
-            "Keep fretting-hand pressure light to avoid fatigue."
-          ],
-          suggestedBpm: { start: 60, target: 100, step: 5 },
-          media: {
-            demoUrl: "https://www.youtube.com/embed/iKiRxaRGKcU",
-            dontUrl: "https://www.youtube.com/embed/7OuyMokCyuA",
-            fixUrl: "https://www.youtube.com/embed/R7hnI3Ei7C4"
-          }
-        }
-      ]
-    },
+  function setLoop(on) {
+    state.isLoop = !!on;
+    audio.loop = state.isLoop;
+  }
 
-    blues_pentatonic_box1: {
-      id: "blues_pentatonic_box1",
-      genre: "blues",
-      name: "Minor Pentatonic (Box 1)",
-      levelBand: "beginner",
-      summary: "Learn the core shape used for riffs, licks, and solos.",
-      drills: [
-        {
-          id: "d_penta_1",
-          name: "Box 1 ascent / descent",
-          durationSec: 180,
-          handednessSafe: true,
-          instructions: [
-            "Play Box 1 up and down clean.",
-            "Use alternate picking (down-up).",
-            "Keep fretting-hand fingers close to the fretboard.",
-            "Aim for even volume between notes."
-          ],
-          suggestedBpm: { start: 60, target: 120, step: 5 },
-          media: {
-            demoUrl: "https://www.youtube.com/embed/eEJpypexUDg",
-            dontUrl: "https://www.youtube.com/embed/7c9rFeXXDDQ",
-            fixUrl: "https://www.youtube.com/embed/S6YPrj5yafo"
-          }
-        },
-        {
-          id: "d_penta_2",
-          name: "Two-notes-per-string accuracy",
-          durationSec: 180,
-          handednessSafe: true,
-          instructions: [
-            "Play slowly: two notes per string, then move to the next string.",
-            "Listen for buzzes and uneven volume.",
-            "Stay relaxed in both hands.",
-            "Stop immediately if tension creeps in—reset posture."
-          ],
-          suggestedBpm: { start: 50, target: 100, step: 5 },
-          media: {
-            demoUrl: "https://www.youtube.com/embed/eEJpypexUDg",
-            dontUrl: "https://www.youtube.com/embed/_ZYFlCih1-Q",
-            fixUrl: "https://www.youtube.com/embed/S6YPrj5yafo"
-          }
-        }
-      ]
-    },
+  function stop() {
+    try { audio.pause(); } catch {}
+    audio.currentTime = 0;
+    state.isPlaying = false;
+    state.trackId = null;
+  }
 
-    blues_bends_vibrato: {
-      id: "blues_bends_vibrato",
-      genre: "blues",
-      name: "Bends + Vibrato (Core Voice)",
-      levelBand: "beginner",
-      summary: "Blues lead lives or dies by bend pitch and vibrato control.",
-      drills: [
-        {
-          id: "d_bend_1",
-          name: "Quarter/half-step bend checks",
-          durationSec: 180,
-          handednessSafe: true,
-          instructions: [
-            "Pick the target note first (destination pitch).",
-            "Then bend up to match it.",
-            "Hold the pitch steady for 2 seconds.",
-            "Use multiple fretting-hand fingers to support the bend."
-          ],
-          suggestedBpm: { start: 40, target: 70, step: 5 },
-          media: {
-            demoUrl: "https://www.youtube.com/embed/06M2-51JF80",
-            dontUrl: "https://www.youtube.com/embed/vtoK5YsQ_uU",
-            fixUrl: "https://www.youtube.com/embed/KBiKI81OH8A"
-          }
-        },
-        {
-          id: "d_vib_1",
-          name: "Slow wide vibrato",
-          durationSec: 180,
-          handednessSafe: true,
-          instructions: [
-            "Hold a note firmly with your fretting hand.",
-            "Rock the wrist slowly for a wide vibrato.",
-            "Keep pitch centered — don’t drift sharp.",
-            "Breathe and stay loose in the picking hand."
-          ],
-          suggestedBpm: { start: 40, target: 80, step: 5 },
-          media: {
-            demoUrl: "https://www.youtube.com/embed/06M2-51JF80",
-            dontUrl: "https://www.youtube.com/embed/fGlBBxOvZa8",
-            fixUrl: "https://www.youtube.com/embed/IE-c81a7H8M"
-          }
-        }
-      ]
+  function pause() {
+    try { audio.pause(); } catch {}
+    state.isPlaying = false;
+  }
+
+  function playTrack(track) {
+    if (!track || !track.audioUrl) return;
+
+    // New track → load source
+    if (state.trackId !== track.id) {
+      audio.src = track.audioUrl;
+      audio.currentTime = 0;
+      state.trackId = track.id;
     }
-  },
 
-  backingTracks: {
-    // NOTE: These are Wikimedia-hosted audio files (ogg). Your backing player
-    // will only "play" tracks that have audioUrl set.
-    bt_blues_shuffle_A: {
-      id: "bt_blues_shuffle_A",
-      genre: "blues",
-      name: "Shuffle Groove in A (demo audio)",
-      key: "A",
-      feel: "shuffle",
-      recommendedBpm: 90,
-      audioUrl: "https://upload.wikimedia.org/wikipedia/commons/a/aa/AcousticShuffle.ogg",
-      note: "Demo audio from Wikimedia Commons (used for development)."
-    },
-    bt_blues_slow_12bar_E: {
-      id: "bt_blues_slow_12bar_E",
-      genre: "blues",
-      name: "Slow 12-Bar in E (demo audio)",
-      key: "E",
-      feel: "slow blues",
-      recommendedBpm: 65,
-      audioUrl: "https://upload.wikimedia.org/wikipedia/commons/7/7b/12barBlues002.ogg",
-      note: "Demo audio from Wikimedia Commons (used for development)."
+    // IMPORTANT: flip state immediately for UI
+    state.isPlaying = true;
+
+    try {
+      audio.play();
+    } catch (e) {
+      console.warn("Audio play failed:", e);
+      state.isPlaying = false;
     }
   }
-};
+
+  function toggle(track) {
+    if (!track || !track.audioUrl) return;
+
+    const sameTrack = state.trackId === track.id;
+
+    if (sameTrack && state.isPlaying) {
+      pause();
+    } else {
+      playTrack(track);
+    }
+  }
+
+  return {
+    state,
+    toggle,
+    stop,
+    setLoop
+  };
+}
