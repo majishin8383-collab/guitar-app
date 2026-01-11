@@ -17,10 +17,19 @@ const DEFAULT_STATE = {
   genre: "blues",
   handedness: "right",      // "right" | "left"
   mirrorVideos: false,      // video mirror preference
+  role: "rhythm",           // "rhythm" | "lead"
   progress: {}
 };
 
 let state = loadState(DEFAULT_STATE);
+
+// Safety: if storage.js doesn't merge defaults, enforce missing keys
+if (!state || typeof state !== "object") state = { ...DEFAULT_STATE };
+if (!state.genre) state.genre = DEFAULT_STATE.genre;
+if (!state.handedness) state.handedness = DEFAULT_STATE.handedness;
+if (typeof state.mirrorVideos !== "boolean") state.mirrorVideos = DEFAULT_STATE.mirrorVideos;
+if (!state.role) state.role = DEFAULT_STATE.role;
+if (!state.progress) state.progress = {};
 
 function persist() {
   saveState(state);
@@ -28,6 +37,10 @@ function persist() {
 
 function handednessLabel() {
   return state.handedness === "left" ? "Left-handed" : "Right-handed";
+}
+
+function roleLabel() {
+  return state.role === "lead" ? "Lead" : "Rhythm";
 }
 
 function ensureMirrorDefault() {
@@ -90,7 +103,7 @@ const progress = {
   reset: (s, d) => resetDrillProgress(s, d, persist)
 };
 
-// --- Metronome (Dose 1.2) ---
+// --- Metronome ---
 const metro = createMetronome();
 const metroState = { drillId: null };
 
@@ -126,6 +139,7 @@ function ctx() {
     nav,
     progress,
     handednessLabel,
+    roleLabel,
     ensureMirrorDefault,
     videoBlock,
     // metronome
