@@ -62,6 +62,11 @@ function setSelectedTrackId(ctx, id) {
   ctx.persist();
 }
 
+function isTrackPlayable(track) {
+  // ✅ NEW: generator tracks are playable even without audioUrl
+  return !!(track && (track.audioUrl || track.generator));
+}
+
 function backingDropdownUI(ctx, tracks) {
   if (!tracks.length) {
     return `<div class="muted" style="margin-top:8px;">No backing tracks defined for this genre yet.</div>`;
@@ -70,11 +75,13 @@ function backingDropdownUI(ctx, tracks) {
   const selectedId = getSelectedTrackId(ctx, tracks);
   const selected = tracks.find(t => t.id === selectedId) || tracks[0];
 
-  const hasAudio = !!selected.audioUrl;
+  // ✅ NEW: playable if audioUrl OR generator
+  const playable = isTrackPlayable(selected);
+
   const isCurrent = ctx.backingState.trackId === selected.id;
   const isPlaying = isCurrent && ctx.backingState.isPlaying;
 
-  const btnLabel = !hasAudio ? "No audio yet" : (isPlaying ? "⏸ Pause" : "▶ Play");
+  const btnLabel = !playable ? "No audio yet" : (isPlaying ? "⏸ Pause" : "▶ Play");
 
   const loopOn = !!ctx.backingState.isLoop;
   const loopBtn = hasBackingControls(ctx)
@@ -88,6 +95,12 @@ function backingDropdownUI(ctx, tracks) {
   const roleNote = hasRole(ctx)
     ? `<div class="muted" style="font-size:14px; margin-top:6px;">Auto-filtered by Role: <b>${ctx.roleLabel()}</b></div>`
     : "";
+
+  const sourceNote = selected.generator
+    ? `<div class="muted" style="font-size:14px; margin-top:10px;">Using <b>generator</b> backing track (no mp3 needed).</div>`
+    : (!selected.audioUrl
+        ? `<div class="muted" style="font-size:14px; margin-top:10px;">No <code>audioUrl</code> set yet for this track.</div>`
+        : "");
 
   return `
     <div class="card" style="background:#171717; margin-top:10px;">
@@ -110,8 +123,8 @@ function backingDropdownUI(ctx, tracks) {
 
           <button
             id="bt-play"
-            class="${hasAudio ? (isPlaying ? "" : "secondary") : "secondary"}"
-            ${hasAudio ? "" : "disabled"}
+            class="${playable ? (isPlaying ? "" : "secondary") : "secondary"}"
+            ${playable ? "" : "disabled"}
             style="white-space:nowrap;"
           >${btnLabel}</button>
 
@@ -120,7 +133,7 @@ function backingDropdownUI(ctx, tracks) {
       </div>
 
       ${selected.note ? `<div class="muted" style="font-size:14px; margin-top:10px;">${selected.note}</div>` : ""}
-      ${!selected.audioUrl ? `<div class="muted" style="font-size:14px; margin-top:10px;">No <code>audioUrl</code> set yet for this track.</div>` : ""}
+      ${sourceNote}
     </div>
   `;
 }
@@ -167,11 +180,13 @@ function wireBackingDropdown(ctx, tracks, rerender) {
 // ------------------ Existing row renderer (kept for potential fallback) ------------------
 
 function backingRow(ctx, track) {
-  const hasAudio = !!track.audioUrl;
+  // ✅ NEW: treat generator tracks as playable
+  const playable = isTrackPlayable(track);
+
   const isCurrent = ctx.backingState.trackId === track.id;
   const isPlaying = isCurrent && ctx.backingState.isPlaying;
 
-  const btnLabel = !hasAudio
+  const btnLabel = !playable
     ? "No audio yet"
     : (isPlaying ? "⏸ Pause" : "▶ Play");
 
@@ -185,9 +200,9 @@ function backingRow(ctx, track) {
         </div>
 
         <button
-          class="${hasAudio ? (isPlaying ? "" : "secondary") : "secondary"}"
+          class="${playable ? (isPlaying ? "" : "secondary") : "secondary"}"
           data-bt-play="${track.id}"
-          ${hasAudio ? "" : "disabled"}
+          ${playable ? "" : "disabled"}
           style="white-space:nowrap;"
         >${btnLabel}</button>
       </div>
@@ -336,8 +351,9 @@ export function renderGenre(ctx, genreId) {
   const btsAll = genre.backingTrackIds.map(id => C.backingTracks[id]).filter(Boolean);
   const bts = filterTracksByRole(ctx, btsAll);
 
+  // ✅ Update helper text so it’s not lying when we use generator tracks
   const backingHeader = hasBacking(ctx)
-    ? `<div class="muted" style="font-size:14px;">(Playable once you add <code>audioUrl</code> in <code>content.js</code>.)</div>`
+    ? `<div class="muted" style="font-size:14px;">Playable if the track has <code>audioUrl</code> <b>or</b> a <code>generator</code> config.</div>`
     : `<div class="muted" style="font-size:14px;">(Backing player not enabled yet.)</div>`;
 
   app.innerHTML = `
@@ -407,7 +423,7 @@ export function renderPractice(ctx) {
   const bts = filterTracksByRole(ctx, btsAll);
 
   const backingHeader = hasBacking(ctx)
-    ? `<div class="muted" style="font-size:14px;">Pick a track from the dropdown. Loop/Stop appear if enabled.</div>`
+    ? `<div class="muted" style="font-size:14px;">Pick a track from the dropdown. Playable if it has <code>audioUrl</code> or <code>generator</code>. Loop/Stop appear if enabled.</div>`
     : `<div class="muted" style="font-size:14px;">Backing player not enabled yet.</div>`;
 
   app.innerHTML = `
