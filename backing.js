@@ -1,240 +1,146 @@
-// backing.js — backing track audio engine (small + stable)
-// Modes:
-// 1) track.audioUrl -> HTMLAudioElement playback (mp3/ogg hosted by you)
-// 2) track.generator -> WebAudio generated backing (no files needed)
-//
-// Goals:
-// - Deterministic UI state (play/pause flips immediately)
+// backing.js — generator backing-track engine (no mp3 required)
+// - WebAudio drums + bass (+ optional rhythm bed for "lead" mix)
+// - Deterministic UI state (flip immediately)
 // - Loop + Stop
-// - Volume + Mute (engine only; UI later if desired)
+// - Volume + Mute
+//
+// Track format supported:
+//   track.generator: { style: "blues_shuffle_12bar" | "blues_slow_12bar", bpm, key, mix: "rhythm" | "lead" }
+// Optional:
+//   track.audioUrl: fallback if you ever add real audio files later (not used here)
 
 export function createBackingPlayer() {
-  // ---------------------------
-  // Shared state (UI reads this)
-  // ---------------------------
+  // Public state (UI reads this)
   const state = {
     trackId: null,
     isPlaying: false,
     isLoop: false,
     volume: 0.85,
-    muted: false,
-
-    // generator-specific (optional)
-    mode: null, // "file" | "gen" | null
-    bpm: 90,
-    key: "A",
-    mix: "rhythm" // "rhythm" | "lead"
+    muted: false
   };
 
-  // ---------------------------
-  // FILE (mp3) player
-  // ---------------------------
-  const audio = new Audio();
-  audio.preload = "auto";
-
-  audio.addEventListener("ended", () => {
-    if (!state.isLoop && state.mode === "file") state.isPlaying = false;
-  });
-
-  audio.addEventListener("error", () => {
-    const code = audio.error ? audio.error.code : "unknown";
-    console.warn("[Backing:file] audio error:", code, "src:", audio.src);
-    state.isPlaying = false;
-  });
-
-  function resolveUrl(url) {
-    try { return new URL(url, window.location.href).toString(); }
-    catch { return url; }
-  }
-
-  function applyFile() {
-    audio.loop = !!state.isLoop;
-    audio.volume = clamp01(state.volume);
-    audio.muted = !!state.muted;
-  }
-
-  async function playFile(track) {
-    if (!track || !track.audioUrl) return;
-
-    if (state.trackId !== track.id || state.mode !== "file") {
-      audio.src = resolveUrl(track.audioUrl);
-      try { audio.currentTime = 0; } catch {}
-      state.trackId = track.id;
-      state.mode = "file";
-    }
-
-    applyFile();
-
-    // flip immediately so UI can show Pause right away
-    state.isPlaying = true;
-
-    try {
-      const p = audio.play();
-      if (p && typeof p.then === "function") await p;
-      state.isPlaying = true;
-    } catch (e) {
-      console.warn("[Backing:file] audio play failed:", e, "src:", audio.src);
-      state.isPlaying = false;
-    }
-  }
-
-  function pauseFile() {
-    try { audio.pause(); } catch {}
-    state.isPlaying = false;
-  }
-
-  function stopFile() {
-    try { audio.pause(); } catch {}
-    try { audio.currentTime = 0; } catch {}
-  }
-
-  // ---------------------------
-  // GENERATOR (Web Audio)
-  // ---------------------------
+  // WebAudio core
   let ac = null;
-  let gen = null; // current generator instance
+  let master = null;
+  let limiter = null;
 
-  function ensureAC() {
-    if (!ac) {
-      ac = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    return ac;
+  // Current playback session (generator)
+  let session = null;
+
+  // Small helpers
+  const clamp01 = (n) => {
+    const x = Number(n);
+    if (!Number.isFinite(x)) return 0.85;
+    return Math.max(0, Math.min(1, x));
+  };
+
+  function ensureAudio() {
+    if (ac) return;
+    ac = new (window.AudioContext || window.webkitAudioContext)();
+
+    master = ac.createGain();
+    limiter = ac.createDynamicsCompressor();
+    limiter.threshold.value = -10;
+    limiter.knee.value = 6;
+    limiter.ratio.value = 12;
+    limiter.attack.value = 0.003;
+    limiter.release.value = 0.15;
+
+    master.connect(limiter);
+    limiter.connect(ac.destination);
+
+    apply();
   }
 
-  function applyGen() {
-    if (!gen) return;
-    gen.setLoop(!!state.isLoop);
-    gen.setVolume(clamp01(state.volume));
-    gen.setMuted(!!state.muted);
-    gen.setBpm(Number(state.bpm) || 90);
-    gen.setKey(state.key || "A");
-    gen.setMix(state.mix || "rhythm");
+  function apply() {
+    if (!master) return;
+    const vol = state.muted ? 0 : clamp01(state.volume);
+    master.gain.setValueAtTime(vol, ac ? ac.currentTime : 0);
   }
 
-  function playGen(track) {
-    const g = track && track.generator ? track.generator : null;
-    if (!g) return;
-
-    // Stop file mode if active
-    if (state.mode === "file") stopFile();
-
-    // Build/replace generator if new track or different style
-    const style = g.style || "blues_shuffle_12bar";
-    const bpm = Number(g.bpm || state.bpm || 90);
-    const key = g.key || state.key || "A";
-    const mix = g.mix || state.mix || "rhythm";
-
-    const needNew =
-      !gen ||
-      state.trackId !== track.id ||
-      state.mode !== "gen" ||
-      gen.style !== style;
-
-    if (needNew) {
-      stopGen(); // safe
-      gen = createGenerator(ensureAC(), style);
-      state.trackId = track.id;
-      state.mode = "gen";
-    }
-
-    // Persist generator parameters into state (so UI can show it later)
-    state.bpm = bpm;
-    state.key = key;
-    state.mix = mix;
-
-    applyGen();
-
-    // flip immediately
-    state.isPlaying = true;
-    gen.start();
-  }
-
-  function pauseGen() {
-    if (!gen) return;
-    gen.pause();
-    state.isPlaying = false;
-  }
-
-  function stopGen() {
-    if (!gen) return;
-    gen.stop();
-    gen = null;
-  }
-
-  // ---------------------------
-  // Public controls
-  // ---------------------------
   function setLoop(on) {
     state.isLoop = !!on;
-    // apply to whichever mode is active
-    if (state.mode === "file") applyFile();
-    applyGen();
   }
 
   function setVolume(v) {
     state.volume = clamp01(v);
-    if (state.mode === "file") applyFile();
-    applyGen();
+    apply();
   }
 
   function setMuted(on) {
     state.muted = !!on;
-    if (state.mode === "file") applyFile();
-    applyGen();
-  }
-
-  // Optional (won't break anything if unused yet)
-  function setBpm(bpm) {
-    state.bpm = clampBpm(bpm);
-    applyGen();
-  }
-
-  function setKey(key) {
-    state.key = normalizeKey(key || "A");
-    applyGen();
-  }
-
-  function setMix(mix) {
-    state.mix = (mix === "lead") ? "lead" : "rhythm";
-    applyGen();
-  }
-
-  function stop() {
-    if (state.mode === "file") stopFile();
-    if (state.mode === "gen") stopGen();
-    state.isPlaying = false;
-    state.trackId = null;
-    state.mode = null;
+    apply();
   }
 
   function pause() {
-    if (state.mode === "file") pauseFile();
-    if (state.mode === "gen") pauseGen();
+    // For generator: pause = stop (simple + stable)
+    stop();
+  }
+
+  function stop() {
+    // Stop generator session if any
+    if (session) {
+      session.stop();
+      session = null;
+    }
     state.isPlaying = false;
+    state.trackId = null;
+  }
+
+  async function playTrack(track) {
+    if (!track) return;
+
+    // Generator path
+    if (track.generator && typeof track.generator === "object") {
+      ensureAudio();
+      if (ac.state === "suspended") {
+        try { await ac.resume(); } catch {}
+      }
+
+      // If switching tracks, stop old session
+      if (state.trackId && state.trackId !== track.id) stop();
+
+      // Flip immediately for UI
+      state.trackId = track.id;
+      state.isPlaying = true;
+
+      try {
+        session = createGeneratorSession(ac, master, track.generator, () => {
+          // called when naturally ended (loop off)
+          state.isPlaying = false;
+          state.trackId = null;
+          session = null;
+        });
+
+        session.setLoop(state.isLoop);
+        session.start();
+        return;
+      } catch (e) {
+        console.warn("[Backing] generator play failed:", e);
+        state.isPlaying = false;
+        state.trackId = null;
+        session = null;
+        return;
+      }
+    }
+
+    // Optional audioUrl fallback (if you ever add MP3 later)
+    if (track.audioUrl) {
+      console.warn("[Backing] audioUrl present but generator engine is enabled. Add MP3 support if needed.");
+      return;
+    }
   }
 
   function toggle(track) {
-    // If track has generator, treat as gen mode.
-    const wantsGen = !!(track && track.generator);
-    const wantsFile = !!(track && track.audioUrl);
-
-    if (!wantsGen && !wantsFile) return;
+    if (!track) return;
 
     const same = state.trackId === track.id;
-
-    // Same track + playing -> pause
     if (same && state.isPlaying) {
       pause();
-      return;
+    } else {
+      playTrack(track);
     }
-
-    // Otherwise start
-    if (wantsGen) playGen(track);
-    else playFile(track);
   }
-
-  // Initialize file player params
-  applyFile();
 
   return {
     state,
@@ -243,369 +149,345 @@ export function createBackingPlayer() {
     pause,
     setLoop,
     setVolume,
-    setMuted,
-
-    // optional future controls
-    setBpm,
-    setKey,
-    setMix
+    setMuted
   };
 }
 
-// ---------------------------
-// Generator implementations
-// ---------------------------
-function createGenerator(ac, style) {
-  const g = {
-    style,
-    isLoop: true,
-    volume: 0.85,
-    muted: false,
-    bpm: 90,
-    key: "A",
-    mix: "rhythm",
-    _isRunning: false,
-    _timer: null,
-    _nextTime: 0
-  };
+/* --------------------------
+   Generator session (12-bar)
+-------------------------- */
 
-  // master gain
-  const master = ac.createGain();
-  master.gain.value = 0.85;
-  master.connect(ac.destination);
+function createGeneratorSession(ac, outNode, gen, onEnded) {
+  const bpm = clampNum(gen.bpm, 60, 220, 90);
+  const style = String(gen.style || "");
+  const key = String(gen.key || "A").toUpperCase();
+  const mix = gen.mix === "lead" ? "lead" : "rhythm";
 
-  // sub-mix gains
-  const drumsGain = ac.createGain();
-  const bassGain = ac.createGain();
-  const rhythmGain = ac.createGain();
+  // timing
+  const beatSec = 60 / bpm;
+  const barBeats = 4;
+  const bars = 12;
+  const totalBeats = bars * barBeats;
+  const totalSec = totalBeats * beatSec;
 
-  drumsGain.connect(master);
-  bassGain.connect(master);
-  rhythmGain.connect(master);
+  // scheduler
+  const lookahead = 0.10;
+  const tickMs = 25;
 
-  function apply() {
-    const vol = g.muted ? 0 : clamp01(g.volume);
-    master.gain.setTargetAtTime(vol, ac.currentTime, 0.01);
-    // rhythm layer only on lead mix
-    rhythmGain.gain.setTargetAtTime(g.mix === "lead" ? 0.18 : 0.0, ac.currentTime, 0.01);
-    drumsGain.gain.setTargetAtTime(0.35, ac.currentTime, 0.01);
-    bassGain.gain.setTargetAtTime(0.45, ac.currentTime, 0.01);
-  }
+  let startedAt = 0;
+  let nextNoteTime = 0;
+  let nextStep = 0; // 0..(stepsPerLoop-1)
+  let playing = false;
+  let loopOn = false;
+  let timer = null;
 
-  g.setLoop = (on) => { g.isLoop = !!on; };
-  g.setVolume = (v) => { g.volume = clamp01(v); apply(); };
-  g.setMuted = (on) => { g.muted = !!on; apply(); };
-  g.setBpm = (bpm) => { g.bpm = clampBpm(bpm); };
-  g.setKey = (key) => { g.key = normalizeKey(key); };
-  g.setMix = (mix) => { g.mix = (mix === "lead") ? "lead" : "rhythm"; apply(); };
+  // steps: we schedule 8th-notes for shuffle/slow
+  const stepsPerBeat = 2; // 8ths
+  const stepsPerBar = barBeats * stepsPerBeat; // 8 steps
+  const stepsPerLoop = bars * stepsPerBar; // 96 steps
 
-  g.start = () => {
-    if (g._isRunning) return;
-    // Some browsers require resume on user gesture; toggle click counts as gesture
-    if (ac.state === "suspended") ac.resume().catch(() => {});
-    g._isRunning = true;
-    g._nextTime = ac.currentTime + 0.05;
-    apply();
-    g._timer = setInterval(() => tick(), 25);
-  };
+  // very small instrument kit
+  const kit = createKit(ac, outNode);
 
-  g.pause = () => {
-    if (!g._isRunning) return;
-    g._isRunning = false;
-    if (g._timer) clearInterval(g._timer);
-    g._timer = null;
-  };
+  // 12-bar progression for blues: I I I I | IV IV I I | V IV I V
+  const prog = build12BarBlues(key);
 
-  g.stop = () => {
-    g.pause();
-  };
+  function start() {
+    if (playing) return;
+    playing = true;
 
-  // --- musical helpers ---
-  function tick() {
-    if (!g._isRunning) return;
+    startedAt = ac.currentTime + 0.03;
+    nextNoteTime = startedAt;
+    nextStep = 0;
 
-    const spb = 60 / Math.max(30, g.bpm); // seconds per beat
-    const lookahead = 0.20;
+    timer = setInterval(scheduler, tickMs);
 
-    while (g._nextTime < ac.currentTime + lookahead) {
-      scheduleStep(g._nextTime, spb);
-      // 8th-note grid for shuffle/slow blues
-      g._nextTime += spb / 2;
+    // If loop is OFF, stop at end of the 12 bars
+    if (!loopOn) {
+      const stopAt = startedAt + totalSec + 0.05;
+      scheduleOneShotStop(stopAt);
     }
   }
 
-  // progress counters for 12-bar
-  let bar = 0;
-  let halfBeat = 0; // 8th note counter within bar
+  function setLoop(on) {
+    loopOn = !!on;
+  }
 
-  function scheduleStep(t, spb) {
-    // 4/4 bar has 8 half-beats
-    const stepInBar = halfBeat % 8;
+  function stop() {
+    if (!playing) return;
+    playing = false;
 
-    // Determine current chord root (12-bar I-IV-V)
-    const prog = (style === "blues_slow_12bar") ? slow12Bar() : shuffle12Bar();
-    const chordDegree = prog[bar % 12]; // 1,4,5
-    const rootHz = keyDegreeToHz(g.key, chordDegree, 2); // bass octave
-
-    // DRUMS
-    // hi-hat every 8th (with light swing in shuffle style)
-    const swing = (style === "blues_shuffle_12bar") ? 0.08 : 0.0;
-    const hatTime = t + (stepInBar % 2 === 1 ? swing * (spb / 2) : 0);
-    schedHat(hatTime, 0.05);
-
-    // kick on 1 & 3 (beats 1,3 => step 0 and 4)
-    if (stepInBar === 0 || stepInBar === 4) schedKick(t, 0.10);
-
-    // snare on 2 & 4 (beat 2,4 => step 2 and 6)
-    if (stepInBar === 2 || stepInBar === 6) schedSnare(t, 0.09);
-
-    // BASS (simple roots on beats 1 and 3, plus pickup on 4&)
-    if (stepInBar === 0 || stepInBar === 4) schedBass(t, rootHz, 0.18, 0.14);
-    if (style === "blues_shuffle_12bar" && stepInBar === 7) {
-      // quick walk-up hint (a fifth above)
-      schedBass(t, rootHz * 1.4983, 0.10, 0.10);
+    if (timer) {
+      clearInterval(timer);
+      timer = null;
     }
+  }
 
-    // RHYTHM GUITAR BED (lead mix only)
-    if (g.mix === "lead") {
-      // light chord hit on beats 2 and 4
-      if (stepInBar === 2 || stepInBar === 6) schedRhythmChord(t, rootHz, 0.12);
+  function scheduleOneShotStop(when) {
+    // Stop without drift: use AudioContext timeouts
+    const ms = Math.max(0, (when - ac.currentTime) * 1000);
+    window.setTimeout(() => {
+      // If loop got turned ON in the meantime, do nothing
+      if (!playing) return;
+      if (loopOn) return;
+
+      stop();
+      if (typeof onEnded === "function") onEnded();
+    }, ms);
+  }
+
+  function scheduler() {
+    if (!playing) return;
+
+    while (nextNoteTime < ac.currentTime + lookahead) {
+      scheduleStep(nextStep, nextNoteTime);
+      advance();
     }
+  }
 
-    // advance counters
-    halfBeat++;
-    if (halfBeat % 8 === 0) {
-      bar++;
-      if (!g.isLoop && bar >= 12) {
-        // stop after one chorus if loop is off
-        g.stop();
+  function advance() {
+    const stepSec = beatSec / stepsPerBeat;
+    nextNoteTime += stepSec;
+    nextStep += 1;
+
+    if (nextStep >= stepsPerLoop) {
+      if (loopOn) {
+        // wrap cleanly
+        nextStep = 0;
+        // keep nextNoteTime continuous (no reset), prevents clicks/gaps
+      } else {
+        // will end via one-shot stop (scheduled at start)
+        nextStep = stepsPerLoop; // hold
       }
     }
   }
 
-  function shuffle12Bar() {
-    // I I I I / IV IV I I / V IV I I
-    return [1,1,1,1, 4,4,1,1, 5,4,1,1];
+  function scheduleStep(stepIdx, t) {
+    // Determine bar + beat within bar
+    const bar = Math.floor(stepIdx / stepsPerBar); // 0..11
+    const stepInBar = stepIdx % stepsPerBar; // 0..7
+    const beatInBar = Math.floor(stepInBar / stepsPerBeat); // 0..3
+    const eighthInBeat = stepInBar % stepsPerBeat; // 0 or 1
+
+    // Determine chord/root for this bar
+    const chord = prog[bar]; // { rootHz, fifthHz, seventhHz }
+    const isDownbeat = (eighthInBeat === 0);
+
+    // DRUMS
+    if (style === "blues_shuffle_12bar") {
+      // swing feel: accent on downbeats, light on offbeats
+      // kick: beats 1 & 3
+      if (isDownbeat && (beatInBar === 0 || beatInBar === 2)) kit.kick(t, 0.95);
+      // snare: beats 2 & 4
+      if (isDownbeat && (beatInBar === 1 || beatInBar === 3)) kit.snare(t, 0.85);
+      // hat: every 8th, offbeat a bit quieter
+      kit.hat(t, eighthInBeat === 0 ? 0.45 : 0.28);
+    } else if (style === "blues_slow_12bar") {
+      // slower vibe: quarter ride + backbeat
+      if (isDownbeat) {
+        if (beatInBar === 0 || beatInBar === 2) kit.kick(t, 0.90);
+        if (beatInBar === 1 || beatInBar === 3) kit.snare(t, 0.80);
+        kit.ride(t, 0.35);
+      }
+      // subtle hat on off 8ths
+      if (!isDownbeat) kit.hat(t, 0.18);
+    } else {
+      // unknown style fallback
+      if (isDownbeat && beatInBar === 0) kit.kick(t, 0.85);
+      if (isDownbeat && beatInBar === 2) kit.snare(t, 0.70);
+      kit.hat(t, 0.22);
+    }
+
+    // BASS (roots on beat 1 + walking-ish on beat 3)
+    if (isDownbeat) {
+      if (beatInBar === 0) kit.bass(t, chord.rootHz, 0.80);
+      if (beatInBar === 2) kit.bass(t, chord.fifthHz, 0.70);
+    }
+
+    // LEAD MIX: simple rhythm bed (very light)
+    if (mix === "lead") {
+      if (style === "blues_shuffle_12bar") {
+        // light chord stab on offbeat 8ths
+        if (!isDownbeat) kit.rhythmStab(t, chord, 0.16);
+      } else if (style === "blues_slow_12bar") {
+        // slow comp: hit on beat 1 and 3 softly
+        if (isDownbeat && (beatInBar === 0 || beatInBar === 2)) kit.rhythmStab(t, chord, 0.18);
+      }
+    }
   }
 
-  function slow12Bar() {
-    // similar, just “feel” slower via bpm (style name helps later expansions)
-    return [1,1,1,1, 4,4,1,1, 5,4,1,1];
-  }
-
-  // --- sound design (simple but usable) ---
-  function schedHat(t, dur) {
-    const n = ac.createBufferSource();
-    n.buffer = noiseBuffer(ac);
-    const f = ac.createBiquadFilter();
-    f.type = "highpass";
-    f.frequency.value = 6000;
-
-    const env = ac.createGain();
-    env.gain.setValueAtTime(0.0, t);
-    env.gain.linearRampToValueAtTime(0.10, t + 0.001);
-    env.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-
-    n.connect(f);
-    f.connect(env);
-    env.connect(drumsGain);
-
-    n.start(t);
-    n.stop(t + dur);
-  }
-
-  function schedSnare(t, dur) {
-    const n = ac.createBufferSource();
-    n.buffer = noiseBuffer(ac);
-    const f = ac.createBiquadFilter();
-    f.type = "bandpass";
-    f.frequency.value = 1800;
-
-    const env = ac.createGain();
-    env.gain.setValueAtTime(0.0, t);
-    env.gain.linearRampToValueAtTime(0.20, t + 0.001);
-    env.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-
-    n.connect(f);
-    f.connect(env);
-    env.connect(drumsGain);
-
-    n.start(t);
-    n.stop(t + dur);
-  }
-
-  function schedKick(t, dur) {
-    const osc = ac.createOscillator();
-    osc.type = "sine";
-
-    const env = ac.createGain();
-    env.gain.setValueAtTime(0.0001, t);
-    env.gain.exponentialRampToValueAtTime(0.35, t + 0.002);
-    env.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-
-    // pitch drop
-    osc.frequency.setValueAtTime(110, t);
-    osc.frequency.exponentialRampToValueAtTime(55, t + dur);
-
-    osc.connect(env);
-    env.connect(drumsGain);
-
-    osc.start(t);
-    osc.stop(t + dur);
-  }
-
-  function schedBass(t, freq, dur, amp) {
-    const osc = ac.createOscillator();
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(freq, t);
-
-    const env = ac.createGain();
-    env.gain.setValueAtTime(0.0001, t);
-    env.gain.exponentialRampToValueAtTime(Math.max(0.0002, amp), t + 0.01);
-    env.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-
-    osc.connect(env);
-    env.connect(bassGain);
-
-    osc.start(t);
-    osc.stop(t + dur);
-  }
-
-  function schedRhythmChord(t, rootHz, dur) {
-    // simple “guitar-ish” bed: filtered noise + a couple detuned saws
-    const env = ac.createGain();
-    env.gain.setValueAtTime(0.0001, t);
-    env.gain.exponentialRampToValueAtTime(0.35, t + 0.005);
-    env.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-
-    // filtered noise for pick attack
-    const n = ac.createBufferSource();
-    n.buffer = noiseBuffer(ac);
-
-    const nf = ac.createBiquadFilter();
-    nf.type = "bandpass";
-    nf.frequency.value = 1200;
-
-    // chord tones (root + 5th + b7-ish color)
-    const o1 = ac.createOscillator();
-    const o2 = ac.createOscillator();
-    const o3 = ac.createOscillator();
-    o1.type = "sawtooth";
-    o2.type = "sawtooth";
-    o3.type = "triangle";
-
-    const root = rootHz * 4; // guitar-ish octave
-    o1.frequency.setValueAtTime(root, t);
-    o2.frequency.setValueAtTime(root * 1.4983, t); // 5th
-    o3.frequency.setValueAtTime(root * 1.7818, t); // ~b7
-
-    // mild detune
-    o1.detune.setValueAtTime(-6, t);
-    o2.detune.setValueAtTime(5, t);
-    o3.detune.setValueAtTime(2, t);
-
-    const f = ac.createBiquadFilter();
-    f.type = "lowpass";
-    f.frequency.setValueAtTime(2200, t);
-
-    // routing
-    n.connect(nf);
-    nf.connect(env);
-
-    o1.connect(f);
-    o2.connect(f);
-    o3.connect(f);
-    f.connect(env);
-
-    env.connect(rhythmGain);
-
-    n.start(t);
-    n.stop(t + dur);
-
-    o1.start(t);
-    o2.start(t);
-    o3.start(t);
-    o1.stop(t + dur);
-    o2.stop(t + dur);
-    o3.stop(t + dur);
-  }
-
-  // expose for cleanup if needed later
-  g._dispose = () => {
-    try { master.disconnect(); } catch {}
-  };
-
-  apply();
-  return g;
+  return { start, stop, setLoop };
 }
 
-// ---------------------------
-// Helpers
-// ---------------------------
-let _noiseBuf = null;
-function noiseBuffer(ac) {
-  if (_noiseBuf && _noiseBuf.sampleRate === ac.sampleRate) return _noiseBuf;
-  const len = Math.floor(ac.sampleRate * 1.0);
-  const buf = ac.createBuffer(1, len, ac.sampleRate);
-  const data = buf.getChannelData(0);
-  for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * 0.6;
-  _noiseBuf = buf;
-  return buf;
-}
-
-function clamp01(n) {
+function clampNum(n, min, max, fallback) {
   const x = Number(n);
-  if (!Number.isFinite(x)) return 0.85;
-  return Math.max(0, Math.min(1, x));
+  if (!Number.isFinite(x)) return fallback;
+  return Math.max(min, Math.min(max, x));
 }
 
-function clampBpm(bpm) {
-  const x = Number(bpm);
-  if (!Number.isFinite(x)) return 90;
-  return Math.max(40, Math.min(220, x));
-}
-
-function normalizeKey(k) {
-  const s = String(k || "A").trim();
-  if (!s) return "A";
-  // unify flats
-  const up = s.toUpperCase();
-  // Accept like "Bb" or "BB" -> "Bb"
-  if (up.length === 2 && up[1] === "B") return up[0] + "b";
-  if (up.length === 2 && up[1] === "#") return up[0] + "#";
-  return up[0];
-}
-
-function keyDegreeToHz(key, degree, octave) {
-  // degree: 1,4,5 for I/IV/V (major-ish)
-  const rootMidi = keyToMidi(normalizeKey(key), octave);
-  const deg = Number(degree) || 1;
-  const semis =
-    deg === 4 ? 5 :
-    deg === 5 ? 7 :
-    0;
-  return midiToHz(rootMidi + semis);
-}
-
-function keyToMidi(key, octave) {
-  // octave: 0..8, where A4=440 is midi 69 (octave 4)
+function noteHz(note) {
+  // A4 = 440. Basic mapping for roots we use (E, A, C, G) in guitar-friendly octaves.
+  // You can extend later.
   const map = {
-    "C": 0, "C#": 1, "Db": 1,
-    "D": 2, "D#": 3, "Eb": 3,
-    "E": 4,
-    "F": 5, "F#": 6, "Gb": 6,
-    "G": 7, "G#": 8, "Ab": 8,
-    "A": 9, "A#": 10, "Bb": 10,
-    "B": 11
+    "E": 82.4069,  // E2
+    "A": 110.0,    // A2
+    "C": 130.8128, // C3
+    "G": 98.0      // G2-ish
   };
-  const k = key.length === 2 && key[1] === "b" ? key[0].toUpperCase() + "b"
-          : key.length === 2 && key[1] === "#" ? key[0].toUpperCase() + "#"
-          : key[0].toUpperCase();
-  const semis = map[k] ?? 9; // default A
-  const oct = Number.isFinite(Number(octave)) ? Number(octave) : 2;
-  return (oct + 1) * 12 + semis; // midi formula
+  return map[note] || 110.0;
 }
 
-function midiToHz(m) {
-  return 440 * Math.pow(2, (m - 69) / 12);
+function build12BarBlues(key) {
+  // I-IV-V in that key; we only need bass roots and chord tones.
+  // For simplicity we treat:
+  //   I = key
+  //   IV = key + 5 semitones
+  //   V = key + 7 semitones
+  // But since we only use E/A/C/G right now, we’ll hard-map IV/V roots for those keys.
+  const I = key;
+  const IV = ({ E:"A", A:"D", C:"F", G:"C" }[key] || "A");
+  const V  = ({ E:"B", A:"E", C:"G", G:"D" }[key] || "E");
+
+  const bars = [I,I,I,I, IV,IV, I,I, V,IV, I,V];
+  return bars.map(rootNote => {
+    const r = noteHz(rootNote);
+    return {
+      rootHz: r,
+      fifthHz: r * 1.5,    // perfect 5th
+      seventhHz: r * 1.7818 // approx minor 7th ratio
+    };
+  });
+}
+
+function createKit(ac, outNode) {
+  const mix = ac.createGain();
+  mix.gain.value = 1.0;
+  mix.connect(outNode);
+
+  // shared noise buffer
+  const noiseBuf = ac.createBuffer(1, ac.sampleRate * 1, ac.sampleRate);
+  const data = noiseBuf.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1);
+
+  function envGain(t, a, d, peak, end) {
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(peak, t + a);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0001, end), t + a + d);
+    return g;
+  }
+
+  function kick(t, amt) {
+    const o = ac.createOscillator();
+    o.type = "sine";
+    const g = envGain(t, 0.002, 0.18, 0.9 * amt, 0.0001);
+
+    o.frequency.setValueAtTime(120, t);
+    o.frequency.exponentialRampToValueAtTime(55, t + 0.16);
+
+    o.connect(g);
+    g.connect(mix);
+
+    o.start(t);
+    o.stop(t + 0.22);
+  }
+
+  function snare(t, amt) {
+    const n = ac.createBufferSource();
+    n.buffer = noiseBuf;
+
+    const hp = ac.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.setValueAtTime(900, t);
+
+    const g = envGain(t, 0.001, 0.12, 0.45 * amt, 0.0001);
+
+    n.connect(hp);
+    hp.connect(g);
+    g.connect(mix);
+
+    n.start(t);
+    n.stop(t + 0.16);
+  }
+
+  function hat(t, amt) {
+    const n = ac.createBufferSource();
+    n.buffer = noiseBuf;
+
+    const bp = ac.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.setValueAtTime(9000, t);
+    bp.Q.setValueAtTime(1.2, t);
+
+    const g = envGain(t, 0.001, 0.05, 0.22 * amt, 0.0001);
+
+    n.connect(bp);
+    bp.connect(g);
+    g.connect(mix);
+
+    n.start(t);
+    n.stop(t + 0.07);
+  }
+
+  function ride(t, amt) {
+    const n = ac.createBufferSource();
+    n.buffer = noiseBuf;
+
+    const bp = ac.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.setValueAtTime(5500, t);
+    bp.Q.setValueAtTime(0.9, t);
+
+    const g = envGain(t, 0.002, 0.18, 0.18 * amt, 0.0001);
+
+    n.connect(bp);
+    bp.connect(g);
+    g.connect(mix);
+
+    n.start(t);
+    n.stop(t + 0.22);
+  }
+
+  function bass(t, hz, amt) {
+    const o = ac.createOscillator();
+    o.type = "triangle";
+    const g = envGain(t, 0.005, 0.20, 0.30 * amt, 0.0001);
+
+    // a touch of lowpass warmth
+    const lp = ac.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.setValueAtTime(700, t);
+
+    o.frequency.setValueAtTime(hz, t);
+
+    o.connect(lp);
+    lp.connect(g);
+    g.connect(mix);
+
+    o.start(t);
+    o.stop(t + 0.28);
+  }
+
+  function rhythmStab(t, chord, amt) {
+    const o = ac.createOscillator();
+    o.type = "sawtooth";
+
+    const g = envGain(t, 0.002, 0.10, 0.20 * amt, 0.0001);
+
+    const lp = ac.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.setValueAtTime(1400, t);
+
+    // simple dyad-ish: root-ish
+    o.frequency.setValueAtTime(chord.rootHz * 2, t);
+
+    o.connect(lp);
+    lp.connect(g);
+    g.connect(mix);
+
+    o.start(t);
+    o.stop(t + 0.14);
+  }
+
+  return { kick, snare, hat, ride, bass, rhythmStab };
 }
