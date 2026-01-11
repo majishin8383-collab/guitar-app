@@ -39,10 +39,9 @@ window.CONTENT = {
           ],
           suggestedBpm: { start: 60, target: 90, step: 5 },
           media: {
-            // Replace these with your friend’s videos later.
-            demoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
-            dontUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
-            fixUrl:  "https://www.youtube.com/embed/dQw4w9WgXcQ"
+            demoUrl: "https://www.youtube.com/embed/Z-Cvv7yo5EA",
+            dontUrl: "https://www.youtube.com/embed/Z-Cvv7yo5EA",
+            fixUrl:  "https://www.youtube.com/embed/Z-Cvv7yo5EA"
           }
         },
         {
@@ -81,9 +80,9 @@ window.CONTENT = {
           ],
           suggestedBpm: { start: 60, target: 120, step: 5 },
           media: {
-            demoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
-            dontUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
-            fixUrl:  "https://www.youtube.com/embed/dQw4w9WgXcQ"
+            demoUrl: "https://www.youtube.com/embed/c0alXyaLTC4",
+            dontUrl: "https://www.youtube.com/embed/c0alXyaLTC4",
+            fixUrl:  "https://www.youtube.com/embed/c0alXyaLTC4"
           }
         },
         {
@@ -122,9 +121,9 @@ window.CONTENT = {
           ],
           suggestedBpm: { start: 40, target: 70, step: 5 },
           media: {
-            demoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
-            dontUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
-            fixUrl:  "https://www.youtube.com/embed/dQw4w9WgXcQ"
+            demoUrl: "https://www.youtube.com/embed/LIPOeIfBXVc",
+            dontUrl: "https://www.youtube.com/embed/LIPOeIfBXVc",
+            fixUrl:  "https://www.youtube.com/embed/LIPOeIfBXVc"
           }
         },
         {
@@ -138,14 +137,19 @@ window.CONTENT = {
             "Keep pitch centered — don’t drift sharp.",
             "Breathe and stay loose in the picking hand."
           ],
-          suggestedBpm: { start: 40, target: 80, step: 5 }
+          suggestedBpm: { start: 40, target: 80, step: 5 },
+          media: {
+            demoUrl: "https://www.youtube.com/embed/WNWqobkgdBA",
+            dontUrl: "https://www.youtube.com/embed/WNWqobkgdBA",
+            fixUrl:  "https://www.youtube.com/embed/WNWqobkgdBA"
+          }
         }
       ]
     }
   },
 
   backingTracks: {
-    // Metadata only in Dose 0.2. Audio comes later.
+    // Metadata only until you add audioUrl
     bt_blues_shuffle_A: {
       id: "bt_blues_shuffle_A",
       genre: "blues",
@@ -153,6 +157,7 @@ window.CONTENT = {
       key: "A",
       feel: "shuffle",
       recommendedBpm: 90
+      // audioUrl: "..." // add later
     },
     bt_blues_slow_12bar_E: {
       id: "bt_blues_slow_12bar_E",
@@ -161,6 +166,7 @@ window.CONTENT = {
       key: "E",
       feel: "slow blues",
       recommendedBpm: 65
+      // audioUrl: "..." // add later
     }
   }
 };
