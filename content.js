@@ -1,6 +1,12 @@
 // content.js
 // Content Model v1 (+ handedness-safe language)
-// Dose 1.3: Real YouTube demo/mistake/fix videos + backing track audioUrl where available
+// Video hooks per drill (demo / mistake / fix)
+// Backing tracks: now include audioUrl (so the player UI can actually play something)
+//
+// IMPORTANT RULE:
+// - Avoid "left hand / right hand" in instruction text.
+// - Always say "fretting hand" and "picking hand".
+// - Videos can be mirrored for left-handed players.
 
 window.CONTENT = {
   genres: {
@@ -8,7 +14,11 @@ window.CONTENT = {
       id: "blues",
       name: "Blues",
       description: "Phrasing, bends, vibrato, groove, and the 12-bar language.",
-      starterSkillIds: ["blues_timing_shuffle", "blues_pentatonic_box1", "blues_bends_vibrato"],
+      starterSkillIds: [
+        "blues_timing_shuffle",
+        "blues_pentatonic_box1",
+        "blues_bends_vibrato"
+      ],
       backingTrackIds: ["bt_blues_shuffle_A", "bt_blues_slow_12bar_E"]
     }
   },
@@ -34,9 +44,12 @@ window.CONTENT = {
           ],
           suggestedBpm: { start: 60, target: 90, step: 5 },
           media: {
-            demoUrl: "https://www.youtube.com/embed/56zp3uWDwVs",
+            // Demo: shuffle rhythm lesson
+            demoUrl: "https://www.youtube.com/embed/iKiRxaRGKcU",
+            // Don’t: common beginner blues mistakes
             dontUrl: "https://www.youtube.com/embed/CkE7NuEGhhg",
-            fixUrl:  "https://www.youtube.com/embed/H7vCMvUyWpA"
+            // Fix: another beginner-friendly shuffle approach
+            fixUrl: "https://www.youtube.com/embed/H7vCMvUyWpA"
           }
         },
         {
@@ -50,7 +63,12 @@ window.CONTENT = {
             "Goal: no rushing on bar transitions.",
             "Keep fretting-hand pressure light to avoid fatigue."
           ],
-          suggestedBpm: { start: 60, target: 100, step: 5 }
+          suggestedBpm: { start: 60, target: 100, step: 5 },
+          media: {
+            demoUrl: "https://www.youtube.com/embed/iKiRxaRGKcU",
+            dontUrl: "https://www.youtube.com/embed/7OuyMokCyuA",
+            fixUrl: "https://www.youtube.com/embed/R7hnI3Ei7C4"
+          }
         }
       ]
     },
@@ -75,9 +93,9 @@ window.CONTENT = {
           ],
           suggestedBpm: { start: 60, target: 120, step: 5 },
           media: {
-            demoUrl: "https://www.youtube.com/embed/fg1n_i-D7v0",
+            demoUrl: "https://www.youtube.com/embed/eEJpypexUDg",
             dontUrl: "https://www.youtube.com/embed/7c9rFeXXDDQ",
-            fixUrl:  "https://www.youtube.com/embed/S6YPrj5yafo"
+            fixUrl: "https://www.youtube.com/embed/S6YPrj5yafo"
           }
         },
         {
@@ -91,7 +109,12 @@ window.CONTENT = {
             "Stay relaxed in both hands.",
             "Stop immediately if tension creeps in—reset posture."
           ],
-          suggestedBpm: { start: 50, target: 100, step: 5 }
+          suggestedBpm: { start: 50, target: 100, step: 5 },
+          media: {
+            demoUrl: "https://www.youtube.com/embed/eEJpypexUDg",
+            dontUrl: "https://www.youtube.com/embed/_ZYFlCih1-Q",
+            fixUrl: "https://www.youtube.com/embed/S6YPrj5yafo"
+          }
         }
       ]
     },
@@ -117,8 +140,8 @@ window.CONTENT = {
           suggestedBpm: { start: 40, target: 70, step: 5 },
           media: {
             demoUrl: "https://www.youtube.com/embed/06M2-51JF80",
-            dontUrl: "https://www.youtube.com/embed/N43iDExNlqU",
-            fixUrl:  "https://www.youtube.com/embed/vtoK5YsQ_uU"
+            dontUrl: "https://www.youtube.com/embed/vtoK5YsQ_uU",
+            fixUrl: "https://www.youtube.com/embed/KBiKI81OH8A"
           }
         },
         {
@@ -132,31 +155,39 @@ window.CONTENT = {
             "Keep pitch centered — don’t drift sharp.",
             "Breathe and stay loose in the picking hand."
           ],
-          suggestedBpm: { start: 40, target: 80, step: 5 }
+          suggestedBpm: { start: 40, target: 80, step: 5 },
+          media: {
+            demoUrl: "https://www.youtube.com/embed/06M2-51JF80",
+            dontUrl: "https://www.youtube.com/embed/fGlBBxOvZa8",
+            fixUrl: "https://www.youtube.com/embed/IE-c81a7H8M"
+          }
         }
       ]
     }
   },
 
   backingTracks: {
+    // NOTE: These are Wikimedia-hosted audio files (ogg). Your backing player
+    // will only "play" tracks that have audioUrl set.
     bt_blues_shuffle_A: {
       id: "bt_blues_shuffle_A",
       genre: "blues",
-      name: "Shuffle Groove in C (Wikimedia CC BY-SA)",
-      key: "C",
+      name: "Shuffle Groove in A (demo audio)",
+      key: "A",
       feel: "shuffle",
       recommendedBpm: 90,
-      audioUrl: "https://upload.wikimedia.org/wikipedia/commons/7/7d/Blues_C_Backin_Track.wav",
-      note: "Source: Wikimedia Commons (CC BY-SA). Big WAV file; loads slower on mobile."
+      audioUrl: "https://upload.wikimedia.org/wikipedia/commons/a/aa/AcousticShuffle.ogg",
+      note: "Demo audio from Wikimedia Commons (used for development)."
     },
     bt_blues_slow_12bar_E: {
       id: "bt_blues_slow_12bar_E",
       genre: "blues",
-      name: "Slow 12-Bar in E",
+      name: "Slow 12-Bar in E (demo audio)",
       key: "E",
       feel: "slow blues",
-      recommendedBpm: 65
-      // add audioUrl later
+      recommendedBpm: 65,
+      audioUrl: "https://upload.wikimedia.org/wikipedia/commons/7/7b/12barBlues002.ogg",
+      note: "Demo audio from Wikimedia Commons (used for development)."
     }
   }
 };
