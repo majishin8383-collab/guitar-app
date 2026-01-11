@@ -20,38 +20,26 @@ const DEFAULT_STATE = {
   handedness: "right",     // "right" | "left"
   mirrorVideos: false,     // video mirror preference
   progress: {},
-  backing: {
-    volume: 0.85,
-    muted: false,
-    loop: false
-  }
+  backing: { volume: 0.85, muted: false, loop: false }
 };
 
 let state = loadState(DEFAULT_STATE);
 
-// Safety: enforce defaults if storage.js doesn't deep-merge
-if (!state || typeof state !== "object") state = { ...DEFAULT_STATE };
-if (!state.genre) state.genre = DEFAULT_STATE.genre;
-if (!state.role) state.role = DEFAULT_STATE.role;
-if (!state.handedness) state.handedness = DEFAULT_STATE.handedness;
-if (typeof state.mirrorVideos !== "boolean") state.mirrorVideos = DEFAULT_STATE.mirrorVideos;
-if (!state.progress) state.progress = {};
-if (!state.backing) state.backing = { ...DEFAULT_STATE.backing };
-if (typeof state.backing.volume !== "number") state.backing.volume = DEFAULT_STATE.backing.volume;
-if (typeof state.backing.muted !== "boolean") state.backing.muted = DEFAULT_STATE.backing.muted;
-if (typeof state.backing.loop !== "boolean") state.backing.loop = DEFAULT_STATE.backing.loop;
+// guard for shallow merges / missing keys
+state = state && typeof state === "object" ? state : { ...DEFAULT_STATE };
+state.progress = state.progress || {};
+state.backing = state.backing || { ...DEFAULT_STATE.backing };
+if (typeof state.backing.volume !== "number") state.backing.volume = 0.85;
+if (typeof state.backing.muted !== "boolean") state.backing.muted = false;
+if (typeof state.backing.loop !== "boolean") state.backing.loop = false;
+if (!state.role) state.role = "rhythm";
 
-function persist() {
-  saveState(state);
-}
+function persist() { saveState(state); }
 
 function handednessLabel() {
   return state.handedness === "left" ? "Left-handed" : "Right-handed";
 }
-
-function roleLabel() {
-  return state.role === "lead" ? "Lead" : "Rhythm";
-}
+function roleLabel() { return state.role === "lead" ? "Lead" : "Rhythm"; }
 
 function ensureMirrorDefault() {
   if (state.handedness === "left" && state.mirrorVideos !== true) {
@@ -78,7 +66,6 @@ function videoBlock(label, url, mirrorOn) {
       </div>
     `;
   }
-
   const mirrorClass = mirrorOn ? "mirror" : "";
   return `
     <div class="videoCard">
@@ -96,7 +83,7 @@ function videoBlock(label, url, mirrorOn) {
   `;
 }
 
-// Navigation (stable function refs)
+// Navigation
 const nav = {
   home: () => renderHome(ctx()),
   genre: (id) => renderGenre(ctx(), id),
@@ -104,7 +91,7 @@ const nav = {
   skill: (skillId, opts) => renderSkill(ctx(), skillId, opts)
 };
 
-// Progress API wrapper (so render.js stays simple)
+// Progress wrapper
 const progress = {
   getOrInit: (s, d) => getOrInitDrillProgress(s, d, persist),
   setBpm: (s, d, bpm) => setDrillBpm(s, d, bpm, persist),
@@ -113,50 +100,39 @@ const progress = {
   reset: (s, d) => resetDrillProgress(s, d, persist)
 };
 
-// --- Metronome ---
+// Metronome
 const metro = createMetronome();
 const metroState = { drillId: null };
 
 function metroToggle(drillId, bpm) {
   if (metro.isRunning() && metroState.drillId === drillId) {
-    metro.stop();
-    metroState.drillId = null;
-    return;
+    metro.stop(); metroState.drillId = null; return;
   }
   metroState.drillId = drillId;
   metro.start(bpm);
 }
-
 function metroSetBpmIfActive(drillId, bpm) {
   if (!metro.isRunning()) return;
   if (metroState.drillId !== drillId) return;
   metro.setBpm(bpm);
 }
-
 function metroStopIfOwnedBy(drillId) {
   if (!metro.isRunning()) return;
   if (metroState.drillId !== drillId) return;
-  metro.stop();
-  metroState.drillId = null;
+  metro.stop(); metroState.drillId = null;
 }
 
-// --- Backing Tracks ---
+// Backing tracks
 const backing = createBackingPlayer();
 const backingState = backing.state;
 
-// Apply persisted settings at boot
+// apply persisted settings on boot
 backing.setVolume(state.backing.volume);
 backing.setMuted(state.backing.muted);
 backing.setLoop(state.backing.loop);
 
-function backingToggle(track) {
-  backing.toggle(track);
-}
-
-function backingStop() {
-  backing.stop();
-}
-
+function backingToggle(track) { backing.toggle(track); }
+function backingStop() { backing.stop(); }
 function backingSetLoop(on) {
   state.backing.loop = !!on;
   persist();
@@ -165,29 +141,10 @@ function backingSetLoop(on) {
 
 function ctx() {
   return {
-    app,
-    C,
-    state,
-    persist,
-    nav,
-    progress,
-    handednessLabel,
-    roleLabel,
-    ensureMirrorDefault,
-    videoBlock,
-
-    // metronome
-    metro,
-    metroState,
-    metroToggle,
-    metroSetBpmIfActive,
-    metroStopIfOwnedBy,
-
-    // backing tracks
-    backingState,
-    backingToggle,
-    backingStop,
-    backingSetLoop
+    app, C, state, persist, nav, progress,
+    handednessLabel, roleLabel, ensureMirrorDefault, videoBlock,
+    metro, metroState, metroToggle, metroSetBpmIfActive, metroStopIfOwnedBy,
+    backingState, backingToggle, backingStop, backingSetLoop
   };
 }
 
