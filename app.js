@@ -9,6 +9,7 @@ import {
 } from "./progress.js";
 import { renderHome, renderGenre, renderPractice, renderSkill } from "./render.js";
 import { createMetronome } from "./metronome.js";
+import { createBackingPlayer } from "./backing.js";
 
 const app = document.getElementById("app");
 const C = window.CONTENT;
@@ -130,6 +131,22 @@ function metroStopIfOwnedBy(drillId) {
   metroState.drillId = null;
 }
 
+// --- Backing Track Player ---
+const backing = createBackingPlayer();
+const backingState = backing.state;
+
+function backingToggle(track) {
+  backing.toggle(track);
+}
+
+function backingStop() {
+  backing.stop();
+}
+
+function backingSetLoop(on) {
+  backing.setLoop(on);
+}
+
 function ctx() {
   return {
     app,
@@ -147,7 +164,12 @@ function ctx() {
     metroState,
     metroToggle,
     metroSetBpmIfActive,
-    metroStopIfOwnedBy
+    metroStopIfOwnedBy,
+    // backing
+    backingState,
+    backingToggle,
+    backingStop,
+    backingSetLoop
   };
 }
 
