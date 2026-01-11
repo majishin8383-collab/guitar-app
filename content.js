@@ -13,8 +13,15 @@ window.CONTENT = {
       id: "blues",
       name: "Blues",
       description: "Phrasing, bends, vibrato, groove, and the 12-bar language.",
-      starterSkillIds: ["blues_timing_shuffle", "blues_pentatonic_box1", "blues_bends_vibrato"],
-      backingTrackIds: ["bt_blues_shuffle_A", "bt_blues_slow_12bar_E"]
+      starterSkillIds: [
+        "blues_timing_shuffle",
+        "blues_pentatonic_box1",
+        "blues_bends_vibrato"
+      ],
+      backingTrackIds: [
+        "bt_blues_shuffle_A",
+        "bt_blues_slow_12bar_E"
+      ]
     }
   },
 
@@ -39,9 +46,7 @@ window.CONTENT = {
           ],
           suggestedBpm: { start: 60, target: 90, step: 5 },
           media: {
-            // Muted shuffle strum pattern
             demoUrl: "https://www.youtube.com/embed/Z-Cvv7yo5EA",
-            // (placeholder mistake/fix videos for now — replace anytime)
             dontUrl: "https://www.youtube.com/embed/56zp3uWDwVs",
             fixUrl:  "https://www.youtube.com/embed/H7vCMvUyWpA"
           }
@@ -59,7 +64,6 @@ window.CONTENT = {
           ],
           suggestedBpm: { start: 60, target: 100, step: 5 },
           media: {
-            // Blues shuffle rhythm / comping references
             demoUrl: "https://www.youtube.com/embed/d5R3Re17dgM",
             dontUrl: "https://www.youtube.com/embed/56zp3uWDwVs",
             fixUrl:  "https://www.youtube.com/embed/H7vCMvUyWpA"
@@ -88,7 +92,6 @@ window.CONTENT = {
           ],
           suggestedBpm: { start: 60, target: 120, step: 5 },
           media: {
-            // Minor pentatonic box 1 lesson
             demoUrl: "https://www.youtube.com/embed/fg1n_i-D7v0",
             dontUrl: "https://www.youtube.com/embed/5Qc426qgSho",
             fixUrl:  "https://www.youtube.com/embed/83GZUBdupaI"
@@ -135,7 +138,6 @@ window.CONTENT = {
           ],
           suggestedBpm: { start: 40, target: 70, step: 5 },
           media: {
-            // Beginner bends & vibrato exercise demo
             demoUrl: "https://www.youtube.com/embed/NVJg8VjEVpM",
             dontUrl: "https://www.youtube.com/embed/M65GXQabC-s",
             fixUrl:  "https://www.youtube.com/embed/39mhhYpaFS0"
@@ -164,15 +166,14 @@ window.CONTENT = {
   },
 
   backingTracks: {
-    // Metadata only unless you add audioUrl (mp3/ogg hosted on your site).
     bt_blues_shuffle_A: {
       id: "bt_blues_shuffle_A",
       genre: "blues",
       name: "Shuffle Groove in A",
       key: "A",
       feel: "shuffle",
-      recommendedBpm: 90
-      // audioUrl: "audio/blues_shuffle_A_90.mp3"
+      recommendedBpm: 90,
+      audioUrl: "audio/blues_shuffle_A_90.mp3"
     },
     bt_blues_slow_12bar_E: {
       id: "bt_blues_slow_12bar_E",
@@ -180,8 +181,8 @@ window.CONTENT = {
       name: "Slow 12-Bar in E",
       key: "E",
       feel: "slow blues",
-      recommendedBpm: 65
-      // audioUrl: "audio/blues_slow_12bar_E_65.mp3"
+      recommendedBpm: 65,
+      audioUrl: "audio/blues_slow_12bar_E_65.mp3"
     }
   }
 };
