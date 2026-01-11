@@ -1,5 +1,11 @@
-// content.js — minimal update: ensure BOTH tracks have audioUrl so both are playable.
-// (Everything else stays the same as your current content model.)
+// content.js
+// Dose 0.2 — Content Model v1 (+ handedness-safe language)
+// Dose 0.2.2 — Video hooks per drill (demo / mistake / fix)
+//
+// IMPORTANT RULE:
+// - Avoid "left hand / right hand" in instruction text.
+// - Always say "fretting hand" and "picking hand".
+// - Videos can be mirrored for left-handed players.
 
 window.CONTENT = {
   genres: {
@@ -13,12 +19,6 @@ window.CONTENT = {
   },
 
   skills: {
-    // KEEP YOUR CURRENT SKILLS EXACTLY AS YOU HAVE THEM
-    // (No changes here in this one-shot — to reduce risk.)
-    // Paste your existing skills object below:
-    // -----------------------------
-    // NOTE: If you paste this file, you must include your existing skills.
-    // For safety, I’m reusing your last known working skills (with your current video URLs).
     blues_timing_shuffle: {
       id: "blues_timing_shuffle",
       genre: "blues",
@@ -39,8 +39,10 @@ window.CONTENT = {
           ],
           suggestedBpm: { start: 60, target: 90, step: 5 },
           media: {
-            demoUrl: "https://www.youtube.com/embed/56zp3uWDwVs",
-            dontUrl: "https://www.youtube.com/embed/CkE7NuEGhhg",
+            // Muted shuffle strum pattern
+            demoUrl: "https://www.youtube.com/embed/Z-Cvv7yo5EA",
+            // (placeholder mistake/fix videos for now — replace anytime)
+            dontUrl: "https://www.youtube.com/embed/56zp3uWDwVs",
             fixUrl:  "https://www.youtube.com/embed/H7vCMvUyWpA"
           }
         },
@@ -57,8 +59,9 @@ window.CONTENT = {
           ],
           suggestedBpm: { start: 60, target: 100, step: 5 },
           media: {
-            demoUrl: "https://www.youtube.com/embed/56zp3uWDwVs",
-            dontUrl: "https://www.youtube.com/embed/CkE7NuEGhhg",
+            // Blues shuffle rhythm / comping references
+            demoUrl: "https://www.youtube.com/embed/d5R3Re17dgM",
+            dontUrl: "https://www.youtube.com/embed/56zp3uWDwVs",
             fixUrl:  "https://www.youtube.com/embed/H7vCMvUyWpA"
           }
         }
@@ -85,9 +88,10 @@ window.CONTENT = {
           ],
           suggestedBpm: { start: 60, target: 120, step: 5 },
           media: {
+            // Minor pentatonic box 1 lesson
             demoUrl: "https://www.youtube.com/embed/fg1n_i-D7v0",
-            dontUrl: "https://www.youtube.com/embed/7c9rFeXXDDQ",
-            fixUrl:  "https://www.youtube.com/embed/S6YPrj5yafo"
+            dontUrl: "https://www.youtube.com/embed/5Qc426qgSho",
+            fixUrl:  "https://www.youtube.com/embed/83GZUBdupaI"
           }
         },
         {
@@ -103,9 +107,9 @@ window.CONTENT = {
           ],
           suggestedBpm: { start: 50, target: 100, step: 5 },
           media: {
-            demoUrl: "https://www.youtube.com/embed/fg1n_i-D7v0",
-            dontUrl: "https://www.youtube.com/embed/7c9rFeXXDDQ",
-            fixUrl:  "https://www.youtube.com/embed/S6YPrj5yafo"
+            demoUrl: "https://www.youtube.com/embed/5Qc426qgSho",
+            dontUrl: "https://www.youtube.com/embed/H6yh8H6kNno",
+            fixUrl:  "https://www.youtube.com/embed/83GZUBdupaI"
           }
         }
       ]
@@ -131,9 +135,10 @@ window.CONTENT = {
           ],
           suggestedBpm: { start: 40, target: 70, step: 5 },
           media: {
-            demoUrl: "https://www.youtube.com/embed/06M2-51JF80",
-            dontUrl: "https://www.youtube.com/embed/N43iDExNlqU",
-            fixUrl:  "https://www.youtube.com/embed/vtoK5YsQ_uU"
+            // Beginner bends & vibrato exercise demo
+            demoUrl: "https://www.youtube.com/embed/NVJg8VjEVpM",
+            dontUrl: "https://www.youtube.com/embed/M65GXQabC-s",
+            fixUrl:  "https://www.youtube.com/embed/39mhhYpaFS0"
           }
         },
         {
@@ -149,9 +154,9 @@ window.CONTENT = {
           ],
           suggestedBpm: { start: 40, target: 80, step: 5 },
           media: {
-            demoUrl: "https://www.youtube.com/embed/WNWqobkgdBA",
-            dontUrl: "https://www.youtube.com/embed/WNWqobkgdBA",
-            fixUrl:  "https://www.youtube.com/embed/WNWqobkgdBA"
+            demoUrl: "https://www.youtube.com/embed/tz7upvwXSt4",
+            dontUrl: "https://www.youtube.com/embed/M65GXQabC-s",
+            fixUrl:  "https://www.youtube.com/embed/39mhhYpaFS0"
           }
         }
       ]
@@ -159,25 +164,24 @@ window.CONTENT = {
   },
 
   backingTracks: {
+    // Metadata only unless you add audioUrl (mp3/ogg hosted on your site).
     bt_blues_shuffle_A: {
       id: "bt_blues_shuffle_A",
       genre: "blues",
-      name: "Shuffle Groove in A (demo audio)",
+      name: "Shuffle Groove in A",
       key: "A",
       feel: "shuffle",
-      recommendedBpm: 90,
-      audioUrl: "https://upload.wikimedia.org/wikipedia/commons/a/aa/AcousticShuffle.ogg",
-      note: "Demo audio from Wikimedia Commons (used for development)."
+      recommendedBpm: 90
+      // audioUrl: "audio/blues_shuffle_A_90.mp3"
     },
     bt_blues_slow_12bar_E: {
       id: "bt_blues_slow_12bar_E",
       genre: "blues",
-      name: "Slow 12-Bar in E (demo audio)",
+      name: "Slow 12-Bar in E",
       key: "E",
       feel: "slow blues",
-      recommendedBpm: 65,
-      audioUrl: "https://upload.wikimedia.org/wikipedia/commons/7/7b/12barBlues002.ogg",
-      note: "Demo audio from Wikimedia Commons (used for development)."
+      recommendedBpm: 65
+      // audioUrl: "audio/blues_slow_12bar_E_65.mp3"
     }
   }
 };
