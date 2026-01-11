@@ -37,7 +37,7 @@ window.CONTENT = {
         "bt_gen_slow_C_lead"
       ]
     }
-  },
+  }
 
   skills: {
     blues_timing_shuffle: {
