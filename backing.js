@@ -1,43 +1,31 @@
-// backing.js — backing track audio engine (small + stable)
-// - Deterministic UI state (play/pause flips immediately)
-// - Loop + Stop
-// - Volume + Mute (engine only; UI later if desired)
+// backing.js — backing track audio engine (hardened)
+// Fixes: URL resolution, ensures volume/mute are correct, adds error logging.
 
 export function createBackingPlayer() {
   const audio = new Audio();
   audio.preload = "auto";
+  audio.volume = 1;
+  audio.muted = false;
 
   const state = {
     trackId: null,
     isPlaying: false,
     isLoop: false,
-    volume: 0.85,
-    muted: false
+    lastError: null
   };
 
-  function apply() {
-    audio.loop = !!state.isLoop;
-    audio.volume = clamp01(state.volume);
-    audio.muted = !!state.muted;
+  function absUrl(url) {
+    try {
+      // Make relative paths robust (works with hash routing)
+      return new URL(url, window.location.href).toString();
+    } catch {
+      return url;
+    }
   }
-
-  audio.addEventListener("ended", () => {
-    if (!state.isLoop) state.isPlaying = false;
-  });
 
   function setLoop(on) {
     state.isLoop = !!on;
-    apply();
-  }
-
-  function setVolume(v) {
-    state.volume = clamp01(v);
-    apply();
-  }
-
-  function setMuted(on) {
-    state.muted = !!on;
-    apply();
+    audio.loop = state.isLoop;
   }
 
   function stop() {
@@ -52,53 +40,67 @@ export function createBackingPlayer() {
     state.isPlaying = false;
   }
 
-  async function playTrack(track) {
+  audio.addEventListener("ended", () => {
+    if (!state.isLoop) state.isPlaying = false;
+  });
+
+  audio.addEventListener("error", () => {
+    // This fires for 404, decode errors, unsupported formats, etc.
+    const err = audio.error ? `AudioError code ${audio.error.code}` : "Unknown audio error";
+    state.lastError = err;
+    state.isPlaying = false;
+    console.warn("[Backing] audio error:", err, "src:", audio.src);
+  });
+
+  function playTrack(track) {
     if (!track || !track.audioUrl) return;
 
+    state.lastError = null;
+
+    // Always ensure audible
+    audio.muted = false;
+    audio.volume = 1;
+
+    const url = absUrl(track.audioUrl);
+
+    // New track → load source
     if (state.trackId !== track.id) {
-      audio.src = track.audioUrl;
+      audio.src = url;
       try { audio.currentTime = 0; } catch {}
       state.trackId = track.id;
     }
 
-    apply();
-
-    // flip immediately so UI can show Pause right away
+    // Flip state immediately for UI
     state.isPlaying = true;
 
-    try {
-      const p = audio.play();
-      if (p && typeof p.then === "function") await p;
-      state.isPlaying = true;
-    } catch (e) {
-      console.warn("Audio play failed:", e);
-      state.isPlaying = false;
+    const p = audio.play();
+    if (p && typeof p.then === "function") {
+      p.then(() => {
+        // ok
+      }).catch((e) => {
+        state.isPlaying = false;
+        state.lastError = String(e?.message || e);
+        console.warn("[Backing] play() failed:", e, "src:", audio.src);
+      });
     }
   }
 
   function toggle(track) {
     if (!track || !track.audioUrl) return;
 
-    const same = state.trackId === track.id;
-    if (same && state.isPlaying) pause();
-    else playTrack(track);
-  }
+    const sameTrack = state.trackId === track.id;
 
-  apply();
+    if (sameTrack && state.isPlaying) {
+      pause();
+    } else {
+      playTrack(track);
+    }
+  }
 
   return {
     state,
     toggle,
     stop,
-    pause,
-    setLoop,
-    setVolume,
-    setMuted
+    setLoop
   };
-}
-
-function clamp01(n) {
-  const x = Number(n);
-  if (!Number.isFinite(x)) return 0.85;
-  return Math.max(0, Math.min(1, x));
 }
