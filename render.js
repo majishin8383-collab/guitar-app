@@ -63,8 +63,7 @@ function setSelectedTrackId(ctx, id) {
 }
 
 function isTrackPlayable(track) {
-  // ✅ NEW: generator tracks are playable even without audioUrl
-  return !!(track && (track.audioUrl || track.generator));
+  return !!(track && (track.youtubeUrl || track.youtubeQuery || track.audioUrl || track.generator));
 }
 
 function backingDropdownUI(ctx, tracks) {
@@ -96,11 +95,17 @@ function backingDropdownUI(ctx, tracks) {
     ? `<div class="muted" style="font-size:14px; margin-top:6px;">Auto-filtered by Role: <b>${ctx.roleLabel()}</b></div>`
     : "";
 
-  const sourceNote = selected.generator
-    ? `<div class="muted" style="font-size:14px; margin-top:10px;">Using <b>generator</b> backing track (no mp3 needed).</div>`
-    : (!selected.audioUrl
-        ? `<div class="muted" style="font-size:14px; margin-top:10px;">No <code>audioUrl</code> set yet for this track.</div>`
-        : "");
+ const sourceNote =
+  selected.youtubeUrl
+    ? `<div class="muted" style="font-size:14px; margin-top:10px;">Opens <b>YouTube</b> link (external).</div>`
+    : selected.youtubeQuery
+      ? `<div class="muted" style="font-size:14px; margin-top:10px;">Opens <b>YouTube</b> search (external).</div>`
+      : selected.generator
+        ? `<div class="muted" style="font-size:14px; margin-top:10px;">Using <b>generator</b> backing track (no mp3 needed).</div>`
+        : (!selected.audioUrl
+            ? `<div class="muted" style="font-size:14px; margin-top:10px;">No source set for this track yet.</div>`
+            : "");
+
 
   return `
     <div class="card" style="background:#171717; margin-top:10px;">
