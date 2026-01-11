@@ -1,10 +1,7 @@
 // render.js
 // UI rendering + event wiring
-// Guarded version: Role + Backing UI only appear if ctx provides the APIs.
-// UPDATE: Backing tracks collapsed into a dropdown + auto-filter by Role (if role exists)
-// - Uses ONLY ctx.backingState + ctx.backingToggle (no backingStop/backingSetLoop required)
-// - Stores selection in state.btSelectedId (safe + persisted)
-// - If no audioUrl exists, button is disabled (same behavior as before)
+// Guarded: Role + Backing UI only appear if ctx provides the APIs.
+// UPDATE: Backing tracks collapsed into dropdown + (optional) Loop/Stop controls.
 
 import { shouldShowLevelUp } from "./progress.js";
 
@@ -21,39 +18,40 @@ function hasBacking(ctx) {
   return !!(ctx.backingState && typeof ctx.backingToggle === "function");
 }
 
-// --- Backing dropdown helpers (safe, no new ctx APIs required) ---
+function hasBackingControls(ctx) {
+  return hasBacking(ctx)
+    && typeof ctx.backingStop === "function"
+    && typeof ctx.backingSetLoop === "function";
+}
 
-function trackMix(track) {
-  // Optional: use generator.mix if you add it later in content.js
-  const mix = track && track.generator && track.generator.mix;
+// -------- Backing helpers (dropdown + role filtering) --------
+
+function getTrackMix(track) {
+  // Prefer explicit mix tags in content.js later:
+  // track.mix = "rhythm" | "lead"
+  // or track.generator.mix = "rhythm" | "lead"
+  const mix = track?.mix || track?.generator?.mix;
   if (mix === "rhythm" || mix === "lead") return mix;
 
-  // Fallback: infer from name if you include "Rhythm Mix"/"Lead Mix"
-  const name = (track && track.name ? String(track.name) : "").toLowerCase();
-  if (name.includes("lead mix")) return "lead";
-  if (name.includes("rhythm mix")) return "rhythm";
+  // Fallback inference from name (optional convenience)
+  const n = String(track?.name || "").toLowerCase();
+  if (n.includes("rhythm mix")) return "rhythm";
+  if (n.includes("lead mix")) return "lead";
   return null;
 }
 
-function roleMix(ctx) {
-  // If no role system, don't filter
-  if (!hasRole(ctx)) return null;
-  return ctx.state.role === "lead" ? "lead" : "rhythm";
-}
-
 function filterTracksByRole(ctx, tracks) {
-  const mix = roleMix(ctx);
-  if (!mix) return tracks;
+  if (!hasRole(ctx)) return tracks;
+  const want = ctx.state.role === "lead" ? "lead" : "rhythm";
 
-  // Keep tracks that match mix if they have a declared mix; otherwise keep them (non-breaking)
+  // If track has a declared mix → filter; if not → keep (non-breaking)
   return tracks.filter(t => {
-    const tm = trackMix(t);
-    return tm ? tm === mix : true;
+    const tm = getTrackMix(t);
+    return tm ? tm === want : true;
   });
 }
 
 function getSelectedTrackId(ctx, tracks) {
-  // Store selection in state.btSelectedId (persisted)
   const id = ctx.state.btSelectedId;
   if (id && tracks.some(t => t.id === id)) return id;
   return tracks.length ? tracks[0].id : null;
@@ -64,14 +62,13 @@ function setSelectedTrackId(ctx, id) {
   ctx.persist();
 }
 
-function backingDropdownHTML(ctx, tracks) {
-  // tracks already filtered
-  const selectedId = getSelectedTrackId(ctx, tracks);
-  const selected = tracks.find(t => t.id === selectedId) || tracks[0];
-
-  if (!selected) {
+function backingDropdownUI(ctx, tracks) {
+  if (!tracks.length) {
     return `<div class="muted" style="margin-top:8px;">No backing tracks defined for this genre yet.</div>`;
   }
+
+  const selectedId = getSelectedTrackId(ctx, tracks);
+  const selected = tracks.find(t => t.id === selectedId) || tracks[0];
 
   const hasAudio = !!selected.audioUrl;
   const isCurrent = ctx.backingState.trackId === selected.id;
@@ -79,16 +76,25 @@ function backingDropdownHTML(ctx, tracks) {
 
   const btnLabel = !hasAudio ? "No audio yet" : (isPlaying ? "⏸ Pause" : "▶ Play");
 
+  const loopOn = !!ctx.backingState.isLoop;
+  const loopBtn = hasBackingControls(ctx)
+    ? `<button id="bt-loop" class="${loopOn ? "" : "secondary"}">${loopOn ? "Loop: ON" : "Loop: OFF"}</button>`
+    : "";
+
+  const stopBtn = hasBackingControls(ctx)
+    ? `<button id="bt-stop" class="secondary" ${ctx.backingState.trackId ? "" : "disabled"}>Stop</button>`
+    : "";
+
   const roleNote = hasRole(ctx)
-    ? `<div class="muted" style="font-size:14px; margin-top:6px;">Filtered by Role: <b>${ctx.roleLabel()}</b></div>`
+    ? `<div class="muted" style="font-size:14px; margin-top:6px;">Auto-filtered by Role: <b>${ctx.roleLabel()}</b></div>`
     : "";
 
   return `
     <div class="card" style="background:#171717; margin-top:10px;">
-      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between;">
-        <div style="flex:1; min-width:220px;">
+      <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:space-between;">
+        <div style="flex:1; min-width:240px;">
           <div class="muted" style="font-size:14px;">Choose track</div>
-          <select id="bt-select" style="width:100%; max-width:520px;">
+          <select id="bt-select" style="width:100%; max-width:560px;">
             ${tracks.map(t => {
               const sel = t.id === selected.id ? "selected" : "";
               const label = `${t.name} — Key ${t.key} • ${t.feel} • ~${t.recommendedBpm} bpm`;
@@ -98,18 +104,23 @@ function backingDropdownHTML(ctx, tracks) {
           ${roleNote}
         </div>
 
-        <div style="display:flex; gap:10px; align-items:center;">
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          ${loopBtn}
+          ${stopBtn}
+
           <button
             id="bt-play"
             class="${hasAudio ? (isPlaying ? "" : "secondary") : "secondary"}"
             ${hasAudio ? "" : "disabled"}
             style="white-space:nowrap;"
           >${btnLabel}</button>
+
           <span class="pill">${isPlaying ? "Playing" : "Stopped"}</span>
         </div>
       </div>
 
       ${selected.note ? `<div class="muted" style="font-size:14px; margin-top:10px;">${selected.note}</div>` : ""}
+      ${!selected.audioUrl ? `<div class="muted" style="font-size:14px; margin-top:10px;">No <code>audioUrl</code> set yet for this track.</div>` : ""}
     </div>
   `;
 }
@@ -119,25 +130,42 @@ function wireBackingDropdown(ctx, tracks, rerender) {
   const playBtn = document.getElementById("bt-play");
   if (!select || !playBtn) return;
 
-  function currentSelectedTrack() {
+  function currentTrack() {
     const id = select.value;
     return tracks.find(t => t.id === id) || tracks[0];
   }
 
   select.onchange = () => {
-    const t = currentSelectedTrack();
+    const t = currentTrack();
     setSelectedTrackId(ctx, t.id);
     rerender();
   };
 
   playBtn.onclick = () => {
-    const t = currentSelectedTrack();
+    const t = currentTrack();
     ctx.backingToggle(t);
     rerender();
   };
+
+  // Optional controls (only if ctx provides them)
+  if (hasBackingControls(ctx)) {
+    const loopBtn = document.getElementById("bt-loop");
+    const stopBtn = document.getElementById("bt-stop");
+
+    if (loopBtn) loopBtn.onclick = () => {
+      ctx.backingSetLoop(!ctx.backingState.isLoop);
+      rerender();
+    };
+
+    if (stopBtn) stopBtn.onclick = () => {
+      ctx.backingStop();
+      rerender();
+    };
+  }
 }
 
-// ------------------ Existing backing row (kept, but no longer used in genre/practice) ------------------
+// ------------------ Existing row renderer (kept for potential fallback) ------------------
+
 function backingRow(ctx, track) {
   const hasAudio = !!track.audioUrl;
   const isCurrent = ctx.backingState.trackId === track.id;
@@ -166,6 +194,8 @@ function backingRow(ctx, track) {
     </div>
   `;
 }
+
+// ------------------ Screens ------------------
 
 export function renderHome(ctx) {
   ctx.ensureMirrorDefault();
@@ -223,7 +253,7 @@ export function renderHome(ctx) {
     </div>
   `;
 
-  // Role buttons (only if enabled)
+  // Role buttons
   if (hasRole(ctx)) {
     const rr = document.getElementById("role-rhythm");
     const rl = document.getElementById("role-lead");
@@ -351,7 +381,7 @@ export function renderGenre(ctx, genreId) {
 
   const btArea = document.getElementById("bt-area");
   if (hasBacking(ctx)) {
-    btArea.innerHTML = backingDropdownHTML(ctx, bts);
+    btArea.innerHTML = backingDropdownUI(ctx, bts);
     wireBackingDropdown(ctx, bts, () => renderGenre(ctx, genreId));
   } else {
     btArea.innerHTML = btsAll.map(t => `
@@ -376,8 +406,8 @@ export function renderPractice(ctx) {
   const btsAll = genre.backingTrackIds.map(id => C.backingTracks[id]).filter(Boolean);
   const bts = filterTracksByRole(ctx, btsAll);
 
-  const backingControls = hasBacking(ctx)
-    ? `<div class="muted" style="font-size:14px;">Pick a backing track from the dropdown.</div>`
+  const backingHeader = hasBacking(ctx)
+    ? `<div class="muted" style="font-size:14px;">Pick a track from the dropdown. Loop/Stop appear if enabled.</div>`
     : `<div class="muted" style="font-size:14px;">Backing player not enabled yet.</div>`;
 
   app.innerHTML = `
@@ -393,7 +423,7 @@ export function renderPractice(ctx) {
       </div>
 
       <h3 style="margin-top:16px;">Backing Tracks</h3>
-      ${backingControls}
+      ${backingHeader}
       <div id="bt-area"></div>
 
       <h3 style="margin-top:16px;">Starter Skills</h3>
@@ -408,7 +438,7 @@ export function renderPractice(ctx) {
 
   const btArea = document.getElementById("bt-area");
   if (hasBacking(ctx)) {
-    btArea.innerHTML = backingDropdownHTML(ctx, bts);
+    btArea.innerHTML = backingDropdownUI(ctx, bts);
     wireBackingDropdown(ctx, bts, () => renderPractice(ctx));
   } else {
     btArea.innerHTML = btsAll.map(t => `
