@@ -1,11 +1,6 @@
 // content.js
-// Dose 0.2 — Content Model v1 (+ handedness-safe language)
-// Dose 0.2.2 — Video hooks per drill (demo / mistake / fix)
-//
-// IMPORTANT RULE:
-// - Avoid "left hand / right hand" in instruction text.
-// - Always say "fretting hand" and "picking hand".
-// - Videos can be mirrored for left-handed players.
+// Content Model v1 (+ handedness-safe language)
+// Dose 1.3: Real YouTube demo/mistake/fix videos + backing track audioUrl where available
 
 window.CONTENT = {
   genres: {
@@ -39,9 +34,9 @@ window.CONTENT = {
           ],
           suggestedBpm: { start: 60, target: 90, step: 5 },
           media: {
-            demoUrl: "https://www.youtube.com/embed/Z-Cvv7yo5EA",
-            dontUrl: "https://www.youtube.com/embed/Z-Cvv7yo5EA",
-            fixUrl:  "https://www.youtube.com/embed/Z-Cvv7yo5EA"
+            demoUrl: "https://www.youtube.com/embed/56zp3uWDwVs",
+            dontUrl: "https://www.youtube.com/embed/CkE7NuEGhhg",
+            fixUrl:  "https://www.youtube.com/embed/H7vCMvUyWpA"
           }
         },
         {
@@ -80,9 +75,9 @@ window.CONTENT = {
           ],
           suggestedBpm: { start: 60, target: 120, step: 5 },
           media: {
-            demoUrl: "https://www.youtube.com/embed/c0alXyaLTC4",
-            dontUrl: "https://www.youtube.com/embed/c0alXyaLTC4",
-            fixUrl:  "https://www.youtube.com/embed/c0alXyaLTC4"
+            demoUrl: "https://www.youtube.com/embed/fg1n_i-D7v0",
+            dontUrl: "https://www.youtube.com/embed/7c9rFeXXDDQ",
+            fixUrl:  "https://www.youtube.com/embed/S6YPrj5yafo"
           }
         },
         {
@@ -121,9 +116,9 @@ window.CONTENT = {
           ],
           suggestedBpm: { start: 40, target: 70, step: 5 },
           media: {
-            demoUrl: "https://www.youtube.com/embed/LIPOeIfBXVc",
-            dontUrl: "https://www.youtube.com/embed/LIPOeIfBXVc",
-            fixUrl:  "https://www.youtube.com/embed/LIPOeIfBXVc"
+            demoUrl: "https://www.youtube.com/embed/06M2-51JF80",
+            dontUrl: "https://www.youtube.com/embed/N43iDExNlqU",
+            fixUrl:  "https://www.youtube.com/embed/vtoK5YsQ_uU"
           }
         },
         {
@@ -137,27 +132,22 @@ window.CONTENT = {
             "Keep pitch centered — don’t drift sharp.",
             "Breathe and stay loose in the picking hand."
           ],
-          suggestedBpm: { start: 40, target: 80, step: 5 },
-          media: {
-            demoUrl: "https://www.youtube.com/embed/WNWqobkgdBA",
-            dontUrl: "https://www.youtube.com/embed/WNWqobkgdBA",
-            fixUrl:  "https://www.youtube.com/embed/WNWqobkgdBA"
-          }
+          suggestedBpm: { start: 40, target: 80, step: 5 }
         }
       ]
     }
   },
 
   backingTracks: {
-    // Metadata only until you add audioUrl
     bt_blues_shuffle_A: {
       id: "bt_blues_shuffle_A",
       genre: "blues",
-      name: "Shuffle Groove in A",
-      key: "A",
+      name: "Shuffle Groove in C (Wikimedia CC BY-SA)",
+      key: "C",
       feel: "shuffle",
-      recommendedBpm: 90
-      // audioUrl: "..." // add later
+      recommendedBpm: 90,
+      audioUrl: "https://upload.wikimedia.org/wikipedia/commons/7/7d/Blues_C_Backin_Track.wav",
+      note: "Source: Wikimedia Commons (CC BY-SA). Big WAV file; loads slower on mobile."
     },
     bt_blues_slow_12bar_E: {
       id: "bt_blues_slow_12bar_E",
@@ -166,7 +156,7 @@ window.CONTENT = {
       key: "E",
       feel: "slow blues",
       recommendedBpm: 65
-      // audioUrl: "..." // add later
+      // add audioUrl later
     }
   }
 };
