@@ -1,9 +1,9 @@
-// backing.js — tiny backing track audio engine (Dose 1.3)
-// Plays audioUrl if present. Supports loop + stop.
+// backing.js — backing track audio engine (FIXED state sync)
+// Ensures UI Play/Pause state is correct immediately after click
 
 export function createBackingPlayer() {
   const audio = new Audio();
-  audio.preload = "none";
+  audio.preload = "auto";
 
   const state = {
     trackId: null,
@@ -12,7 +12,9 @@ export function createBackingPlayer() {
   };
 
   audio.addEventListener("ended", () => {
-    if (!audio.loop) state.isPlaying = false;
+    if (!state.isLoop) {
+      state.isPlaying = false;
+    }
   });
 
   function setLoop(on) {
@@ -24,26 +26,7 @@ export function createBackingPlayer() {
     try { audio.pause(); } catch {}
     audio.currentTime = 0;
     state.isPlaying = false;
-    // keep trackId so UI can still show which track was last selected
-  }
-
-  async function playTrack(track) {
-    if (!track || !track.audioUrl) return;
-
-    if (state.trackId !== track.id) {
-      audio.src = track.audioUrl;
-      audio.loop = state.isLoop;
-      state.trackId = track.id;
-    }
-
-    try {
-      await audio.play();
-      state.isPlaying = true;
-    } catch (e) {
-      // Autoplay restrictions: user must click (we only call from button click anyway)
-      state.isPlaying = false;
-      console.warn("Audio play blocked:", e);
-    }
+    state.trackId = null;
   }
 
   function pause() {
@@ -51,13 +34,43 @@ export function createBackingPlayer() {
     state.isPlaying = false;
   }
 
+  function playTrack(track) {
+    if (!track || !track.audioUrl) return;
+
+    // New track → load source
+    if (state.trackId !== track.id) {
+      audio.src = track.audioUrl;
+      audio.currentTime = 0;
+      state.trackId = track.id;
+    }
+
+    // IMPORTANT: flip state immediately for UI
+    state.isPlaying = true;
+
+    try {
+      audio.play();
+    } catch (e) {
+      console.warn("Audio play failed:", e);
+      state.isPlaying = false;
+    }
+  }
+
   function toggle(track) {
     if (!track || !track.audioUrl) return;
 
-    const isSame = state.trackId === track.id;
-    if (isSame && state.isPlaying) pause();
-    else playTrack(track);
+    const sameTrack = state.trackId === track.id;
+
+    if (sameTrack && state.isPlaying) {
+      pause();
+    } else {
+      playTrack(track);
+    }
   }
 
-  return { state, toggle, stop, setLoop };
+  return {
+    state,
+    toggle,
+    stop,
+    setLoop
+  };
 }
