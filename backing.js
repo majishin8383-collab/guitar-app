@@ -1,8 +1,7 @@
-// backing.js — backing track audio engine (One-shot upgrade)
+// backing.js — backing track audio engine (small + stable)
 // - Deterministic UI state (play/pause flips immediately)
-// - Volume + Mute controls
 // - Loop + Stop
-// - Safer play() handling for mobile/browser policies
+// - Volume + Mute (engine only; UI later if desired)
 
 export function createBackingPlayer() {
   const audio = new Audio();
@@ -16,7 +15,7 @@ export function createBackingPlayer() {
     muted: false
   };
 
-  function applyAudioSettings() {
+  function apply() {
     audio.loop = !!state.isLoop;
     audio.volume = clamp01(state.volume);
     audio.muted = !!state.muted;
@@ -28,17 +27,17 @@ export function createBackingPlayer() {
 
   function setLoop(on) {
     state.isLoop = !!on;
-    applyAudioSettings();
+    apply();
   }
 
   function setVolume(v) {
     state.volume = clamp01(v);
-    applyAudioSettings();
+    apply();
   }
 
   function setMuted(on) {
     state.muted = !!on;
-    applyAudioSettings();
+    apply();
   }
 
   function stop() {
@@ -56,17 +55,15 @@ export function createBackingPlayer() {
   async function playTrack(track) {
     if (!track || !track.audioUrl) return;
 
-    // New track → load source
     if (state.trackId !== track.id) {
       audio.src = track.audioUrl;
       try { audio.currentTime = 0; } catch {}
       state.trackId = track.id;
     }
 
-    // Apply loop/volume/mute before playing
-    applyAudioSettings();
+    apply();
 
-    // IMPORTANT: flip state immediately for UI
+    // flip immediately so UI can show Pause right away
     state.isPlaying = true;
 
     try {
@@ -82,14 +79,12 @@ export function createBackingPlayer() {
   function toggle(track) {
     if (!track || !track.audioUrl) return;
 
-    const sameTrack = state.trackId === track.id;
-
-    if (sameTrack && state.isPlaying) pause();
+    const same = state.trackId === track.id;
+    if (same && state.isPlaying) pause();
     else playTrack(track);
   }
 
-  // init defaults
-  applyAudioSettings();
+  apply();
 
   return {
     state,
