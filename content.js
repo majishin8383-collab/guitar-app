@@ -179,9 +179,9 @@ window.CONTENT = {
     }
   },
 
-  backingTracks: {
+    backingTracks: {
     // ---------------------------
-    // SHUFFLE (12-bar) — generator
+    // SHUFFLE (12-bar) — YouTube
     // ---------------------------
     bt_gen_shuffle_A_rhythm: {
       id: "bt_gen_shuffle_A_rhythm",
@@ -190,8 +190,8 @@ window.CONTENT = {
       key: "A",
       feel: "shuffle",
       recommendedBpm: 92,
-      note: "Drums + bass (no rhythm guitar). Great for rhythm practice.",
-      generator: { style: "blues_shuffle_12bar", bpm: 92, key: "A", mix: "rhythm" }
+      note: "Open a shuffle backing track on YouTube. Great for rhythm practice.",
+      youtubeQuery: "12 bar blues shuffle backing track key A 92 bpm"
     },
     bt_gen_shuffle_A_lead: {
       id: "bt_gen_shuffle_A_lead",
@@ -200,8 +200,8 @@ window.CONTENT = {
       key: "A",
       feel: "shuffle",
       recommendedBpm: 92,
-      note: "Adds a light rhythm-guitar bed so you can practice lead over it.",
-      generator: { style: "blues_shuffle_12bar", bpm: 92, key: "A", mix: "lead" }
+      note: "Open a shuffle backing track on YouTube. Practice lead over the groove.",
+      youtubeQuery: "12 bar blues shuffle backing track key A 92 bpm"
     },
 
     bt_gen_shuffle_E_rhythm: {
@@ -211,8 +211,8 @@ window.CONTENT = {
       key: "E",
       feel: "shuffle",
       recommendedBpm: 96,
-      note: "Drums + bass (no rhythm guitar).",
-      generator: { style: "blues_shuffle_12bar", bpm: 96, key: "E", mix: "rhythm" }
+      note: "Open a shuffle backing track on YouTube.",
+      youtubeQuery: "12 bar blues shuffle backing track key E 96 bpm"
     },
     bt_gen_shuffle_E_lead: {
       id: "bt_gen_shuffle_E_lead",
@@ -221,8 +221,8 @@ window.CONTENT = {
       key: "E",
       feel: "shuffle",
       recommendedBpm: 96,
-      note: "Lead over a simple rhythm bed.",
-      generator: { style: "blues_shuffle_12bar", bpm: 96, key: "E", mix: "lead" }
+      note: "Open a shuffle backing track on YouTube. Practice lead over the groove.",
+      youtubeQuery: "12 bar blues shuffle backing track key E 96 bpm"
     },
 
     bt_gen_shuffle_G_rhythm: {
@@ -232,8 +232,8 @@ window.CONTENT = {
       key: "G",
       feel: "shuffle",
       recommendedBpm: 90,
-      note: "Drums + bass (no rhythm guitar).",
-      generator: { style: "blues_shuffle_12bar", bpm: 90, key: "G", mix: "rhythm" }
+      note: "Open a shuffle backing track on YouTube.",
+      youtubeQuery: "12 bar blues shuffle backing track key G 90 bpm"
     },
     bt_gen_shuffle_G_lead: {
       id: "bt_gen_shuffle_G_lead",
@@ -242,12 +242,12 @@ window.CONTENT = {
       key: "G",
       feel: "shuffle",
       recommendedBpm: 90,
-      note: "Lead over a simple rhythm bed.",
-      generator: { style: "blues_shuffle_12bar", bpm: 90, key: "G", mix: "lead" }
+      note: "Open a shuffle backing track on YouTube. Practice lead over the groove.",
+      youtubeQuery: "12 bar blues shuffle backing track key G 90 bpm"
     },
 
     // ---------------------------
-    // SLOW BLUES (12-bar) — generator
+    // SLOW BLUES (12-bar) — YouTube
     // ---------------------------
     bt_gen_slow_E_rhythm: {
       id: "bt_gen_slow_E_rhythm",
@@ -256,8 +256,8 @@ window.CONTENT = {
       key: "E",
       feel: "slow blues",
       recommendedBpm: 66,
-      note: "Drums + bass only. Practice clean timing and dynamics.",
-      generator: { style: "blues_slow_12bar", bpm: 66, key: "E", mix: "rhythm" }
+      note: "Open a slow blues backing track on YouTube. Practice timing and dynamics.",
+      youtubeQuery: "slow blues backing track key E 66 bpm 12 bar"
     },
     bt_gen_slow_E_lead: {
       id: "bt_gen_slow_E_lead",
@@ -266,8 +266,8 @@ window.CONTENT = {
       key: "E",
       feel: "slow blues",
       recommendedBpm: 66,
-      note: "Slow bed for bends + vibrato practice.",
-      generator: { style: "blues_slow_12bar", bpm: 66, key: "E", mix: "lead" }
+      note: "Open a slow blues backing track on YouTube. Great for bends and vibrato.",
+      youtubeQuery: "slow blues backing track key E 66 bpm 12 bar"
     },
 
     bt_gen_slow_A_rhythm: {
@@ -277,8 +277,8 @@ window.CONTENT = {
       key: "A",
       feel: "slow blues",
       recommendedBpm: 64,
-      note: "Drums + bass only.",
-      generator: { style: "blues_slow_12bar", bpm: 64, key: "A", mix: "rhythm" }
+      note: "Open a slow blues backing track on YouTube.",
+      youtubeQuery: "slow blues backing track key A 64 bpm 12 bar"
     },
     bt_gen_slow_A_lead: {
       id: "bt_gen_slow_A_lead",
@@ -287,8 +287,8 @@ window.CONTENT = {
       key: "A",
       feel: "slow blues",
       recommendedBpm: 64,
-      note: "Lead bed for phrasing practice.",
-      generator: { style: "blues_slow_12bar", bpm: 64, key: "A", mix: "lead" }
+      note: "Open a slow blues backing track on YouTube. Practice phrasing over the groove.",
+      youtubeQuery: "slow blues backing track key A 64 bpm 12 bar"
     },
 
     bt_gen_slow_C_rhythm: {
@@ -298,8 +298,8 @@ window.CONTENT = {
       key: "C",
       feel: "slow blues",
       recommendedBpm: 62,
-      note: "Drums + bass only.",
-      generator: { style: "blues_slow_12bar", bpm: 62, key: "C", mix: "rhythm" }
+      note: "Open a slow blues backing track on YouTube.",
+      youtubeQuery: "slow blues backing track key C 62 bpm 12 bar"
     },
     bt_gen_slow_C_lead: {
       id: "bt_gen_slow_C_lead",
@@ -308,8 +308,7 @@ window.CONTENT = {
       key: "C",
       feel: "slow blues",
       recommendedBpm: 62,
-      note: "Lead bed for melodic practice.",
-      generator: { style: "blues_slow_12bar", bpm: 62, key: "C", mix: "lead" }
+      note: "Open a slow blues backing track on YouTube. Practice melodic ideas over the groove.",
+      youtubeQuery: "slow blues backing track key C 62 bpm 12 bar"
     }
   }
-};
