@@ -311,4 +311,4 @@ window.CONTENT = {
       note: "Open a slow blues backing track on YouTube. Practice melodic ideas over the groove.",
       youtubeQuery: "slow blues backing track key C 62 bpm 12 bar"
     }
-  }
+  };
