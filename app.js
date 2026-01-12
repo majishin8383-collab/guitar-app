@@ -17,7 +17,7 @@ const DEFAULT_STATE = {
   genre: "blues",
   role: "rhythm",          // "rhythm" | "lead"
   handedness: "right",     // "right" | "left"
-  mirrorVideos: false,     // video mirror preference
+  mirrorVideos: false,     // drill-video mirror preference
   progress: {},
   btSelectedId: null       // backing-track dropdown selection
 };
@@ -43,28 +43,7 @@ function ensureMirrorDefault() {
   }
 }
 
-// --- YouTube helpers (backing tracks) ---
-function openYoutubeForTrack(track) {
-  if (!track) return;
-
-  // Prefer direct embed link (opens fine in a new tab)
-  if (track.youtubeEmbed && typeof track.youtubeEmbed === "string") {
-    window.open(track.youtubeEmbed, "_blank", "noopener,noreferrer");
-    return;
-  }
-
-  // Otherwise search query
-  const q = track.youtubeQuery || track.youtubeSearch || null;
-  if (q && typeof q === "string") {
-    const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`;
-    window.open(url, "_blank", "noopener,noreferrer");
-    return;
-  }
-
-  // Fallback: if nothing exists, do nothing (keeps app stable)
-  console.warn("[Backing] Track has no youtubeEmbed or youtubeQuery:", track?.id);
-}
-
+// Drill video helper (unchanged)
 function safeEmbed(url) {
   if (!url || typeof url !== "string") return null;
   const ok =
@@ -139,30 +118,29 @@ function metroStopIfOwnedBy(drillId) {
   metro.stop(); metroState.drillId = null;
 }
 
-// Backing tracks (simple YouTube launcher state)
+// Backing tracks — IN-APP ONLY
+// No window.open. Render.js will embed the selected track when playing.
 const backingState = {
   trackId: null,
-  isPlaying: false,
-  isLoop: false,
-  volume: 0.85,
-  muted: false
+  isPlaying: false
 };
 
 function backingToggle(track) {
   if (!track) return;
 
   const same = backingState.trackId === track.id;
-  if (same && backingState.isPlaying) {
-    // pause = just flip UI state (cannot control YouTube)
-    backingState.isPlaying = false;
+  if (same) {
+    backingState.isPlaying = !backingState.isPlaying;
     return;
   }
 
   backingState.trackId = track.id;
   backingState.isPlaying = true;
+}
 
-  // Open YouTube (embed preferred)
-  openYoutubeForTrack(track);
+function backingStop() {
+  backingState.isPlaying = false;
+  backingState.trackId = null;
 }
 
 function ctx() {
@@ -171,9 +149,10 @@ function ctx() {
     handednessLabel, roleLabel, ensureMirrorDefault, videoBlock,
     metro, metroState, metroToggle, metroSetBpmIfActive, metroStopIfOwnedBy,
 
-    // backing hooks expected by render.js
+    // backing hooks used by render.js
     backingState,
-    backingToggle
+    backingToggle,
+    backingStop
   };
 }
 
