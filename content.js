@@ -1,7 +1,7 @@
 // content.js
 // Dose 0.2 — Content Model v1 (+ handedness-safe language)
 // Dose 0.2.2 — Video hooks per drill (demo / mistake / fix)
-// Dose 0.3 — Backing tracks use generator engine (no mp3 files needed)
+// Dose 0.3.1 — Backing tracks use YouTube embeds (legal + easy, no mp3)
 //
 // IMPORTANT RULE:
 // - Avoid "left hand / right hand" in instruction text.
@@ -62,7 +62,7 @@ window.CONTENT = {
           media: {
             demoUrl: "https://www.youtube.com/embed/Z-Cvv7yo5EA",
             dontUrl: "https://www.youtube.com/embed/56zp3uWDwVs",
-            fixUrl:  "https://www.youtube.com/embed/H7vCMvUyWpA"
+            fixUrl: "https://www.youtube.com/embed/H7vCMvUyWpA"
           }
         },
         {
@@ -80,7 +80,7 @@ window.CONTENT = {
           media: {
             demoUrl: "https://www.youtube.com/embed/d5R3Re17dgM",
             dontUrl: "https://www.youtube.com/embed/56zp3uWDwVs",
-            fixUrl:  "https://www.youtube.com/embed/H7vCMvUyWpA"
+            fixUrl: "https://www.youtube.com/embed/H7vCMvUyWpA"
           }
         }
       ]
@@ -108,7 +108,7 @@ window.CONTENT = {
           media: {
             demoUrl: "https://www.youtube.com/embed/fg1n_i-D7v0",
             dontUrl: "https://www.youtube.com/embed/5Qc426qgSho",
-            fixUrl:  "https://www.youtube.com/embed/83GZUBdupaI"
+            fixUrl: "https://www.youtube.com/embed/83GZUBdupaI"
           }
         },
         {
@@ -126,7 +126,7 @@ window.CONTENT = {
           media: {
             demoUrl: "https://www.youtube.com/embed/5Qc426qgSho",
             dontUrl: "https://www.youtube.com/embed/H6yh8H6kNno",
-            fixUrl:  "https://www.youtube.com/embed/83GZUBdupaI"
+            fixUrl: "https://www.youtube.com/embed/83GZUBdupaI"
           }
         }
       ]
@@ -154,7 +154,7 @@ window.CONTENT = {
           media: {
             demoUrl: "https://www.youtube.com/embed/NVJg8VjEVpM",
             dontUrl: "https://www.youtube.com/embed/M65GXQabC-s",
-            fixUrl:  "https://www.youtube.com/embed/39mhhYpaFS0"
+            fixUrl: "https://www.youtube.com/embed/39mhhYpaFS0"
           }
         },
         {
@@ -172,7 +172,7 @@ window.CONTENT = {
           media: {
             demoUrl: "https://www.youtube.com/embed/tz7upvwXSt4",
             dontUrl: "https://www.youtube.com/embed/M65GXQabC-s",
-            fixUrl:  "https://www.youtube.com/embed/39mhhYpaFS0"
+            fixUrl: "https://www.youtube.com/embed/39mhhYpaFS0"
           }
         }
       ]
@@ -192,8 +192,7 @@ window.CONTENT = {
       recommendedBpm: 92,
       note: "Open a shuffle backing track on YouTube. Great for rhythm practice.",
       youtubeQuery: "12 bar blues shuffle backing track key A 92 bpm",
-      // In-app player (embed)
-      youtubeEmbed: "https://www.youtube.com/embed/74xL5ChUkco"
+      youtubeEmbed: "https://www.youtube.com/embed/3szngdntfyM"
     },
     bt_gen_shuffle_A_lead: {
       id: "bt_gen_shuffle_A_lead",
@@ -203,7 +202,8 @@ window.CONTENT = {
       feel: "shuffle",
       recommendedBpm: 92,
       note: "Open a shuffle backing track on YouTube. Practice lead over the groove.",
-      youtubeQuery: "12 bar blues shuffle backing track key A 92 bpm"
+      youtubeQuery: "12 bar blues shuffle backing track key A 92 bpm",
+      youtubeEmbed: "https://www.youtube.com/embed/snHUyvxKPEc"
     },
 
     bt_gen_shuffle_E_rhythm: {
@@ -214,7 +214,8 @@ window.CONTENT = {
       feel: "shuffle",
       recommendedBpm: 96,
       note: "Open a shuffle backing track on YouTube.",
-      youtubeQuery: "12 bar blues shuffle backing track key E 96 bpm"
+      youtubeQuery: "12 bar blues shuffle backing track key E 96 bpm",
+      youtubeEmbed: "https://www.youtube.com/embed/LpxSayM9cBg"
     },
     bt_gen_shuffle_E_lead: {
       id: "bt_gen_shuffle_E_lead",
@@ -225,8 +226,7 @@ window.CONTENT = {
       recommendedBpm: 96,
       note: "Open a shuffle backing track on YouTube. Practice lead over the groove.",
       youtubeQuery: "12 bar blues shuffle backing track key E 96 bpm",
-      // In-app player (embed)
-      youtubeEmbed: "https://www.youtube.com/embed/x8fZFbfEhxE"
+      youtubeEmbed: "https://www.youtube.com/embed/wEn5qYz57Ws"
     },
 
     bt_gen_shuffle_G_rhythm: {
@@ -238,8 +238,7 @@ window.CONTENT = {
       recommendedBpm: 90,
       note: "Open a shuffle backing track on YouTube.",
       youtubeQuery: "12 bar blues shuffle backing track key G 90 bpm",
-      // In-app player (embed)
-      youtubeEmbed: "https://www.youtube.com/embed/iWEqBZD6kNI"
+      youtubeEmbed: "https://www.youtube.com/embed/nVdRnJuRgcI"
     },
     bt_gen_shuffle_G_lead: {
       id: "bt_gen_shuffle_G_lead",
@@ -249,7 +248,8 @@ window.CONTENT = {
       feel: "shuffle",
       recommendedBpm: 90,
       note: "Open a shuffle backing track on YouTube. Practice lead over the groove.",
-      youtubeQuery: "12 bar blues shuffle backing track key G 90 bpm"
+      youtubeQuery: "12 bar blues shuffle backing track key G 90 bpm",
+      youtubeEmbed: "https://www.youtube.com/embed/_LYRAYuHcFU"
     },
 
     // ---------------------------
@@ -264,8 +264,7 @@ window.CONTENT = {
       recommendedBpm: 66,
       note: "Open a slow blues backing track on YouTube. Practice timing and dynamics.",
       youtubeQuery: "slow blues backing track key E 66 bpm 12 bar",
-      // In-app player (embed)
-      youtubeEmbed: "https://www.youtube.com/embed/aDVuSwg4pyk"
+      youtubeEmbed: "https://www.youtube.com/embed/5oy6kOxE-uI"
     },
     bt_gen_slow_E_lead: {
       id: "bt_gen_slow_E_lead",
@@ -275,7 +274,8 @@ window.CONTENT = {
       feel: "slow blues",
       recommendedBpm: 66,
       note: "Open a slow blues backing track on YouTube. Great for bends and vibrato.",
-      youtubeQuery: "slow blues backing track key E 66 bpm 12 bar"
+      youtubeQuery: "slow blues backing track key E 66 bpm 12 bar",
+      youtubeEmbed: "https://www.youtube.com/embed/uircC2D8uk4"
     },
 
     bt_gen_slow_A_rhythm: {
@@ -286,7 +286,8 @@ window.CONTENT = {
       feel: "slow blues",
       recommendedBpm: 64,
       note: "Open a slow blues backing track on YouTube.",
-      youtubeQuery: "slow blues backing track key A 64 bpm 12 bar"
+      youtubeQuery: "slow blues backing track key A 64 bpm 12 bar",
+      youtubeEmbed: "https://www.youtube.com/embed/a2I1nO3uVYU"
     },
     bt_gen_slow_A_lead: {
       id: "bt_gen_slow_A_lead",
@@ -296,7 +297,8 @@ window.CONTENT = {
       feel: "slow blues",
       recommendedBpm: 64,
       note: "Open a slow blues backing track on YouTube. Practice phrasing over the groove.",
-      youtubeQuery: "slow blues backing track key A 64 bpm 12 bar"
+      youtubeQuery: "slow blues backing track key A 64 bpm 12 bar",
+      youtubeEmbed: "https://www.youtube.com/embed/a2I1nO3uVYU"
     },
 
     bt_gen_slow_C_rhythm: {
@@ -307,7 +309,8 @@ window.CONTENT = {
       feel: "slow blues",
       recommendedBpm: 62,
       note: "Open a slow blues backing track on YouTube.",
-      youtubeQuery: "slow blues backing track key C 62 bpm 12 bar"
+      youtubeQuery: "slow blues backing track key C 62 bpm 12 bar",
+      youtubeEmbed: "https://www.youtube.com/embed/IGfyzzcMOKk"
     },
     bt_gen_slow_C_lead: {
       id: "bt_gen_slow_C_lead",
@@ -317,7 +320,8 @@ window.CONTENT = {
       feel: "slow blues",
       recommendedBpm: 62,
       note: "Open a slow blues backing track on YouTube. Practice melodic ideas over the groove.",
-      youtubeQuery: "slow blues backing track key C 62 bpm 12 bar"
+      youtubeQuery: "slow blues backing track key C 62 bpm 12 bar",
+      youtubeEmbed: "https://www.youtube.com/embed/IGfyzzcMOKk"
     }
   }
 };
