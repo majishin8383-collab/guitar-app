@@ -1,7 +1,7 @@
 // render.js
 // UI rendering + event wiring
-// Guarded: Role + Backing UI only appear if ctx provides the APIs.
-// UPDATE: YouTube backing tracks render inline via dropdown (no fake Play/Pause button).
+// Guarded: Role UI only appears if ctx provides role APIs.
+// Backing tracks: YouTube embed ONLY. Dropdown controls what displays (no Stop/Play buttons).
 
 import { shouldShowLevelUp } from "./progress.js";
 
@@ -12,15 +12,6 @@ function hasRole(ctx) {
 function rolePill(ctx) {
   if (!hasRole(ctx)) return "";
   return `<span class="pill">Role: ${ctx.roleLabel()}</span>`;
-}
-
-function hasBacking(ctx) {
-  // We only need backingState for "what's selected/current" + optional stop.
-  return !!(ctx.backingState && typeof ctx.backingStop === "function");
-}
-
-function hasBackingState(ctx) {
-  return !!(ctx.backingState && typeof ctx.backingState === "object");
 }
 
 // -------- Backing helpers (dropdown + role filtering) --------
@@ -53,12 +44,6 @@ function getSelectedTrackId(ctx, tracks) {
 function setSelectedTrackId(ctx, id) {
   ctx.state.btSelectedId = id;
   ctx.persist();
-
-  // Keep backingState aligned if present (optional, non-breaking)
-  if (hasBackingState(ctx)) {
-    ctx.backingState.trackId = id;
-    ctx.backingState.isPlaying = false; // we don't pretend to control YT playback
-  }
 }
 
 function safeYoutubeEmbed(url) {
@@ -70,44 +55,7 @@ function safeYoutubeEmbed(url) {
   return ok ? url : null;
 }
 
-function backingVideoPanel(track) {
-  if (!track) return "";
-  const safe = safeYoutubeEmbed(track.youtubeEmbed);
-  if (!safe) {
-    return `
-      <div class="card" style="background:#171717; margin-top:10px;">
-        <div class="muted">No in-app backing video set for this track yet.</div>
-      </div>
-    `;
-  }
-
-  return `
-    <div class="card" style="background:#171717; margin-top:10px;">
-      <div style="font-weight:700;">Backing Track</div>
-      <div class="muted" style="font-size:14px;">
-        ${track.name} • Key ${track.key} • ~${track.recommendedBpm} bpm
-      </div>
-
-      <div style="height:10px"></div>
-
-      <div class="videoWrap">
-        <iframe
-          src="${safe}"
-          title="${track.name}"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          allowfullscreen
-        ></iframe>
-      </div>
-
-      ${track.note ? `<div class="muted" style="font-size:13px; margin-top:10px;">${track.note}</div>` : ""}
-      <div class="muted" style="font-size:12px; margin-top:6px;">
-        Use the YouTube controls above to play/pause (this keeps it reliable).
-      </div>
-    </div>
-  `;
-}
-
-function backingDropdownUI(ctx, tracks) {
+function backingUI(ctx, tracks, rerender) {
   if (!tracks.length) {
     return `<div class="muted" style="margin-top:8px;">No backing tracks defined for this genre yet.</div>`;
   }
@@ -115,42 +63,59 @@ function backingDropdownUI(ctx, tracks) {
   const selectedId = getSelectedTrackId(ctx, tracks);
   const selected = tracks.find(t => t.id === selectedId) || tracks[0];
 
-  const stopBtn = hasBacking(ctx)
-    ? `<button id="bt-stop" class="secondary" ${selectedId ? "" : "disabled"}>Stop</button>`
-    : "";
+  const safe = safeYoutubeEmbed(selected.youtubeEmbed);
 
-  const roleNote = hasRole(ctx)
-    ? `<div class="muted" style="font-size:14px; margin-top:6px;">Auto-filtered by Role: <b>${ctx.roleLabel()}</b></div>`
-    : "";
-
-  const sourceNote = selected.youtubeEmbed
-    ? `<div class="muted" style="font-size:14px; margin-top:10px;">Using <b>YouTube embed</b> (plays inside the app).</div>`
-    : `<div class="muted" style="font-size:14px; margin-top:10px;">No <code>youtubeEmbed</code> set yet for this track.</div>`;
+  // cache-bust parameter so iframe swaps reliably on selection change
+  const iframeSrc = safe ? `${safe}${safe.includes("?") ? "&" : "?"}cb=${encodeURIComponent(selected.id)}` : null;
 
   return `
     <div class="card" style="background:#171717; margin-top:10px;">
-      <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:space-between;">
-        <div style="flex:1; min-width:240px;">
-          <div class="muted" style="font-size:14px;">Choose track</div>
-          <select id="bt-select" style="width:100%; max-width:560px;">
-            ${tracks.map(t => {
-              const sel = t.id === selected.id ? "selected" : "";
-              const label = `${t.name} — Key ${t.key} • ${t.feel} • ~${t.recommendedBpm} bpm`;
-              return `<option value="${t.id}" ${sel}>${label}</option>`;
-            }).join("")}
-          </select>
-          ${roleNote}
-        </div>
+      <div class="muted" style="font-size:14px;">Choose track</div>
 
-        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-          ${stopBtn}
-        </div>
-      </div>
+      <select id="bt-select" style="width:100%; max-width:560px; margin-top:6px;">
+        ${tracks.map(t => {
+          const sel = t.id === selected.id ? "selected" : "";
+          const label = `${t.name} — Key ${t.key} • ${t.feel} • ~${t.recommendedBpm} bpm`;
+          return `<option value="${t.id}" ${sel}>${label}</option>`;
+        }).join("")}
+      </select>
 
-      ${sourceNote}
+      ${hasRole(ctx)
+        ? `<div class="muted" style="font-size:14px; margin-top:6px;">Auto-filtered by Role: <b>${ctx.roleLabel()}</b></div>`
+        : ""}
+
+      ${selected.note ? `<div class="muted" style="font-size:13px; margin-top:10px;">${selected.note}</div>` : ""}
+
+      <div class="hr" style="margin:12px 0;"></div>
+
+      ${
+        iframeSrc
+          ? `
+            <div style="font-weight:700;">Backing Track (in-app)</div>
+            <div class="muted" style="font-size:14px; margin-bottom:10px;">
+              ${selected.name} • Key ${selected.key} • ~${selected.recommendedBpm} bpm
+            </div>
+
+            <div class="videoWrap">
+              <iframe
+                src="${iframeSrc}"
+                title="${selected.name}"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowfullscreen
+              ></iframe>
+            </div>
+
+            <div class="muted" style="font-size:12px; margin-top:8px;">
+              Use the YouTube controls in the player to play/pause.
+            </div>
+          `
+          : `
+            <div class="muted">
+              No <code>youtubeEmbed</code> set for this track yet.
+            </div>
+          `
+      }
     </div>
-
-    ${backingVideoPanel(selected)}
   `;
 }
 
@@ -158,26 +123,10 @@ function wireBackingDropdown(ctx, tracks, rerender) {
   const select = document.getElementById("bt-select");
   if (!select) return;
 
-  function currentTrack() {
-    const id = select.value;
-    return tracks.find(t => t.id === id) || tracks[0];
-  }
-
   select.onchange = () => {
-    const t = currentTrack();
-    setSelectedTrackId(ctx, t.id);
-    rerender();
+    setSelectedTrackId(ctx, select.value);
+    rerender(); // this will rebuild the iframe with new src immediately
   };
-
-  const stopBtn = document.getElementById("bt-stop");
-  if (stopBtn && hasBacking(ctx)) {
-    stopBtn.onclick = () => {
-      ctx.backingStop();
-      // also clear selection to be honest (optional)
-      // ctx.state.btSelectedId = null; ctx.persist();
-      rerender();
-    };
-  }
 }
 
 // ------------------ Screens ------------------
@@ -321,8 +270,6 @@ export function renderGenre(ctx, genreId) {
   const btsAll = genre.backingTrackIds.map(id => C.backingTracks[id]).filter(Boolean);
   const bts = filterTracksByRole(ctx, btsAll);
 
-  const backingHeader = `<div class="muted" style="font-size:14px;">Pick a track from the dropdown. It embeds inside the app.</div>`;
-
   app.innerHTML = `
     <div class="card">
       <h2>${genre.name}</h2>
@@ -338,7 +285,6 @@ export function renderGenre(ctx, genreId) {
       <div id="skill-list"></div>
 
       <h3 style="margin-top:16px;">Backing Tracks</h3>
-      ${backingHeader}
       <div id="bt-area"></div>
 
       <div style="margin-top:16px;" class="row">
@@ -363,7 +309,7 @@ export function renderGenre(ctx, genreId) {
   });
 
   const btArea = document.getElementById("bt-area");
-  btArea.innerHTML = backingDropdownUI(ctx, bts);
+  btArea.innerHTML = backingUI(ctx, bts, () => renderGenre(ctx, genreId));
   wireBackingDropdown(ctx, bts, () => renderGenre(ctx, genreId));
 
   document.getElementById("back-home").onclick = () => ctx.nav.home();
@@ -381,8 +327,6 @@ export function renderPractice(ctx) {
   const btsAll = genre.backingTrackIds.map(id => C.backingTracks[id]).filter(Boolean);
   const bts = filterTracksByRole(ctx, btsAll);
 
-  const backingHeader = `<div class="muted" style="font-size:14px;">Pick a track from the dropdown. It embeds inside the app.</div>`;
-
   app.innerHTML = `
     <div class="card">
       <h2>Today's Practice</h2>
@@ -396,7 +340,6 @@ export function renderPractice(ctx) {
       </div>
 
       <h3 style="margin-top:16px;">Backing Tracks</h3>
-      ${backingHeader}
       <div id="bt-area"></div>
 
       <h3 style="margin-top:16px;">Starter Skills</h3>
@@ -410,7 +353,7 @@ export function renderPractice(ctx) {
   `;
 
   const btArea = document.getElementById("bt-area");
-  btArea.innerHTML = backingDropdownUI(ctx, bts);
+  btArea.innerHTML = backingUI(ctx, bts, () => renderPractice(ctx));
   wireBackingDropdown(ctx, bts, () => renderPractice(ctx));
 
   const skillList = document.getElementById("skill-list");
@@ -618,4 +561,4 @@ export function renderSkill(ctx, skillId, opts = {}) {
   });
 
   document.getElementById("back").onclick = backTo;
-}
+      }
