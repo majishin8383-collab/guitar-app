@@ -1,7 +1,8 @@
 // render.js
 // UI rendering + event wiring
 // Guarded: Role + Backing UI only appear if ctx provides the APIs.
-// UPDATE: Backing tracks collapsed into dropdown + (optional) Loop/Stop controls.
+// UPDATE: Backing tracks collapsed into dropdown + optional Clear/Loop controls.
+// YouTube-first: supports youtubeEmbed (in-app) and youtubeUrl/youtubeQuery (external).
 
 import { shouldShowLevelUp } from "./progress.js";
 
@@ -26,9 +27,19 @@ function hasBackingControls(ctx) {
 
 // -------- Backing helpers (dropdown + role filtering) --------
 
+function safeYoutubeEmbed(url) {
+  if (!url || typeof url !== "string") return null;
+  const ok =
+    url.startsWith("https://www.youtube.com/embed/") ||
+    url.startsWith("https://youtube.com/embed/") ||
+    url.startsWith("https://www.youtube-nocookie.com/embed/");
+  return ok ? url : null;
+}
+
 function getTrackMix(track) {
   // Prefer explicit mix tags in content.js later:
   // track.mix = "rhythm" | "lead"
+  // or track.generator.mix = "rhythm" | "lead"
   const mix = track?.mix || track?.generator?.mix;
   if (mix === "rhythm" || mix === "lead") return mix;
 
@@ -62,8 +73,7 @@ function setSelectedTrackId(ctx, id) {
 }
 
 function isTrackPlayable(track) {
-  // YouTube-only support + backwards compatibility
-  return !!(track && (track.youtubeUrl || track.youtubeQuery || track.audioUrl || track.generator));
+  return !!(track && (track.youtubeEmbed || track.youtubeUrl || track.youtubeQuery || track.audioUrl || track.generator));
 }
 
 function backingDropdownUI(ctx, tracks) {
@@ -77,10 +87,10 @@ function backingDropdownUI(ctx, tracks) {
   const playable = isTrackPlayable(selected);
 
   const isCurrent = ctx.backingState.trackId === selected.id;
-  const isPlaying = isCurrent && ctx.backingState.isPlaying;
+  const isActive = isCurrent && ctx.backingState.isPlaying;
 
-  // YouTube behavior: "Play" opens external, "Stop" clears state (cannot pause YouTube from here).
-  const btnLabel = !playable ? "No source yet" : (isPlaying ? "⏹ Stop" : "▶ Open YouTube");
+  // YouTube behavior: "Open YouTube" or "Stop" (clear selection).
+  const btnLabel = !playable ? "No source yet" : (isActive ? "⏹ Stop" : "▶ Open");
 
   const loopOn = !!ctx.backingState.isLoop;
   const loopBtn = hasBackingControls(ctx)
@@ -88,23 +98,24 @@ function backingDropdownUI(ctx, tracks) {
     : "";
 
   const stopBtn = hasBackingControls(ctx)
-    ? `<button id="bt-stop" class="secondary" ${ctx.backingState.trackId ? "" : "disabled"}>Stop</button>`
+    ? `<button id="bt-stop" class="secondary" ${ctx.backingState.trackId ? "" : "disabled"}>Clear</button>`
     : "";
 
   const roleNote = hasRole(ctx)
     ? `<div class="muted" style="font-size:14px; margin-top:6px;">Auto-filtered by Role: <b>${ctx.roleLabel()}</b></div>`
     : "";
 
+  const embed = safeYoutubeEmbed(selected.youtubeEmbed);
   const sourceNote =
-    selected.youtubeUrl
-      ? `<div class="muted" style="font-size:14px; margin-top:10px;">Opens a <b>YouTube link</b> (external).</div>`
-      : selected.youtubeQuery
-        ? `<div class="muted" style="font-size:14px; margin-top:10px;">Opens a <b>YouTube search</b> (external).</div>`
-        : selected.generator
-          ? `<div class="muted" style="font-size:14px; margin-top:10px;">Using <b>generator</b> backing track (legacy mode).</div>`
-          : (!selected.audioUrl
-              ? `<div class="muted" style="font-size:14px; margin-top:10px;">No source set for this track yet.</div>`
-              : "");
+    embed
+      ? `<div class="muted" style="font-size:14px; margin-top:10px;">Plays <b>in-app</b> via YouTube embed.</div>`
+      : selected.youtubeUrl
+        ? `<div class="muted" style="font-size:14px; margin-top:10px;">Opens a <b>YouTube link</b> (external).</div>`
+        : selected.youtubeQuery
+          ? `<div class="muted" style="font-size:14px; margin-top:10px;">Opens a <b>YouTube search</b> (external).</div>`
+          : (selected.generator || selected.audioUrl)
+            ? `<div class="muted" style="font-size:14px; margin-top:10px;">Legacy source present (not used in YouTube-first mode).</div>`
+            : `<div class="muted" style="font-size:14px; margin-top:10px;">No source set for this track yet.</div>`;
 
   return `
     <div class="card" style="background:#171717; margin-top:10px;">
@@ -127,17 +138,49 @@ function backingDropdownUI(ctx, tracks) {
 
           <button
             id="bt-play"
-            class="${playable ? (isPlaying ? "" : "secondary") : "secondary"}"
+            class="${playable ? (isActive ? "" : "secondary") : "secondary"}"
             ${playable ? "" : "disabled"}
             style="white-space:nowrap;"
           >${btnLabel}</button>
 
-          <span class="pill">${isPlaying ? "Selected" : "Idle"}</span>
+          <span class="pill">${isActive ? "Active" : "Idle"}</span>
         </div>
       </div>
 
       ${selected.note ? `<div class="muted" style="font-size:14px; margin-top:10px;">${selected.note}</div>` : ""}
       ${sourceNote}
+    </div>
+  `;
+}
+
+function backingEmbedPanel(ctx, tracks) {
+  if (!hasBacking(ctx)) return "";
+  if (!ctx.backingState.trackId || !ctx.backingState.isPlaying) return "";
+
+  const current = tracks.find(t => t && t.id === ctx.backingState.trackId) || null;
+  const embed = safeYoutubeEmbed(current?.youtubeEmbed);
+  if (!current || !embed) return "";
+
+  return `
+    <div class="card" style="background:#171717; margin-top:10px;">
+      <div class="row" style="justify-content:space-between; align-items:center;">
+        <div>
+          <div class="muted" style="font-size:14px;">Now Playing (in-app)</div>
+          <div><b>${current.name}</b></div>
+        </div>
+        <button class="secondary" id="bt-clear-embed">Clear</button>
+      </div>
+
+      <div class="videoWrap" style="margin-top:10px;">
+        <iframe
+          src="${embed}"
+          title="${current.name}"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowfullscreen
+        ></iframe>
+      </div>
+
+      <div class="muted" style="margin-top:8px;">YouTube embed playback.</div>
     </div>
   `;
 }
@@ -160,7 +203,6 @@ function wireBackingDropdown(ctx, tracks, rerender) {
 
   playBtn.onclick = () => {
     const t = currentTrack();
-    // YouTube behavior: toggle will open external when starting; when "playing", toggle acts like stop.
     ctx.backingToggle(t);
     rerender();
   };
@@ -180,38 +222,6 @@ function wireBackingDropdown(ctx, tracks, rerender) {
       rerender();
     };
   }
-}
-
-// ------------------ Existing row renderer (kept for potential fallback) ------------------
-
-function backingRow(ctx, track) {
-  const playable = isTrackPlayable(track);
-
-  const isCurrent = ctx.backingState.trackId === track.id;
-  const isPlaying = isCurrent && ctx.backingState.isPlaying;
-
-  const btnLabel = !playable
-    ? "No source yet"
-    : (isPlaying ? "⏹ Stop" : "▶ Open YouTube");
-
-  return `
-    <div class="card" style="background:#171717; margin-top:10px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-        <div>
-          <div><b>${track.name}</b></div>
-          <div class="muted" style="font-size:14px;">Key ${track.key} • ${track.feel} • ~${track.recommendedBpm} bpm</div>
-          ${track.note ? `<div class="muted" style="font-size:14px; margin-top:6px;">${track.note}</div>` : ""}
-        </div>
-
-        <button
-          class="${playable ? (isPlaying ? "" : "secondary") : "secondary"}"
-          data-bt-play="${track.id}"
-          ${playable ? "" : "disabled"}
-          style="white-space:nowrap;"
-        >${btnLabel}</button>
-      </div>
-    </div>
-  `;
 }
 
 // ------------------ Screens ------------------
@@ -356,7 +366,7 @@ export function renderGenre(ctx, genreId) {
   const bts = filterTracksByRole(ctx, btsAll);
 
   const backingHeader = hasBacking(ctx)
-    ? `<div class="muted" style="font-size:14px;">Tap Play to open YouTube externally (link or search).</div>`
+    ? `<div class="muted" style="font-size:14px;">Tap Open to play: in-app if an embed is set; otherwise YouTube opens externally.</div>`
     : `<div class="muted" style="font-size:14px;">(Backing player not enabled yet.)</div>`;
 
   app.innerHTML = `
@@ -376,6 +386,7 @@ export function renderGenre(ctx, genreId) {
       <h3 style="margin-top:16px;">Backing Tracks</h3>
       ${backingHeader}
       <div id="bt-area"></div>
+      <div id="bt-embed"></div>
 
       <div style="margin-top:16px;" class="row">
         <button class="secondary" id="back-home">Back</button>
@@ -399,15 +410,22 @@ export function renderGenre(ctx, genreId) {
   });
 
   const btArea = document.getElementById("bt-area");
+  const btEmbed = document.getElementById("bt-embed");
+
   if (hasBacking(ctx)) {
     btArea.innerHTML = backingDropdownUI(ctx, bts);
     wireBackingDropdown(ctx, bts, () => renderGenre(ctx, genreId));
+    btEmbed.innerHTML = backingEmbedPanel(ctx, btsAll);
+
+    const clearEmbed = document.getElementById("bt-clear-embed");
+    if (clearEmbed) clearEmbed.onclick = () => { ctx.backingStop(); renderGenre(ctx, genreId); };
   } else {
     btArea.innerHTML = btsAll.map(t => `
       <div style="opacity:.9; margin:8px 0;">
         • <strong>${t.name}</strong> — Key ${t.key}, ${t.feel}, ~${t.recommendedBpm} bpm
       </div>
     `).join("");
+    btEmbed.innerHTML = "";
   }
 
   document.getElementById("back-home").onclick = () => ctx.nav.home();
@@ -426,7 +444,7 @@ export function renderPractice(ctx) {
   const bts = filterTracksByRole(ctx, btsAll);
 
   const backingHeader = hasBacking(ctx)
-    ? `<div class="muted" style="font-size:14px;">Pick a track. Tap Play to open YouTube (external).</div>`
+    ? `<div class="muted" style="font-size:14px;">Pick a track and tap Open. If an embed is set, it plays in-app.</div>`
     : `<div class="muted" style="font-size:14px;">Backing player not enabled yet.</div>`;
 
   app.innerHTML = `
@@ -444,6 +462,7 @@ export function renderPractice(ctx) {
       <h3 style="margin-top:16px;">Backing Tracks</h3>
       ${backingHeader}
       <div id="bt-area"></div>
+      <div id="bt-embed"></div>
 
       <h3 style="margin-top:16px;">Starter Skills</h3>
       <div id="skill-list"></div>
@@ -456,15 +475,22 @@ export function renderPractice(ctx) {
   `;
 
   const btArea = document.getElementById("bt-area");
+  const btEmbed = document.getElementById("bt-embed");
+
   if (hasBacking(ctx)) {
     btArea.innerHTML = backingDropdownUI(ctx, bts);
     wireBackingDropdown(ctx, bts, () => renderPractice(ctx));
+    btEmbed.innerHTML = backingEmbedPanel(ctx, btsAll);
+
+    const clearEmbed = document.getElementById("bt-clear-embed");
+    if (clearEmbed) clearEmbed.onclick = () => { ctx.backingStop(); renderPractice(ctx); };
   } else {
     btArea.innerHTML = btsAll.map(t => `
       <div style="opacity:.9; margin:8px 0;">
         • <strong>${t.name}</strong> — Key ${t.key}, ${t.feel}, ~${t.recommendedBpm} bpm
       </div>
     `).join("");
+    btEmbed.innerHTML = "";
   }
 
   const skillList = document.getElementById("skill-list");
