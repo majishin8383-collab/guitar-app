@@ -19,11 +19,7 @@ const DEFAULT_STATE = {
   handedness: "right",     // "right" | "left"
   mirrorVideos: false,     // drill-video mirror preference
   progress: {},
-
-  // backing track UI state
-  btSelectedId: null,      // dropdown selection
-  btPlayingId: null,       // currently "playing" track (embedded)
-  btIsPlaying: false       // whether to show/embed it as playing
+  btSelectedId: null       // backing-track dropdown selection
 };
 
 let state = loadState(DEFAULT_STATE);
@@ -33,8 +29,6 @@ state = state && typeof state === "object" ? state : { ...DEFAULT_STATE };
 state.progress = state.progress || {};
 if (!state.role) state.role = "rhythm";
 if (!("btSelectedId" in state)) state.btSelectedId = null;
-if (!("btPlayingId" in state)) state.btPlayingId = null;
-if (!("btIsPlaying" in state)) state.btIsPlaying = false;
 
 function persist() { saveState(state); }
 
@@ -55,7 +49,8 @@ function safeEmbed(url) {
   if (!url || typeof url !== "string") return null;
   const ok =
     url.startsWith("https://www.youtube.com/embed/") ||
-    url.startsWith("https://youtube.com/embed/");
+    url.startsWith("https://youtube.com/embed/") ||
+    url.startsWith("https://www.youtube-nocookie.com/embed/");
   return ok ? url : null;
 }
 
@@ -125,60 +120,11 @@ function metroStopIfOwnedBy(drillId) {
   metro.stop(); metroState.drillId = null;
 }
 
-// Backing tracks — IN-APP ONLY (persisted)
-// Render.js is responsible for embedding the video when playing.
-const backingState = {
-  get trackId() { return state.btPlayingId; },
-  get isPlaying() { return !!state.btIsPlaying; }
-};
-
-function backingSetSelected(id) {
-  state.btSelectedId = id || null;
-  persist();
-}
-
-function backingToggle(track) {
-  if (!track) return;
-
-  // keep selection aligned with what user is interacting with
-  if (track.id && state.btSelectedId !== track.id) {
-    state.btSelectedId = track.id;
-  }
-
-  const same = state.btPlayingId === track.id;
-
-  if (same) {
-    // toggle play/pause on same track
-    state.btIsPlaying = !state.btIsPlaying;
-
-    // if paused, we keep btPlayingId so UI can show selection as current
-    persist();
-    return;
-  }
-
-  // switch to new track and start playing
-  state.btPlayingId = track.id;
-  state.btIsPlaying = true;
-  persist();
-}
-
-function backingStop() {
-  state.btIsPlaying = false;
-  state.btPlayingId = null;
-  persist();
-}
-
 function ctx() {
   return {
     app, C, state, persist, nav, progress,
     handednessLabel, roleLabel, ensureMirrorDefault, videoBlock,
-    metro, metroState, metroToggle, metroSetBpmIfActive, metroStopIfOwnedBy,
-
-    // backing hooks used by render.js
-    backingState,
-    backingToggle,
-    backingStop,
-    backingSetSelected
+    metro, metroState, metroToggle, metroSetBpmIfActive, metroStopIfOwnedBy
   };
 }
 
