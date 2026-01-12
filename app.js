@@ -9,7 +9,6 @@ import {
 } from "./progress.js";
 import { renderHome, renderGenre, renderPractice, renderSkill } from "./render.js";
 import { createMetronome } from "./metronome.js";
-import { createBackingPlayer } from "./backing.js";
 
 const app = document.getElementById("app");
 const C = window.CONTENT;
@@ -20,7 +19,7 @@ const DEFAULT_STATE = {
   handedness: "right",     // "right" | "left"
   mirrorVideos: false,     // video mirror preference
   progress: {},
-  backing: { volume: 0.85, muted: false, loop: false }
+  btSelectedId: null       // backing-track dropdown selection
 };
 
 let state = loadState(DEFAULT_STATE);
@@ -28,10 +27,6 @@ let state = loadState(DEFAULT_STATE);
 // guard for shallow merges / missing keys
 state = state && typeof state === "object" ? state : { ...DEFAULT_STATE };
 state.progress = state.progress || {};
-state.backing = state.backing || { ...DEFAULT_STATE.backing };
-if (typeof state.backing.volume !== "number") state.backing.volume = 0.85;
-if (typeof state.backing.muted !== "boolean") state.backing.muted = false;
-if (typeof state.backing.loop !== "boolean") state.backing.loop = false;
 if (!state.role) state.role = "rhythm";
 
 function persist() { saveState(state); }
@@ -46,6 +41,28 @@ function ensureMirrorDefault() {
     state.mirrorVideos = true;
     persist();
   }
+}
+
+// --- YouTube helpers (backing tracks) ---
+function openYoutubeForTrack(track) {
+  if (!track) return;
+
+  // Prefer direct embed link (opens fine in a new tab)
+  if (track.youtubeEmbed && typeof track.youtubeEmbed === "string") {
+    window.open(track.youtubeEmbed, "_blank", "noopener,noreferrer");
+    return;
+  }
+
+  // Otherwise search query
+  const q = track.youtubeQuery || track.youtubeSearch || null;
+  if (q && typeof q === "string") {
+    const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+    return;
+  }
+
+  // Fallback: if nothing exists, do nothing (keeps app stable)
+  console.warn("[Backing] Track has no youtubeEmbed or youtubeQuery:", track?.id);
 }
 
 function safeEmbed(url) {
@@ -122,21 +139,30 @@ function metroStopIfOwnedBy(drillId) {
   metro.stop(); metroState.drillId = null;
 }
 
-// Backing tracks
-const backing = createBackingPlayer();
-const backingState = backing.state;
+// Backing tracks (simple YouTube launcher state)
+const backingState = {
+  trackId: null,
+  isPlaying: false,
+  isLoop: false,
+  volume: 0.85,
+  muted: false
+};
 
-// apply persisted settings on boot
-backing.setVolume(state.backing.volume);
-backing.setMuted(state.backing.muted);
-backing.setLoop(state.backing.loop);
+function backingToggle(track) {
+  if (!track) return;
 
-function backingToggle(track) { backing.toggle(track); }
-function backingStop() { backing.stop(); }
-function backingSetLoop(on) {
-  state.backing.loop = !!on;
-  persist();
-  backing.setLoop(state.backing.loop);
+  const same = backingState.trackId === track.id;
+  if (same && backingState.isPlaying) {
+    // pause = just flip UI state (cannot control YouTube)
+    backingState.isPlaying = false;
+    return;
+  }
+
+  backingState.trackId = track.id;
+  backingState.isPlaying = true;
+
+  // Open YouTube (embed preferred)
+  openYoutubeForTrack(track);
 }
 
 function ctx() {
@@ -144,7 +170,10 @@ function ctx() {
     app, C, state, persist, nav, progress,
     handednessLabel, roleLabel, ensureMirrorDefault, videoBlock,
     metro, metroState, metroToggle, metroSetBpmIfActive, metroStopIfOwnedBy,
-    backingState, backingToggle, backingStop, backingSetLoop
+
+    // backing hooks expected by render.js
+    backingState,
+    backingToggle
   };
 }
 
