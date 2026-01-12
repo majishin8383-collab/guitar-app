@@ -1,7 +1,7 @@
 // render.js
 // UI rendering + event wiring
 // Guarded: Role + Backing UI only appear if ctx provides the APIs.
-// Backing tracks: dropdown + in-app YouTube embed when playing.
+// UPDATE A: Backing tracks show inline YouTube embed panel (in-app).
 
 import { shouldShowLevelUp } from "./progress.js";
 
@@ -18,8 +18,8 @@ function hasBacking(ctx) {
   return !!(ctx.backingState && typeof ctx.backingToggle === "function");
 }
 
-function hasBackingStop(ctx) {
-  return typeof ctx.backingStop === "function";
+function hasBackingControls(ctx) {
+  return hasBacking(ctx) && typeof ctx.backingStop === "function";
 }
 
 // -------- Backing helpers (dropdown + role filtering) --------
@@ -37,7 +37,6 @@ function getTrackMix(track) {
 function filterTracksByRole(ctx, tracks) {
   if (!hasRole(ctx)) return tracks;
   const want = ctx.state.role === "lead" ? "lead" : "rhythm";
-
   return tracks.filter(t => {
     const tm = getTrackMix(t);
     return tm ? tm === want : true;
@@ -53,27 +52,66 @@ function getSelectedTrackId(ctx, tracks) {
 function setSelectedTrackId(ctx, id) {
   ctx.state.btSelectedId = id;
   ctx.persist();
-}
-
-function youtubeEmbedFromTrack(track) {
-  if (!track) return null;
-
-  // Preferred: explicit embed URL
-  if (typeof track.youtubeEmbed === "string" && track.youtubeEmbed.startsWith("https://www.youtube.com/embed/")) {
-    return track.youtubeEmbed;
-  }
-
-  // Optional: support youtubeId (if you add later)
-  if (typeof track.youtubeId === "string" && track.youtubeId.trim()) {
-    return `https://www.youtube.com/embed/${track.youtubeId.trim()}`;
-  }
-
-  return null;
+  // optional hook if app.js exposes it (harmless if not)
+  if (typeof ctx.backingSetSelected === "function") ctx.backingSetSelected(id);
 }
 
 function isTrackPlayable(track) {
-  // In-app playback requires an embed or ID
-  return !!youtubeEmbedFromTrack(track);
+  // For YouTube-backed tracks: playable if youtubeEmbed is present
+  return !!(track && typeof track.youtubeEmbed === "string" && track.youtubeEmbed.includes("youtube"));
+}
+
+function safeYoutubeEmbed(url) {
+  if (!url || typeof url !== "string") return null;
+  const ok =
+    url.startsWith("https://www.youtube.com/embed/") ||
+    url.startsWith("https://youtube.com/embed/") ||
+    url.startsWith("https://www.youtube-nocookie.com/embed/");
+  return ok ? url : null;
+}
+
+function backingVideoPanel(ctx, track) {
+  if (!track) return "";
+  const safe = safeYoutubeEmbed(track.youtubeEmbed);
+  if (!safe) {
+    return `
+      <div class="card" style="background:#171717; margin-top:10px;">
+        <div class="muted">No in-app video set for this track yet.</div>
+      </div>
+    `;
+  }
+
+  const isCurrent = ctx.backingState.trackId === track.id;
+  const playing = isCurrent && ctx.backingState.isPlaying;
+
+  return `
+    <div class="card" style="background:#171717; margin-top:10px;">
+      <div class="row" style="justify-content:space-between; align-items:center;">
+        <div>
+          <div style="font-weight:700;">Backing Track Video</div>
+          <div class="muted" style="font-size:14px;">
+            ${track.name} • Key ${track.key} • ~${track.recommendedBpm} bpm
+          </div>
+        </div>
+        <span class="pill">${playing ? "Playing" : "Ready"}</span>
+      </div>
+
+      <div style="height:10px"></div>
+
+      <div class="videoWrap">
+        <iframe
+          src="${safe}"
+          title="${track.name}"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowfullscreen
+        ></iframe>
+      </div>
+
+      <div class="muted" style="font-size:13px; margin-top:10px;">
+        Tip: If a YouTube embed ever shows “unavailable,” swap the embed to a different backing track video.
+      </div>
+    </div>
+  `;
 }
 
 function backingDropdownUI(ctx, tracks) {
@@ -89,9 +127,9 @@ function backingDropdownUI(ctx, tracks) {
   const isCurrent = ctx.backingState.trackId === selected.id;
   const isPlaying = isCurrent && ctx.backingState.isPlaying;
 
-  const btnLabel = !playable ? "No video set" : (isPlaying ? "⏸ Pause" : "▶ Play");
+  const btnLabel = !playable ? "No video yet" : (isPlaying ? "⏸ Pause" : "▶ Play");
 
-  const stopBtn = hasBackingStop(ctx)
+  const stopBtn = hasBackingControls(ctx)
     ? `<button id="bt-stop" class="secondary" ${ctx.backingState.trackId ? "" : "disabled"}>Stop</button>`
     : "";
 
@@ -99,12 +137,16 @@ function backingDropdownUI(ctx, tracks) {
     ? `<div class="muted" style="font-size:14px; margin-top:6px;">Auto-filtered by Role: <b>${ctx.roleLabel()}</b></div>`
     : "";
 
-  const sourceNote = playable
-    ? `<div class="muted" style="font-size:14px; margin-top:10px;">Plays <b>inside the app</b>.</div>`
-    : `<div class="muted" style="font-size:14px; margin-top:10px;">Add <code>youtubeEmbed</code> (or <code>youtubeId</code>) to play this track in-app.</div>`;
+  const sourceNote = selected.youtubeEmbed
+    ? `<div class="muted" style="font-size:14px; margin-top:10px;">Using <b>YouTube embed</b> (plays inside the app).</div>`
+    : `<div class="muted" style="font-size:14px; margin-top:10px;">No <code>youtubeEmbed</code> set yet for this track.</div>`;
 
-  const embed = youtubeEmbedFromTrack(selected);
-  const showEmbed = isPlaying && embed;
+  // Inline video panel:
+  // - If currently playing something: show THAT track
+  // - Otherwise: show the selected track (if it has an embed)
+  const currentPlaying = tracks.find(t => t.id === ctx.backingState.trackId) || null;
+  const panelTrack = (ctx.backingState.isPlaying && currentPlaying) ? currentPlaying : selected;
+  const panel = (panelTrack && safeYoutubeEmbed(panelTrack.youtubeEmbed)) ? backingVideoPanel(ctx, panelTrack) : "";
 
   return `
     <div class="card" style="background:#171717; margin-top:10px;">
@@ -131,38 +173,21 @@ function backingDropdownUI(ctx, tracks) {
             style="white-space:nowrap;"
           >${btnLabel}</button>
 
-          <span id="bt-status" class="pill">${isPlaying ? "Playing" : "Stopped"}</span>
+          <span class="pill">${isPlaying ? "Playing" : "Stopped"}</span>
         </div>
       </div>
 
       ${selected.note ? `<div class="muted" style="font-size:14px; margin-top:10px;">${selected.note}</div>` : ""}
       ${sourceNote}
-
-      ${
-        showEmbed
-          ? `
-            <div style="margin-top:12px;">
-              <div class="muted" style="font-size:14px; margin-bottom:6px;">Backing track video</div>
-              <div class="videoWrap" style="aspect-ratio:16/9; width:100%; border-radius:12px; overflow:hidden;">
-                <iframe
-                  src="${embed}"
-                  title="Backing track"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  allowfullscreen
-                ></iframe>
-              </div>
-            </div>
-          `
-          : ""
-      }
     </div>
+
+    ${panel}
   `;
 }
 
 function wireBackingDropdown(ctx, tracks, rerender) {
   const select = document.getElementById("bt-select");
   const playBtn = document.getElementById("bt-play");
-  const stopBtn = document.getElementById("bt-stop");
   if (!select || !playBtn) return;
 
   function currentTrack() {
@@ -170,23 +195,21 @@ function wireBackingDropdown(ctx, tracks, rerender) {
     return tracks.find(t => t.id === id) || tracks[0];
   }
 
-  // Change selection: rerender needed (updates notes + embed state)
   select.onchange = () => {
     const t = currentTrack();
     setSelectedTrackId(ctx, t.id);
     rerender();
   };
 
-  // Play/pause: rerender needed (to show/hide iframe)
   playBtn.onclick = () => {
     const t = currentTrack();
     ctx.backingToggle(t);
     rerender();
   };
 
-  // Stop: rerender needed
-  if (stopBtn && hasBackingStop(ctx)) {
-    stopBtn.onclick = () => {
+  if (hasBackingControls(ctx)) {
+    const stopBtn = document.getElementById("bt-stop");
+    if (stopBtn) stopBtn.onclick = () => {
       ctx.backingStop();
       rerender();
     };
@@ -335,7 +358,7 @@ export function renderGenre(ctx, genreId) {
   const bts = filterTracksByRole(ctx, btsAll);
 
   const backingHeader = hasBacking(ctx)
-    ? `<div class="muted" style="font-size:14px;">Backing tracks play in-app when a <code>youtubeEmbed</code> is set.</div>`
+    ? `<div class="muted" style="font-size:14px;">Select a track, then Play. It embeds inside the app.</div>`
     : `<div class="muted" style="font-size:14px;">(Backing player not enabled yet.)</div>`;
 
   app.innerHTML = `
@@ -405,7 +428,7 @@ export function renderPractice(ctx) {
   const bts = filterTracksByRole(ctx, btsAll);
 
   const backingHeader = hasBacking(ctx)
-    ? `<div class="muted" style="font-size:14px;">Pick a backing track and press Play to watch it in-app.</div>`
+    ? `<div class="muted" style="font-size:14px;">Select a backing track. Play embeds inside the app.</div>`
     : `<div class="muted" style="font-size:14px;">Backing player not enabled yet.</div>`;
 
   app.innerHTML = `
