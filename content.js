@@ -191,7 +191,9 @@ window.CONTENT = {
       feel: "shuffle",
       recommendedBpm: 92,
       note: "Open a shuffle backing track on YouTube. Great for rhythm practice.",
-      youtubeQuery: "12 bar blues shuffle backing track key A 92 bpm"
+      youtubeQuery: "12 bar blues shuffle backing track key A 92 bpm",
+      // In-app player (embed)
+      youtubeEmbed: "https://www.youtube.com/embed/74xL5ChUkco"
     },
     bt_gen_shuffle_A_lead: {
       id: "bt_gen_shuffle_A_lead",
@@ -222,7 +224,9 @@ window.CONTENT = {
       feel: "shuffle",
       recommendedBpm: 96,
       note: "Open a shuffle backing track on YouTube. Practice lead over the groove.",
-      youtubeQuery: "12 bar blues shuffle backing track key E 96 bpm"
+      youtubeQuery: "12 bar blues shuffle backing track key E 96 bpm",
+      // In-app player (embed)
+      youtubeEmbed: "https://www.youtube.com/embed/x8fZFbfEhxE"
     },
 
     bt_gen_shuffle_G_rhythm: {
@@ -233,7 +237,9 @@ window.CONTENT = {
       feel: "shuffle",
       recommendedBpm: 90,
       note: "Open a shuffle backing track on YouTube.",
-      youtubeQuery: "12 bar blues shuffle backing track key G 90 bpm"
+      youtubeQuery: "12 bar blues shuffle backing track key G 90 bpm",
+      // In-app player (embed)
+      youtubeEmbed: "https://www.youtube.com/embed/iWEqBZD6kNI"
     },
     bt_gen_shuffle_G_lead: {
       id: "bt_gen_shuffle_G_lead",
@@ -257,7 +263,9 @@ window.CONTENT = {
       feel: "slow blues",
       recommendedBpm: 66,
       note: "Open a slow blues backing track on YouTube. Practice timing and dynamics.",
-      youtubeQuery: "slow blues backing track key E 66 bpm 12 bar"
+      youtubeQuery: "slow blues backing track key E 66 bpm 12 bar",
+      // In-app player (embed)
+      youtubeEmbed: "https://www.youtube.com/embed/aDVuSwg4pyk"
     },
     bt_gen_slow_E_lead: {
       id: "bt_gen_slow_E_lead",
