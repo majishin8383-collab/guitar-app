@@ -29,7 +29,6 @@ function hasBackingControls(ctx) {
 function getTrackMix(track) {
   // Prefer explicit mix tags in content.js later:
   // track.mix = "rhythm" | "lead"
-  // or track.generator.mix = "rhythm" | "lead"
   const mix = track?.mix || track?.generator?.mix;
   if (mix === "rhythm" || mix === "lead") return mix;
 
@@ -63,6 +62,7 @@ function setSelectedTrackId(ctx, id) {
 }
 
 function isTrackPlayable(track) {
+  // YouTube-only support + backwards compatibility
   return !!(track && (track.youtubeUrl || track.youtubeQuery || track.audioUrl || track.generator));
 }
 
@@ -74,13 +74,13 @@ function backingDropdownUI(ctx, tracks) {
   const selectedId = getSelectedTrackId(ctx, tracks);
   const selected = tracks.find(t => t.id === selectedId) || tracks[0];
 
-  // ✅ NEW: playable if audioUrl OR generator
   const playable = isTrackPlayable(selected);
 
   const isCurrent = ctx.backingState.trackId === selected.id;
   const isPlaying = isCurrent && ctx.backingState.isPlaying;
 
-  const btnLabel = !playable ? "No audio yet" : (isPlaying ? "⏸ Pause" : "▶ Play");
+  // YouTube behavior: "Play" opens external, "Stop" clears state (cannot pause YouTube from here).
+  const btnLabel = !playable ? "No source yet" : (isPlaying ? "⏹ Stop" : "▶ Open YouTube");
 
   const loopOn = !!ctx.backingState.isLoop;
   const loopBtn = hasBackingControls(ctx)
@@ -95,17 +95,16 @@ function backingDropdownUI(ctx, tracks) {
     ? `<div class="muted" style="font-size:14px; margin-top:6px;">Auto-filtered by Role: <b>${ctx.roleLabel()}</b></div>`
     : "";
 
- const sourceNote =
-  selected.youtubeUrl
-    ? `<div class="muted" style="font-size:14px; margin-top:10px;">Opens <b>YouTube</b> link (external).</div>`
-    : selected.youtubeQuery
-      ? `<div class="muted" style="font-size:14px; margin-top:10px;">Opens <b>YouTube</b> search (external).</div>`
-      : selected.generator
-        ? `<div class="muted" style="font-size:14px; margin-top:10px;">Using <b>generator</b> backing track (no mp3 needed).</div>`
-        : (!selected.audioUrl
-            ? `<div class="muted" style="font-size:14px; margin-top:10px;">No source set for this track yet.</div>`
-            : "");
-
+  const sourceNote =
+    selected.youtubeUrl
+      ? `<div class="muted" style="font-size:14px; margin-top:10px;">Opens a <b>YouTube link</b> (external).</div>`
+      : selected.youtubeQuery
+        ? `<div class="muted" style="font-size:14px; margin-top:10px;">Opens a <b>YouTube search</b> (external).</div>`
+        : selected.generator
+          ? `<div class="muted" style="font-size:14px; margin-top:10px;">Using <b>generator</b> backing track (legacy mode).</div>`
+          : (!selected.audioUrl
+              ? `<div class="muted" style="font-size:14px; margin-top:10px;">No source set for this track yet.</div>`
+              : "");
 
   return `
     <div class="card" style="background:#171717; margin-top:10px;">
@@ -133,7 +132,7 @@ function backingDropdownUI(ctx, tracks) {
             style="white-space:nowrap;"
           >${btnLabel}</button>
 
-          <span class="pill">${isPlaying ? "Playing" : "Stopped"}</span>
+          <span class="pill">${isPlaying ? "Selected" : "Idle"}</span>
         </div>
       </div>
 
@@ -161,6 +160,7 @@ function wireBackingDropdown(ctx, tracks, rerender) {
 
   playBtn.onclick = () => {
     const t = currentTrack();
+    // YouTube behavior: toggle will open external when starting; when "playing", toggle acts like stop.
     ctx.backingToggle(t);
     rerender();
   };
@@ -185,15 +185,14 @@ function wireBackingDropdown(ctx, tracks, rerender) {
 // ------------------ Existing row renderer (kept for potential fallback) ------------------
 
 function backingRow(ctx, track) {
-  // ✅ NEW: treat generator tracks as playable
   const playable = isTrackPlayable(track);
 
   const isCurrent = ctx.backingState.trackId === track.id;
   const isPlaying = isCurrent && ctx.backingState.isPlaying;
 
   const btnLabel = !playable
-    ? "No audio yet"
-    : (isPlaying ? "⏸ Pause" : "▶ Play");
+    ? "No source yet"
+    : (isPlaying ? "⏹ Stop" : "▶ Open YouTube");
 
   return `
     <div class="card" style="background:#171717; margin-top:10px;">
@@ -356,9 +355,8 @@ export function renderGenre(ctx, genreId) {
   const btsAll = genre.backingTrackIds.map(id => C.backingTracks[id]).filter(Boolean);
   const bts = filterTracksByRole(ctx, btsAll);
 
-  // ✅ Update helper text so it’s not lying when we use generator tracks
   const backingHeader = hasBacking(ctx)
-    ? `<div class="muted" style="font-size:14px;">Playable if the track has <code>audioUrl</code> <b>or</b> a <code>generator</code> config.</div>`
+    ? `<div class="muted" style="font-size:14px;">Tap Play to open YouTube externally (link or search).</div>`
     : `<div class="muted" style="font-size:14px;">(Backing player not enabled yet.)</div>`;
 
   app.innerHTML = `
@@ -428,7 +426,7 @@ export function renderPractice(ctx) {
   const bts = filterTracksByRole(ctx, btsAll);
 
   const backingHeader = hasBacking(ctx)
-    ? `<div class="muted" style="font-size:14px;">Pick a track from the dropdown. Playable if it has <code>audioUrl</code> or <code>generator</code>. Loop/Stop appear if enabled.</div>`
+    ? `<div class="muted" style="font-size:14px;">Pick a track. Tap Play to open YouTube (external).</div>`
     : `<div class="muted" style="font-size:14px;">Backing player not enabled yet.</div>`;
 
   app.innerHTML = `
