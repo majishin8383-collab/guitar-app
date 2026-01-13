@@ -1,12 +1,11 @@
 // content.js
-// Dose 0.2 — Content Model v1 (+ handedness-safe language)
-// Dose 0.2.2 — Video hooks per drill (demo / mistake / fix)
-// Dose 0.3.1 — Backing tracks use YouTube embeds (legal + easy, no mp3)
+// Content Registry — pure data only
 //
-// IMPORTANT RULE:
-// - Avoid "left hand / right hand" in instruction text.
-// - Always say "fretting hand" and "picking hand".
-// - Videos can be mirrored for left-handed players.
+// RULES:
+// - No logic in this file
+// - Avoid "left hand / right hand" → use "fretting hand" / "picking hand"
+// - Videos may be mirrored by UI
+// - Backing tracks may have empty youtubeEmbed safely
 
 window.CONTENT = {
   genres: {
@@ -20,26 +19,45 @@ window.CONTENT = {
         "blues_bends_vibrato"
       ],
       backingTrackIds: [
-        // Shuffle (rhythm + lead mixes)
-        "bt_gen_shuffle_A_rhythm",
-        "bt_gen_shuffle_A_lead",
-        "bt_gen_shuffle_E_rhythm",
-        "bt_gen_shuffle_E_lead",
-        "bt_gen_shuffle_G_rhythm",
-        "bt_gen_shuffle_G_lead",
+        "bt_blues_shuffle_A_rhythm",
+        "bt_blues_shuffle_A_lead",
+        "bt_blues_shuffle_E_rhythm",
+        "bt_blues_shuffle_E_lead",
+        "bt_blues_shuffle_G_rhythm",
+        "bt_blues_shuffle_G_lead",
+        "bt_blues_slow_E_rhythm",
+        "bt_blues_slow_E_lead",
+        "bt_blues_slow_A_rhythm",
+        "bt_blues_slow_A_lead",
+        "bt_blues_slow_C_rhythm",
+        "bt_blues_slow_C_lead"
+      ]
+    },
 
-        // Slow blues (rhythm + lead mixes)
-        "bt_gen_slow_E_rhythm",
-        "bt_gen_slow_E_lead",
-        "bt_gen_slow_A_rhythm",
-        "bt_gen_slow_A_lead",
-        "bt_gen_slow_C_rhythm",
-        "bt_gen_slow_C_lead"
+    rock: {
+      id: "rock",
+      name: "Rock",
+      description: "Power chords, palm muting, tight downstrokes, and riff timing.",
+      starterSkillIds: [
+        "rock_power_chords",
+        "rock_palm_muting",
+        "rock_riff_timing"
+      ],
+      backingTrackIds: [
+        "bt_rock_mid_A_rhythm",
+        "bt_rock_mid_A_lead",
+        "bt_rock_mid_E_rhythm",
+        "bt_rock_mid_E_lead",
+        "bt_rock_mid_G_rhythm",
+        "bt_rock_mid_G_lead"
       ]
     }
   },
 
   skills: {
+    // =====================
+    // BLUES
+    // =====================
     blues_timing_shuffle: {
       id: "blues_timing_shuffle",
       genre: "blues",
@@ -62,25 +80,7 @@ window.CONTENT = {
           media: {
             demoUrl: "https://www.youtube.com/embed/Z-Cvv7yo5EA",
             dontUrl: "https://www.youtube.com/embed/56zp3uWDwVs",
-            fixUrl: "https://www.youtube.com/embed/H7vCMvUyWpA"
-          }
-        },
-        {
-          id: "d_shuffle_2",
-          name: "12-bar rhythm hits",
-          durationSec: 180,
-          handednessSafe: true,
-          instructions: [
-            "Play a simple 12-bar rhythm (even just on one chord).",
-            "Count bars out loud if needed.",
-            "Goal: no rushing on bar transitions.",
-            "Keep fretting-hand pressure light to avoid fatigue."
-          ],
-          suggestedBpm: { start: 60, target: 100, step: 5 },
-          media: {
-            demoUrl: "https://www.youtube.com/embed/d5R3Re17dgM",
-            dontUrl: "https://www.youtube.com/embed/56zp3uWDwVs",
-            fixUrl: "https://www.youtube.com/embed/H7vCMvUyWpA"
+            fixUrl:  "https://www.youtube.com/embed/H7vCMvUyWpA"
           }
         }
       ]
@@ -108,25 +108,7 @@ window.CONTENT = {
           media: {
             demoUrl: "https://www.youtube.com/embed/fg1n_i-D7v0",
             dontUrl: "https://www.youtube.com/embed/5Qc426qgSho",
-            fixUrl: "https://www.youtube.com/embed/83GZUBdupaI"
-          }
-        },
-        {
-          id: "d_penta_2",
-          name: "Two-notes-per-string accuracy",
-          durationSec: 180,
-          handednessSafe: true,
-          instructions: [
-            "Play slowly: two notes per string, then move to the next string.",
-            "Listen for buzzes and uneven volume.",
-            "Stay relaxed in both hands.",
-            "Stop immediately if tension creeps in—reset posture."
-          ],
-          suggestedBpm: { start: 50, target: 100, step: 5 },
-          media: {
-            demoUrl: "https://www.youtube.com/embed/5Qc426qgSho",
-            dontUrl: "https://www.youtube.com/embed/H6yh8H6kNno",
-            fixUrl: "https://www.youtube.com/embed/83GZUBdupaI"
+            fixUrl:  "https://www.youtube.com/embed/83GZUBdupaI"
           }
         }
       ]
@@ -145,34 +127,103 @@ window.CONTENT = {
           durationSec: 180,
           handednessSafe: true,
           instructions: [
-            "Pick the target note first (destination pitch).",
+            "Pick the target note first.",
             "Then bend up to match it.",
             "Hold the pitch steady for 2 seconds.",
-            "Use multiple fretting-hand fingers to support the bend."
+            "Support bends with multiple fretting-hand fingers."
           ],
           suggestedBpm: { start: 40, target: 70, step: 5 },
           media: {
             demoUrl: "https://www.youtube.com/embed/NVJg8VjEVpM",
             dontUrl: "https://www.youtube.com/embed/M65GXQabC-s",
-            fixUrl: "https://www.youtube.com/embed/39mhhYpaFS0"
+            fixUrl:  "https://www.youtube.com/embed/39mhhYpaFS0"
           }
-        },
+        }
+      ]
+    },
+
+    // =====================
+    // ROCK
+    // =====================
+    rock_power_chords: {
+      id: "rock_power_chords",
+      genre: "rock",
+      name: "Power Chords",
+      levelBand: "beginner",
+      summary: "Fast, clean power-chord changes form the backbone of rock.",
+      drills: [
         {
-          id: "d_vib_1",
-          name: "Slow wide vibrato",
+          id: "d_rock_pc_1",
+          name: "Two-chord swap (A5 ↔ G5)",
           durationSec: 180,
           handednessSafe: true,
           instructions: [
-            "Hold a note firmly with your fretting hand.",
-            "Rock the wrist slowly for a wide vibrato.",
-            "Keep pitch centered — don’t drift sharp.",
-            "Breathe and stay loose in the picking hand."
+            "Form A5 and G5 with your fretting hand.",
+            "Use steady downstrokes with the picking hand.",
+            "Minimize movement between chord shapes.",
+            "Aim for smooth, silent transitions."
           ],
-          suggestedBpm: { start: 40, target: 80, step: 5 },
+          suggestedBpm: { start: 70, target: 120, step: 5 },
           media: {
-            demoUrl: "https://www.youtube.com/embed/tz7upvwXSt4",
+            demoUrl: "https://www.youtube.com/embed/2WbSBLplJS0",
+            dontUrl: "https://www.youtube.com/embed/56zp3uWDwVs",
+            fixUrl:  "https://www.youtube.com/embed/H7vCMvUyWpA"
+          }
+        }
+      ]
+    },
+
+    rock_palm_muting: {
+      id: "rock_palm_muting",
+      genre: "rock",
+      name: "Palm Muting",
+      levelBand: "beginner",
+      summary: "Control muting pressure for tight, punchy rhythm.",
+      drills: [
+        {
+          id: "d_rock_pm_1",
+          name: "Mute pressure ladder",
+          durationSec: 180,
+          handednessSafe: true,
+          instructions: [
+            "Rest the picking-hand palm lightly near the bridge.",
+            "Pick steady eighth notes on one string.",
+            "Adjust pressure until the sound is tight but clear.",
+            "Maintain consistent tempo."
+          ],
+          suggestedBpm: { start: 70, target: 140, step: 5 },
+          media: {
+            demoUrl: "https://www.youtube.com/embed/8hJmN3A6G1A",
+            dontUrl: "https://www.youtube.com/embed/56zp3uWDwVs",
+            fixUrl:  "https://www.youtube.com/embed/H7vCMvUyWpA"
+          }
+        }
+      ]
+    },
+
+    rock_riff_timing: {
+      id: "rock_riff_timing",
+      genre: "rock",
+      name: "Riff Timing",
+      levelBand: "beginner",
+      summary: "Tight riffs come from controlled starts and stops.",
+      drills: [
+        {
+          id: "d_rock_rt_1",
+          name: "Start/stop grid",
+          durationSec: 180,
+          handednessSafe: true,
+          instructions: [
+            "Pick steady eighth notes.",
+            "Stop cleanly every two beats.",
+            "Resume exactly on the click.",
+            "Eliminate ringing during rests."
+          ],
+          suggestedBpm: { start: 70, target: 140, step: 5 },
+          media: {
+            demoUrl: "https://www.youtube.com/embed/4xVqfXQK5xk",
             dontUrl: "https://www.youtube.com/embed/M65GXQabC-s",
-            fixUrl: "https://www.youtube.com/embed/39mhhYpaFS0"
+            fixUrl:  "https://www.youtube.com/embed/H7vCMvUyWpA"
           }
         }
       ]
@@ -180,148 +231,40 @@ window.CONTENT = {
   },
 
   backingTracks: {
-    // ---------------------------
-    // SHUFFLE (12-bar) — YouTube
-    // ---------------------------
-    bt_gen_shuffle_A_rhythm: {
-      id: "bt_gen_shuffle_A_rhythm",
+    // =====================
+    // BLUES
+    // =====================
+    bt_blues_shuffle_A_rhythm: {
+      id: "bt_blues_shuffle_A_rhythm",
       genre: "blues",
-      name: "Shuffle 12-Bar (A) — Rhythm Mix",
+      name: "Shuffle 12-Bar (A) — Rhythm",
       key: "A",
       feel: "shuffle",
       recommendedBpm: 92,
-      note: "Open a shuffle backing track on YouTube. Great for rhythm practice.",
-      youtubeQuery: "12 bar blues shuffle backing track key A 92 bpm",
       youtubeEmbed: "https://www.youtube.com/embed/3szngdntfyM"
     },
-    bt_gen_shuffle_A_lead: {
-      id: "bt_gen_shuffle_A_lead",
-      genre: "blues",
-      name: "Shuffle 12-Bar (A) — Lead Mix",
-      key: "A",
-      feel: "shuffle",
-      recommendedBpm: 92,
-      note: "Open a shuffle backing track on YouTube. Practice lead over the groove.",
-      youtubeQuery: "12 bar blues shuffle backing track key A 92 bpm",
-      youtubeEmbed: "https://www.youtube.com/embed/snHUyvxKPEc"
-    },
 
-    bt_gen_shuffle_E_rhythm: {
-      id: "bt_gen_shuffle_E_rhythm",
+    bt_blues_slow_A_rhythm: {
+      id: "bt_blues_slow_A_rhythm",
       genre: "blues",
-      name: "Shuffle 12-Bar (E) — Rhythm Mix",
-      key: "E",
-      feel: "shuffle",
-      recommendedBpm: 96,
-      note: "Open a shuffle backing track on YouTube.",
-      youtubeQuery: "12 bar blues shuffle backing track key E 96 bpm",
-      youtubeEmbed: "https://www.youtube.com/embed/LpxSayM9cBg"
-    },
-    bt_gen_shuffle_E_lead: {
-      id: "bt_gen_shuffle_E_lead",
-      genre: "blues",
-      name: "Shuffle 12-Bar (E) — Lead Mix",
-      key: "E",
-      feel: "shuffle",
-      recommendedBpm: 96,
-      note: "Open a shuffle backing track on YouTube. Practice lead over the groove.",
-      youtubeQuery: "12 bar blues shuffle backing track key E 96 bpm",
-      youtubeEmbed: "https://www.youtube.com/embed/wEn5qYz57Ws"
-    },
-
-    bt_gen_shuffle_G_rhythm: {
-      id: "bt_gen_shuffle_G_rhythm",
-      genre: "blues",
-      name: "Shuffle 12-Bar (G) — Rhythm Mix",
-      key: "G",
-      feel: "shuffle",
-      recommendedBpm: 90,
-      note: "Open a shuffle backing track on YouTube.",
-      youtubeQuery: "12 bar blues shuffle backing track key G 90 bpm",
-      youtubeEmbed: "https://www.youtube.com/embed/nVdRnJuRgcI"
-    },
-    bt_gen_shuffle_G_lead: {
-      id: "bt_gen_shuffle_G_lead",
-      genre: "blues",
-      name: "Shuffle 12-Bar (G) — Lead Mix",
-      key: "G",
-      feel: "shuffle",
-      recommendedBpm: 90,
-      note: "Open a shuffle backing track on YouTube. Practice lead over the groove.",
-      youtubeQuery: "12 bar blues shuffle backing track key G 90 bpm",
-      youtubeEmbed: "https://www.youtube.com/embed/_LYRAYuHcFU"
-    },
-
-    // ---------------------------
-    // SLOW BLUES (12-bar) — YouTube
-    // ---------------------------
-    bt_gen_slow_E_rhythm: {
-      id: "bt_gen_slow_E_rhythm",
-      genre: "blues",
-      name: "Slow 12-Bar (E) — Rhythm Mix",
-      key: "E",
-      feel: "slow blues",
-      recommendedBpm: 66,
-      note: "Open a slow blues backing track on YouTube. Practice timing and dynamics.",
-      youtubeQuery: "slow blues backing track key E 66 bpm 12 bar",
-      youtubeEmbed: "https://www.youtube.com/embed/5oy6kOxE-uI"
-    },
-    bt_gen_slow_E_lead: {
-      id: "bt_gen_slow_E_lead",
-      genre: "blues",
-      name: "Slow 12-Bar (E) — Lead Mix",
-      key: "E",
-      feel: "slow blues",
-      recommendedBpm: 66,
-      note: "Open a slow blues backing track on YouTube. Great for bends and vibrato.",
-      youtubeQuery: "slow blues backing track key E 66 bpm 12 bar",
-      youtubeEmbed: "https://www.youtube.com/embed/uircC2D8uk4"
-    },
-
-    bt_gen_slow_A_rhythm: {
-      id: "bt_gen_slow_A_rhythm",
-      genre: "blues",
-      name: "Slow 12-Bar (A) — Rhythm Mix",
+      name: "Slow 12-Bar (A)",
       key: "A",
       feel: "slow blues",
       recommendedBpm: 64,
-      note: "Open a slow blues backing track on YouTube.",
-      youtubeQuery: "slow blues backing track key A 64 bpm 12 bar",
-      youtubeEmbed: "https://www.youtube.com/embed/a2I1nO3uVYU"
-    },
-    bt_gen_slow_A_lead: {
-      id: "bt_gen_slow_A_lead",
-      genre: "blues",
-      name: "Slow 12-Bar (A) — Lead Mix",
-      key: "A",
-      feel: "slow blues",
-      recommendedBpm: 64,
-      note: "Open a slow blues backing track on YouTube. Practice phrasing over the groove.",
-      youtubeQuery: "slow blues backing track key A 64 bpm 12 bar",
       youtubeEmbed: "https://www.youtube.com/embed/a2I1nO3uVYU"
     },
 
-    bt_gen_slow_C_rhythm: {
-      id: "bt_gen_slow_C_rhythm",
-      genre: "blues",
-      name: "Slow 12-Bar (C) — Rhythm Mix",
-      key: "C",
-      feel: "slow blues",
-      recommendedBpm: 62,
-      note: "Open a slow blues backing track on YouTube.",
-      youtubeQuery: "slow blues backing track key C 62 bpm 12 bar",
-      youtubeEmbed: "https://www.youtube.com/embed/IGfyzzcMOKk"
-    },
-    bt_gen_slow_C_lead: {
-      id: "bt_gen_slow_C_lead",
-      genre: "blues",
-      name: "Slow 12-Bar (C) — Lead Mix",
-      key: "C",
-      feel: "slow blues",
-      recommendedBpm: 62,
-      note: "Open a slow blues backing track on YouTube. Practice melodic ideas over the groove.",
-      youtubeQuery: "slow blues backing track key C 62 bpm 12 bar",
-      youtubeEmbed: "https://www.youtube.com/embed/IGfyzzcMOKk"
+    // =====================
+    // ROCK (safe placeholders)
+    // =====================
+    bt_rock_mid_A_rhythm: {
+      id: "bt_rock_mid_A_rhythm",
+      genre: "rock",
+      name: "Rock Mid-Tempo (A)",
+      key: "A",
+      feel: "mid rock",
+      recommendedBpm: 120,
+      youtubeEmbed: ""
     }
   }
 };
