@@ -1,17 +1,15 @@
 // content.js
-// Content Registry — PURE DATA ONLY
+// Dose 0.2 — Content Model v1 (+ handedness-safe language)
+// Dose 0.2.2 — Video hooks per drill (demo / mistake / fix)
+// Dose 0.3.1 — Backing tracks use YouTube embeds (legal + easy, no mp3)
 //
-// RULES:
-// - No logic/functions in this file.
-// - Avoid "left hand / right hand" → use "fretting hand" / "picking hand".
-// - Videos can be mirrored by UI.
-// - Backing tracks embed in-app via youtubeEmbed (empty string is allowed).
+// IMPORTANT RULE:
+// - Avoid "left hand / right hand" in instruction text.
+// - Always say "fretting hand" and "picking hand".
+// - Videos can be mirrored for left-handed players.
 
 window.CONTENT = {
   genres: {
-    // =====================
-    // BLUES (working set)
-    // =====================
     blues: {
       id: "blues",
       name: "Blues",
@@ -40,62 +38,87 @@ window.CONTENT = {
       ]
     },
 
-    // =====================
-    // DEFAULT SET (stubs that won’t break UI)
-    // =====================
     rock: {
       id: "rock",
       name: "Rock",
-      description: "Power chords, palm muting, tight downstrokes, and riff timing.",
-      starterSkillIds: ["rock_power_chords", "rock_palm_muting", "rock_riff_timing"],
-      backingTrackIds: ["bt_rock_A", "bt_rock_E", "bt_rock_G"]
+      description: "Power chords, tight rhythm, and pentatonic phrasing with attitude.",
+      starterSkillIds: [
+        "rock_timing_8ths",
+        "rock_power_chords",
+        "rock_pentatonic_phrasing"
+      ],
+      backingTrackIds: [
+        "bt_rock_E_rhythm",
+        "bt_rock_E_lead",
+        "bt_rock_A_rhythm",
+        "bt_rock_A_lead",
+        "bt_rock_G_rhythm",
+        "bt_rock_G_lead"
+      ]
     },
 
     metal: {
       id: "metal",
       name: "Metal",
-      description: "Alternate picking, chug control, and tight rhythm precision.",
-      starterSkillIds: ["metal_alt_picking", "metal_chug_control", "metal_rhythm_tightness"],
-      backingTrackIds: ["bt_metal_E", "bt_metal_A", "bt_metal_D"]
+      description: "Palm-muted precision, downpicking endurance, and tight alternate picking.",
+      starterSkillIds: [
+        "metal_timing_chugs",
+        "metal_downpicking",
+        "metal_alt_picking"
+      ],
+      backingTrackIds: [
+        "bt_metal_Em_rhythm",
+        "bt_metal_Em_lead",
+        "bt_metal_Gm_rhythm",
+        "bt_metal_Gm_lead",
+        "bt_metal_Am_rhythm",
+        "bt_metal_Am_lead"
+      ]
     },
 
     country: {
       id: "country",
       name: "Country",
-      description: "Hybrid picking, double-stops, and clean groove phrasing.",
-      starterSkillIds: ["country_boom_chick", "country_double_stops", "country_hybrid_picking"],
-      backingTrackIds: ["bt_country_G", "bt_country_A", "bt_country_E"]
-    },
-
-    jazz: {
-      id: "jazz",
-      name: "Jazz",
-      description: "Shell chords, swing comping, and clean voice leading.",
-      starterSkillIds: ["jazz_shell_chords", "jazz_swing_comp", "jazz_voice_leading"],
-      backingTrackIds: ["bt_jazz_C", "bt_jazz_F", "bt_jazz_Bb"]
+      description: "Clean rhythm, chord changes, and melodic fills that land in the pocket.",
+      starterSkillIds: [
+        "country_timing_boomchick",
+        "country_open_chords",
+        "country_major_pentatonic"
+      ],
+      backingTrackIds: [
+        "bt_country_G_rhythm",
+        "bt_country_G_lead",
+        "bt_country_A_rhythm",
+        "bt_country_A_lead",
+        "bt_country_D_rhythm",
+        "bt_country_D_lead"
+      ]
     },
 
     funk: {
       id: "funk",
-      name: "funk",
-      description: "16th-note rhythm, ghost notes, and tight muted strumming.",
-      starterSkillIds: ["funk_16th_grid", "funk_ghost_notes", "funk_chops"],
-      backingTrackIds: ["bt_funk_E", "bt_funk_A", "bt_funk_D"]
-    },
-
-    acoustic: {
-      id: "acoustic",
-      name: "Acoustic",
-      description: "Strumming feel, clean transitions, and dynamic control.",
-      starterSkillIds: ["acoustic_strum_feel", "acoustic_chord_changes", "acoustic_dynamics"],
-      backingTrackIds: ["bt_acoustic_G", "bt_acoustic_C", "bt_acoustic_D"]
+      name: "Funk",
+      description: "16th-note feel, muting control, and groove-first rhythm playing.",
+      starterSkillIds: [
+        "funk_timing_16ths",
+        "funk_mute_control",
+        "funk_chord_stabs"
+      ],
+      backingTrackIds: [
+        "bt_funk_Em_rhythm",
+        "bt_funk_Em_lead",
+        "bt_funk_Am_rhythm",
+        "bt_funk_Am_lead",
+        "bt_funk_Dm_rhythm",
+        "bt_funk_Dm_lead"
+      ]
     }
   },
 
   skills: {
-    // =====================
-    // BLUES (working set)
-    // =====================
+    // ---------------------------
+    // BLUES (existing)
+    // ---------------------------
     blues_timing_shuffle: {
       id: "blues_timing_shuffle",
       genre: "blues",
@@ -234,189 +257,185 @@ window.CONTENT = {
       ]
     },
 
-    // =====================
-    // ROCK (starter stubs)
-    // =====================
+    // ---------------------------
+    // ROCK
+    // ---------------------------
+    rock_timing_8ths: {
+      id: "rock_timing_8ths",
+      genre: "rock",
+      name: "8th-Note Timing (Rock Engine)",
+      levelBand: "beginner",
+      summary: "Build steady, punchy 8th-notes with clean picking-hand control.",
+      drills: [
+        {
+          id: "d_rock_8ths_1",
+          name: "Muted 8th-note chugs",
+          durationSec: 150,
+          handednessSafe: true,
+          instructions: [
+            "Mute strings lightly with your fretting hand.",
+            "Pick steady 8th-notes on one string.",
+            "Stay relaxed in the picking hand.",
+            "Aim for consistent volume and spacing."
+          ],
+          suggestedBpm: { start: 80, target: 140, step: 5 }
+        },
+        {
+          id: "d_rock_8ths_2",
+          name: "Accent control (2 and 4)",
+          durationSec: 180,
+          handednessSafe: true,
+          instructions: [
+            "Keep steady 8th-notes.",
+            "Accentuate beats 2 and 4.",
+            "Keep non-accent notes light and even.",
+            "If tension shows up, slow down and reset."
+          ],
+          suggestedBpm: { start: 80, target: 130, step: 5 }
+        }
+      ]
+    },
+
     rock_power_chords: {
       id: "rock_power_chords",
       genre: "rock",
-      name: "Power Chords (Foundation)",
+      name: "Power Chords (Clean Changes)",
       levelBand: "beginner",
-      summary: "Clean power chords and fast changes.",
+      summary: "Move between power chords cleanly without losing timing.",
       drills: [
         {
           id: "d_rock_pc_1",
-          name: "Two-chord swap (A5 ↔ G5)",
+          name: "Two-chord switch",
           durationSec: 180,
           handednessSafe: true,
           instructions: [
-            "Form A5 and G5 with your fretting hand.",
-            "Use steady downstrokes with your picking hand.",
-            "Keep changes small and quiet.",
-            "Stay relaxed—speed comes later."
+            "Choose two power chords (example: E5 and G5).",
+            "Strum steady 8th-notes.",
+            "Switch chords every 2 bars.",
+            "Keep fretting-hand pressure only as heavy as needed."
           ],
-          suggestedBpm: { start: 70, target: 120, step: 5 },
-          media: {
-            demoUrl: "https://www.youtube.com/embed/2WbSBLplJS0",
-            dontUrl: "https://www.youtube.com/embed/H6yh8H6kNno",
-            fixUrl: "https://www.youtube.com/embed/H7vCMvUyWpA"
-          }
+          suggestedBpm: { start: 70, target: 120, step: 5 }
+        },
+        {
+          id: "d_rock_pc_2",
+          name: "Palm-mute vs open contrast",
+          durationSec: 180,
+          handednessSafe: true,
+          instructions: [
+            "Play one bar palm-muted, one bar open.",
+            "Keep tempo identical in both bars.",
+            "Use the picking-hand edge to control mute depth.",
+            "Listen for note clarity (no dead thuds unless intended)."
+          ],
+          suggestedBpm: { start: 70, target: 120, step: 5 }
         }
       ]
     },
 
-    rock_palm_muting: {
-      id: "rock_palm_muting",
+    rock_pentatonic_phrasing: {
+      id: "rock_pentatonic_phrasing",
       genre: "rock",
-      name: "Palm Muting (Control)",
+      name: "Pentatonic Phrasing (Rock Lead)",
       levelBand: "beginner",
-      summary: "Get a tight, punchy rock rhythm.",
+      summary: "Turn scale shapes into musical phrases with timing and space.",
       drills: [
         {
-          id: "d_rock_pm_1",
-          name: "Mute pressure ladder",
-          durationSec: 180,
+          id: "d_rock_penta_1",
+          name: "Call-and-response (2 bars each)",
+          durationSec: 240,
           handednessSafe: true,
           instructions: [
-            "Rest the picking-hand palm near the bridge.",
-            "Pick steady eighth notes on one string.",
-            "Adjust pressure until it’s tight but clear.",
-            "Hold tempo constant."
+            "Improvise a short 2-bar phrase.",
+            "Answer it with a different 2-bar phrase.",
+            "Leave space between phrases.",
+            "Keep bends and vibrato controlled—pitch first."
           ],
-          suggestedBpm: { start: 70, target: 140, step: 5 },
-          media: {
-            demoUrl: "https://www.youtube.com/embed/8hJmN3A6G1A",
-            dontUrl: "https://www.youtube.com/embed/56zp3uWDwVs",
-            fixUrl: "https://www.youtube.com/embed/H7vCMvUyWpA"
-          }
+          suggestedBpm: { start: 70, target: 110, step: 5 }
         }
       ]
     },
 
-    rock_riff_timing: {
-      id: "rock_riff_timing",
-      genre: "rock",
-      name: "Riff Timing (Tight Stops)",
-      levelBand: "beginner",
-      summary: "Repeatable riffs with clean starts/stops.",
-      drills: [
-        {
-          id: "d_rock_rt_1",
-          name: "Start/stop grid",
-          durationSec: 180,
-          handednessSafe: true,
-          instructions: [
-            "Pick steady eighth notes.",
-            "Stop cleanly every two beats.",
-            "Resume exactly on the click.",
-            "Eliminate ringing during rests."
-          ],
-          suggestedBpm: { start: 70, target: 140, step: 5 },
-          media: {
-            demoUrl: "https://www.youtube.com/embed/4xVqfXQK5xk",
-            dontUrl: "https://www.youtube.com/embed/M65GXQabC-s",
-            fixUrl: "https://www.youtube.com/embed/H7vCMvUyWpA"
-          }
-        }
-      ]
-    },
-
-    // =====================
-    // METAL (starter stubs)
-    // =====================
-    metal_alt_picking: {
-      id: "metal_alt_picking",
+    // ---------------------------
+    // METAL
+    // ---------------------------
+    metal_timing_chugs: {
+      id: "metal_timing_chugs",
       genre: "metal",
-      name: "Alternate Picking (Engine)",
+      name: "Chug Timing (Tight Low End)",
       levelBand: "beginner",
-      summary: "Even down-up picking with clean attack.",
-      drills: [
-        {
-          id: "d_metal_ap_1",
-          name: "Single-string alternate grid",
-          durationSec: 180,
-          handednessSafe: true,
-          instructions: [
-            "Pick steady 8ths (down-up) on one string.",
-            "Keep the picking-hand motion small.",
-            "Stay relaxed at higher tempos.",
-            "Aim for identical volume each note."
-          ],
-          suggestedBpm: { start: 80, target: 160, step: 5 },
-          media: {
-            demoUrl: "https://www.youtube.com/embed/4xVqfXQK5xk",
-            dontUrl: "https://www.youtube.com/embed/H6yh8H6kNno",
-            fixUrl: "https://www.youtube.com/embed/H7vCMvUyWpA"
-          }
-        }
-      ]
-    },
-
-    metal_chug_control: {
-      id: "metal_chug_control",
-      genre: "metal",
-      name: "Chug Control (Palm + Timing)",
-      levelBand: "beginner",
-      summary: "Tight low-string chugs without flub.",
+      summary: "Lock in palm-muted chugs that stay perfectly on the grid.",
       drills: [
         {
           id: "d_metal_chug_1",
-          name: "Chug bursts",
+          name: "16th-note bursts",
           durationSec: 180,
           handednessSafe: true,
           instructions: [
-            "Palm mute lightly near the bridge.",
-            "Play 1 bar chugs, 1 bar rest.",
-            "Resume perfectly on the click.",
-            "Keep tone consistent across bars."
+            "Play steady 8th-notes for 2 beats.",
+            "Switch to 16th-notes for 2 beats.",
+            "Return to 8th-notes cleanly.",
+            "Keep palm-mute depth consistent."
           ],
-          suggestedBpm: { start: 90, target: 170, step: 5 },
-          media: {
-            demoUrl: "https://www.youtube.com/embed/8hJmN3A6G1A",
-            dontUrl: "https://www.youtube.com/embed/M65GXQabC-s",
-            fixUrl: "https://www.youtube.com/embed/H7vCMvUyWpA"
-          }
+          suggestedBpm: { start: 90, target: 150, step: 5 }
         }
       ]
     },
 
-    metal_rhythm_tightness: {
-      id: "metal_rhythm_tightness",
+    metal_downpicking: {
+      id: "metal_downpicking",
       genre: "metal",
-      name: "Rhythm Tightness (Stops)",
+      name: "Downpicking Endurance",
       levelBand: "beginner",
-      summary: "Clean silences and sharp rest control.",
+      summary: "Build power and endurance while staying relaxed and even.",
       drills: [
         {
-          id: "d_metal_rt_1",
-          name: "Stop-on-1 drill",
-          durationSec: 180,
+          id: "d_metal_down_1",
+          name: "Downpick 8ths (1-minute blocks)",
+          durationSec: 240,
           handednessSafe: true,
           instructions: [
-            "Play 3 beats, stop on beat 4.",
-            "Make the stop silent (no ring).",
-            "Repeat for 2 minutes.",
-            "Stay locked to the metronome."
+            "Pick steady 8th-notes using downstrokes only.",
+            "Keep motion small and efficient.",
+            "Stop before form breaks down.",
+            "Increase bpm only when relaxed and clean."
           ],
-          suggestedBpm: { start: 80, target: 150, step: 5 },
-          media: {
-            demoUrl: "https://www.youtube.com/embed/4xVqfXQK5xk",
-            dontUrl: "https://www.youtube.com/embed/56zp3uWDwVs",
-            fixUrl: "https://www.youtube.com/embed/H7vCMvUyWpA"
-          }
+          suggestedBpm: { start: 90, target: 160, step: 5 }
         }
       ]
     },
 
-    // =====================
-    // COUNTRY (starter stubs)
-    // =====================
-    country_boom_chick: {
-      id: "country_boom_chick",
-      genre: "country",
-      name: "Boom-Chick (Groove)",
+    metal_alt_picking: {
+      id: "metal_alt_picking",
+      genre: "metal",
+      name: "Alternate Picking (Accuracy First)",
       levelBand: "beginner",
-      summary: "A simple country rhythm feel: bass + strum.",
+      summary: "Clean, even alternate picking across strings without tension.",
+      drills: [
+        {
+          id: "d_metal_alt_1",
+          name: "Single-string accuracy",
+          durationSec: 180,
+          handednessSafe: true,
+          instructions: [
+            "Pick one string with strict alternate picking.",
+            "Listen for uneven volume between strokes.",
+            "Keep fretting-hand fingers close to the fretboard.",
+            "If you tense up, reduce bpm and reset posture."
+          ],
+          suggestedBpm: { start: 90, target: 170, step: 5 }
+        }
+      ]
+    },
+
+    // ---------------------------
+    // COUNTRY
+    // ---------------------------
+    country_timing_boomchick: {
+      id: "country_timing_boomchick",
+      genre: "country",
+      name: "Boom-Chick Timing",
+      levelBand: "beginner",
+      summary: "Bass note + chord hit timing that stays steady and musical.",
       drills: [
         {
           id: "d_country_bc_1",
@@ -424,343 +443,139 @@ window.CONTENT = {
           durationSec: 180,
           handednessSafe: true,
           instructions: [
-            "Pick a bass note, then strum a chord.",
-            "Keep it even: boom-chick, boom-chick.",
-            "Stay relaxed in the picking hand.",
-            "Lock to the click before speeding up."
+            "Pick a bass note on beat 1 and 3.",
+            "Strum a chord on beat 2 and 4.",
+            "Keep chord hits short and controlled.",
+            "Make the groove feel effortless."
           ],
-          suggestedBpm: { start: 70, target: 130, step: 5 },
-          media: {
-            demoUrl: "https://www.youtube.com/embed/d5R3Re17dgM",
-            dontUrl: "https://www.youtube.com/embed/56zp3uWDwVs",
-            fixUrl: "https://www.youtube.com/embed/H7vCMvUyWpA"
-          }
+          suggestedBpm: { start: 70, target: 120, step: 5 }
         }
       ]
     },
 
-    country_double_stops: {
-      id: "country_double_stops",
+    country_open_chords: {
+      id: "country_open_chords",
       genre: "country",
-      name: "Double Stops (Clean)",
+      name: "Open Chord Changes",
       levelBand: "beginner",
-      summary: "Two-note country phrases with clean fretting-hand control.",
+      summary: "Clean chord switches without rushing the change.",
       drills: [
         {
-          id: "d_country_ds_1",
-          name: "Two-note grip shifts",
-          durationSec: 180,
+          id: "d_country_chords_1",
+          name: "Two-chord loop (4 bars each)",
+          durationSec: 240,
           handednessSafe: true,
           instructions: [
-            "Choose a simple two-note shape.",
-            "Move it up/down the neck slowly.",
-            "Keep notes clean with minimal pressure.",
-            "Use the picking hand for even attack."
+            "Choose two open chords (example: G and C).",
+            "Play 4 bars of the first chord, then switch.",
+            "Keep strum dynamics consistent.",
+            "Aim for silent, efficient fretting-hand movement."
           ],
-          suggestedBpm: { start: 60, target: 110, step: 5 },
-          media: {
-            demoUrl: "https://www.youtube.com/embed/fg1n_i-D7v0",
-            dontUrl: "https://www.youtube.com/embed/H6yh8H6kNno",
-            fixUrl: "https://www.youtube.com/embed/83GZUBdupaI"
-          }
+          suggestedBpm: { start: 65, target: 110, step: 5 }
         }
       ]
     },
 
-    country_hybrid_picking: {
-      id: "country_hybrid_picking",
+    country_major_pentatonic: {
+      id: "country_major_pentatonic",
       genre: "country",
-      name: "Hybrid Picking (Starter)",
+      name: "Major Pentatonic (Melodic Fills)",
       levelBand: "beginner",
-      summary: "Pick + fingers for clean, snappy articulation.",
+      summary: "Simple melodic fills that fit over major progressions.",
       drills: [
         {
-          id: "d_country_hp_1",
-          name: "Pick-then-pluck pattern",
-          durationSec: 180,
+          id: "d_country_penta_1",
+          name: "Fill after the chord",
+          durationSec: 240,
           handednessSafe: true,
           instructions: [
-            "Pick one string with the pick.",
-            "Pluck a higher string with a free finger.",
-            "Repeat slowly and cleanly.",
-            "Keep the picking hand relaxed."
+            "Strum one bar of chords.",
+            "Play a short 1-bar fill from the major pentatonic.",
+            "Keep fills rhythmic and singable.",
+            "Return to chords cleanly without rushing."
           ],
-          suggestedBpm: { start: 60, target: 120, step: 5 },
-          media: {
-            demoUrl: "https://www.youtube.com/embed/5Qc426qgSho",
-            dontUrl: "https://www.youtube.com/embed/M65GXQabC-s",
-            fixUrl: "https://www.youtube.com/embed/83GZUBdupaI"
-          }
+          suggestedBpm: { start: 65, target: 105, step: 5 }
         }
       ]
     },
 
-    // =====================
-    // JAZZ (starter stubs)
-    // =====================
-    jazz_shell_chords: {
-      id: "jazz_shell_chords",
-      genre: "jazz",
-      name: "Shell Chords (3rds + 7ths)",
-      levelBand: "beginner",
-      summary: "Simple jazz chord shapes that sound full in context.",
-      drills: [
-        {
-          id: "d_jazz_shell_1",
-          name: "ii–V–I shell cycle",
-          durationSec: 210,
-          handednessSafe: true,
-          instructions: [
-            "Play simple shell shapes for ii–V–I.",
-            "Keep fretting-hand fingers close to the strings.",
-            "Strum lightly with the picking hand.",
-            "Aim for smooth voice-leading."
-          ],
-          suggestedBpm: { start: 60, target: 120, step: 5 },
-          media: {
-            demoUrl: "https://www.youtube.com/embed/d5R3Re17dgM",
-            dontUrl: "https://www.youtube.com/embed/56zp3uWDwVs",
-            fixUrl: "https://www.youtube.com/embed/H7vCMvUyWpA"
-          }
-        }
-      ]
-    },
-
-    jazz_swing_comp: {
-      id: "jazz_swing_comp",
-      genre: "jazz",
-      name: "Swing Comping (Time Feel)",
-      levelBand: "beginner",
-      summary: "Light comping with steady swing feel.",
-      drills: [
-        {
-          id: "d_jazz_swing_1",
-          name: "2 and 4 comp hits",
-          durationSec: 180,
-          handednessSafe: true,
-          instructions: [
-            "Play soft chord hits on beats 2 and 4.",
-            "Count out loud if needed.",
-            "Keep tone light and consistent.",
-            "Stay locked to the click."
-          ],
-          suggestedBpm: { start: 70, target: 140, step: 5 },
-          media: {
-            demoUrl: "https://www.youtube.com/embed/Z-Cvv7yo5EA",
-            dontUrl: "https://www.youtube.com/embed/H6yh8H6kNno",
-            fixUrl: "https://www.youtube.com/embed/H7vCMvUyWpA"
-          }
-        }
-      ]
-    },
-
-    jazz_voice_leading: {
-      id: "jazz_voice_leading",
-      genre: "jazz",
-      name: "Voice Leading (Smooth Changes)",
-      levelBand: "beginner",
-      summary: "Make changes sound connected instead of jumpy.",
-      drills: [
-        {
-          id: "d_jazz_vl_1",
-          name: "One-finger movement changes",
-          durationSec: 180,
-          handednessSafe: true,
-          instructions: [
-            "Pick two chord shapes that share notes.",
-            "Move only one fretting-hand finger between them.",
-            "Strum gently and evenly.",
-            "Listen for smoothness."
-          ],
-          suggestedBpm: { start: 60, target: 110, step: 5 },
-          media: {
-            demoUrl: "https://www.youtube.com/embed/fg1n_i-D7v0",
-            dontUrl: "https://www.youtube.com/embed/M65GXQabC-s",
-            fixUrl: "https://www.youtube.com/embed/83GZUBdupaI"
-          }
-        }
-      ]
-    },
-
-    // =====================
-    // FUNK (starter stubs)
-    // =====================
-    funk_16th_grid: {
-      id: "funk_16th_grid",
+    // ---------------------------
+    // FUNK
+    // ---------------------------
+    funk_timing_16ths: {
+      id: "funk_timing_16ths",
       genre: "funk",
-      name: "16th-Note Grid (Time)",
+      name: "16th-Note Timing (Funk Grid)",
       levelBand: "beginner",
-      summary: "Build tight 16th-note time without rushing.",
+      summary: "Feel 16ths cleanly so your groove stays locked and confident.",
       drills: [
         {
           id: "d_funk_16_1",
-          name: "Muted 16ths (slow)",
+          name: "Muted 16ths (light touch)",
           durationSec: 180,
           handednessSafe: true,
           instructions: [
-            "Mute strings lightly with your fretting hand.",
-            "Strum 16ths softly with the picking hand.",
-            "Keep motion tiny and relaxed.",
-            "Prioritize evenness over speed."
+            "Mute strings with the fretting hand.",
+            "Strum continuous 16ths lightly.",
+            "Keep the picking hand loose and small.",
+            "Aim for consistent motion without fatigue."
           ],
-          suggestedBpm: { start: 60, target: 110, step: 5 },
-          media: {
-            demoUrl: "https://www.youtube.com/embed/Z-Cvv7yo5EA",
-            dontUrl: "https://www.youtube.com/embed/56zp3uWDwVs",
-            fixUrl: "https://www.youtube.com/embed/H7vCMvUyWpA"
-          }
+          suggestedBpm: { start: 70, target: 110, step: 5 }
         }
       ]
     },
 
-    funk_ghost_notes: {
-      id: "funk_ghost_notes",
+    funk_mute_control: {
+      id: "funk_mute_control",
       genre: "funk",
-      name: "Ghost Notes (Texture)",
+      name: "Mute Control (Clean Stops)",
       levelBand: "beginner",
-      summary: "Add groove texture with controlled muted hits.",
+      summary: "Start and stop chord sounds sharply without losing the beat.",
       drills: [
         {
-          id: "d_funk_ghost_1",
-          name: "Ghost + accent pattern",
+          id: "d_funk_mute_1",
+          name: "Short chord hits (tight release)",
           durationSec: 180,
           handednessSafe: true,
           instructions: [
-            "Mute lightly with fretting hand for ghost hits.",
-            "Accent one hit every beat.",
-            "Keep picking-hand motion constant.",
-            "Make accents louder without speeding up."
+            "Play a chord hit on beats 2 and 4.",
+            "Immediately release pressure to mute the chord.",
+            "Keep timing strict—no rushing the mute.",
+            "Use minimal fretting-hand movement."
           ],
-          suggestedBpm: { start: 70, target: 120, step: 5 },
-          media: {
-            demoUrl: "https://www.youtube.com/embed/d5R3Re17dgM",
-            dontUrl: "https://www.youtube.com/embed/H6yh8H6kNno",
-            fixUrl: "https://www.youtube.com/embed/H7vCMvUyWpA"
-          }
+          suggestedBpm: { start: 70, target: 110, step: 5 }
         }
       ]
     },
 
-    funk_chops: {
-      id: "funk_chops",
+    funk_chord_stabs: {
+      id: "funk_chord_stabs",
       genre: "funk",
-      name: "Funk Chops (Stops)",
+      name: "Chord Stabs (Groove First)",
       levelBand: "beginner",
-      summary: "Clean stop-start rhythm for tight funk.",
+      summary: "Punchy chord stabs that sit inside the groove.",
       drills: [
         {
-          id: "d_funk_chops_1",
-          name: "Chop on offbeats",
-          durationSec: 180,
+          id: "d_funk_stab_1",
+          name: "Offbeat stabs",
+          durationSec: 210,
           handednessSafe: true,
           instructions: [
-            "Strum lightly and stop immediately after each hit.",
-            "Focus on clean silences (no ringing).",
-            "Use fretting-hand release to help the stop.",
-            "Lock to the metronome."
+            "Keep a steady 16th-note motion with the picking hand.",
+            "Only let chord stabs ring on offbeats.",
+            "Mute everything else.",
+            "Stay relaxed—groove comes from control, not force."
           ],
-          suggestedBpm: { start: 70, target: 130, step: 5 },
-          media: {
-            demoUrl: "https://www.youtube.com/embed/4xVqfXQK5xk",
-            dontUrl: "https://www.youtube.com/embed/M65GXQabC-s",
-            fixUrl: "https://www.youtube.com/embed/H7vCMvUyWpA"
-          }
-        }
-      ]
-    },
-
-    // =====================
-    // ACOUSTIC (starter stubs)
-    // =====================
-    acoustic_strum_feel: {
-      id: "acoustic_strum_feel",
-      genre: "acoustic",
-      name: "Strum Feel (Steady Motion)",
-      levelBand: "beginner",
-      summary: "Build a steady strum with relaxed picking-hand motion.",
-      drills: [
-        {
-          id: "d_ac_strum_1",
-          name: "Down-up consistency",
-          durationSec: 180,
-          handednessSafe: true,
-          instructions: [
-            "Strum down-up lightly on one chord.",
-            "Keep the picking hand loose.",
-            "Aim for even volume and timing.",
-            "Don’t tense up as you speed up."
-          ],
-          suggestedBpm: { start: 60, target: 120, step: 5 },
-          media: {
-            demoUrl: "https://www.youtube.com/embed/d5R3Re17dgM",
-            dontUrl: "https://www.youtube.com/embed/56zp3uWDwVs",
-            fixUrl: "https://www.youtube.com/embed/H7vCMvUyWpA"
-          }
-        }
-      ]
-    },
-
-    acoustic_chord_changes: {
-      id: "acoustic_chord_changes",
-      genre: "acoustic",
-      name: "Chord Changes (Quiet Hands)",
-      levelBand: "beginner",
-      summary: "Smooth changes without noise and without stopping.",
-      drills: [
-        {
-          id: "d_ac_changes_1",
-          name: "Two-chord loop (G ↔ C)",
-          durationSec: 180,
-          handednessSafe: true,
-          instructions: [
-            "Loop between two chords slowly.",
-            "Lift fretting-hand fingers only as much as needed.",
-            "Keep strumming steady with the picking hand.",
-            "Increase BPM only after clean transitions."
-          ],
-          suggestedBpm: { start: 60, target: 110, step: 5 },
-          media: {
-            demoUrl: "https://www.youtube.com/embed/fg1n_i-D7v0",
-            dontUrl: "https://www.youtube.com/embed/H6yh8H6kNno",
-            fixUrl: "https://www.youtube.com/embed/83GZUBdupaI"
-          }
-        }
-      ]
-    },
-
-    acoustic_dynamics: {
-      id: "acoustic_dynamics",
-      genre: "acoustic",
-      name: "Dynamics (Soft vs Loud)",
-      levelBand: "beginner",
-      summary: "Control volume and intensity without changing tempo.",
-      drills: [
-        {
-          id: "d_ac_dyn_1",
-          name: "4 bars soft / 4 bars loud",
-          durationSec: 180,
-          handednessSafe: true,
-          instructions: [
-            "Strum 4 bars softly, then 4 bars louder.",
-            "Keep tempo identical.",
-            "Use picking-hand depth and speed for dynamics.",
-            "Avoid tensing up on loud sections."
-          ],
-          suggestedBpm: { start: 70, target: 130, step: 5 },
-          media: {
-            demoUrl: "https://www.youtube.com/embed/Z-Cvv7yo5EA",
-            dontUrl: "https://www.youtube.com/embed/M65GXQabC-s",
-            fixUrl: "https://www.youtube.com/embed/H7vCMvUyWpA"
-          }
+          suggestedBpm: { start: 70, target: 105, step: 5 }
         }
       ]
     }
   },
 
   backingTracks: {
-    // =====================
-    // BLUES (your working embeds)
-    // =====================
+    // ---------------------------
+    // BLUES (existing) — YouTube
+    // ---------------------------
     bt_gen_shuffle_A_rhythm: {
       id: "bt_gen_shuffle_A_rhythm",
       genre: "blues",
@@ -768,7 +583,7 @@ window.CONTENT = {
       key: "A",
       feel: "shuffle",
       recommendedBpm: 92,
-      note: "Great for rhythm practice.",
+      note: "Use the YouTube controls in the player to play/pause.",
       youtubeQuery: "12 bar blues shuffle backing track key A 92 bpm",
       youtubeEmbed: "https://www.youtube.com/embed/3szngdntfyM"
     },
@@ -779,7 +594,7 @@ window.CONTENT = {
       key: "A",
       feel: "shuffle",
       recommendedBpm: 92,
-      note: "Practice lead over the groove.",
+      note: "Use the YouTube controls in the player to play/pause.",
       youtubeQuery: "12 bar blues shuffle backing track key A 92 bpm",
       youtubeEmbed: "https://www.youtube.com/embed/snHUyvxKPEc"
     },
@@ -790,7 +605,7 @@ window.CONTENT = {
       key: "E",
       feel: "shuffle",
       recommendedBpm: 96,
-      note: "Shuffle feel in E.",
+      note: "Use the YouTube controls in the player to play/pause.",
       youtubeQuery: "12 bar blues shuffle backing track key E 96 bpm",
       youtubeEmbed: "https://www.youtube.com/embed/LpxSayM9cBg"
     },
@@ -801,7 +616,7 @@ window.CONTENT = {
       key: "E",
       feel: "shuffle",
       recommendedBpm: 96,
-      note: "Lead practice in E.",
+      note: "Use the YouTube controls in the player to play/pause.",
       youtubeQuery: "12 bar blues shuffle backing track key E 96 bpm",
       youtubeEmbed: "https://www.youtube.com/embed/wEn5qYz57Ws"
     },
@@ -812,7 +627,7 @@ window.CONTENT = {
       key: "G",
       feel: "shuffle",
       recommendedBpm: 90,
-      note: "Shuffle feel in G.",
+      note: "Use the YouTube controls in the player to play/pause.",
       youtubeQuery: "12 bar blues shuffle backing track key G 90 bpm",
       youtubeEmbed: "https://www.youtube.com/embed/nVdRnJuRgcI"
     },
@@ -823,10 +638,11 @@ window.CONTENT = {
       key: "G",
       feel: "shuffle",
       recommendedBpm: 90,
-      note: "Lead practice in G.",
+      note: "Use the YouTube controls in the player to play/pause.",
       youtubeQuery: "12 bar blues shuffle backing track key G 90 bpm",
       youtubeEmbed: "https://www.youtube.com/embed/_LYRAYuHcFU"
     },
+
     bt_gen_slow_E_rhythm: {
       id: "bt_gen_slow_E_rhythm",
       genre: "blues",
@@ -834,7 +650,7 @@ window.CONTENT = {
       key: "E",
       feel: "slow blues",
       recommendedBpm: 66,
-      note: "Practice timing and dynamics.",
+      note: "Use the YouTube controls in the player to play/pause.",
       youtubeQuery: "slow blues backing track key E 66 bpm 12 bar",
       youtubeEmbed: "https://www.youtube.com/embed/5oy6kOxE-uI"
     },
@@ -845,7 +661,7 @@ window.CONTENT = {
       key: "E",
       feel: "slow blues",
       recommendedBpm: 66,
-      note: "Great for bends and vibrato.",
+      note: "Use the YouTube controls in the player to play/pause.",
       youtubeQuery: "slow blues backing track key E 66 bpm 12 bar",
       youtubeEmbed: "https://www.youtube.com/embed/uircC2D8uk4"
     },
@@ -856,7 +672,7 @@ window.CONTENT = {
       key: "A",
       feel: "slow blues",
       recommendedBpm: 64,
-      note: "Slow groove in A.",
+      note: "Use the YouTube controls in the player to play/pause.",
       youtubeQuery: "slow blues backing track key A 64 bpm 12 bar",
       youtubeEmbed: "https://www.youtube.com/embed/a2I1nO3uVYU"
     },
@@ -867,7 +683,7 @@ window.CONTENT = {
       key: "A",
       feel: "slow blues",
       recommendedBpm: 64,
-      note: "Practice phrasing over the groove.",
+      note: "Use the YouTube controls in the player to play/pause.",
       youtubeQuery: "slow blues backing track key A 64 bpm 12 bar",
       youtubeEmbed: "https://www.youtube.com/embed/a2I1nO3uVYU"
     },
@@ -878,7 +694,7 @@ window.CONTENT = {
       key: "C",
       feel: "slow blues",
       recommendedBpm: 62,
-      note: "Slow groove in C.",
+      note: "Use the YouTube controls in the player to play/pause.",
       youtubeQuery: "slow blues backing track key C 62 bpm 12 bar",
       youtubeEmbed: "https://www.youtube.com/embed/IGfyzzcMOKk"
     },
@@ -889,216 +705,289 @@ window.CONTENT = {
       key: "C",
       feel: "slow blues",
       recommendedBpm: 62,
-      note: "Practice melodic ideas over the groove.",
+      note: "Use the YouTube controls in the player to play/pause.",
       youtubeQuery: "slow blues backing track key C 62 bpm 12 bar",
       youtubeEmbed: "https://www.youtube.com/embed/IGfyzzcMOKk"
     },
 
-    // =====================
-    // DEFAULT SET (safe placeholders — fill youtubeEmbed later)
-    // =====================
-    bt_rock_A: {
-      id: "bt_rock_A",
+    // ---------------------------
+    // ROCK — YouTube
+    // ---------------------------
+    bt_rock_E_rhythm: {
+      id: "bt_rock_E_rhythm",
       genre: "rock",
-      name: "Rock Groove (A)",
-      key: "A",
-      feel: "mid rock",
-      recommendedBpm: 120,
-      note: "Placeholder — add youtubeEmbed when you pick a track.",
-      youtubeQuery: "rock backing track key A 120 bpm",
-      youtubeEmbed: ""
-    },
-    bt_rock_E: {
-      id: "bt_rock_E",
-      genre: "rock",
-      name: "Rock Groove (E)",
+      name: "Rock Backing Track (E) — Rhythm Mix",
       key: "E",
-      feel: "mid rock",
+      feel: "straight rock",
       recommendedBpm: 120,
-      note: "Placeholder — add youtubeEmbed when you pick a track.",
+      note: "Tight rock groove. Use YouTube player controls.",
       youtubeQuery: "rock backing track key E 120 bpm",
-      youtubeEmbed: ""
+      youtubeEmbed: "https://www.youtube.com/embed/-Te_EMMUyEA"
     },
-    bt_rock_G: {
-      id: "bt_rock_G",
+    bt_rock_E_lead: {
+      id: "bt_rock_E_lead",
       genre: "rock",
-      name: "Rock Groove (G)",
-      key: "G",
-      feel: "mid rock",
-      recommendedBpm: 115,
-      note: "Placeholder — add youtubeEmbed when you pick a track.",
-      youtubeQuery: "rock backing track key G 115 bpm",
-      youtubeEmbed: ""
-    },
-
-    bt_metal_E: {
-      id: "bt_metal_E",
-      genre: "metal",
-      name: "Metal Chug (E)",
+      name: "Rock Backing Track (E) — Lead Mix",
       key: "E",
-      feel: "metal",
-      recommendedBpm: 160,
-      note: "Placeholder — add youtubeEmbed when you pick a track.",
-      youtubeQuery: "metal backing track key E 160 bpm",
-      youtubeEmbed: ""
+      feel: "straight rock",
+      recommendedBpm: 120,
+      note: "Practice lead phrasing with space and strong endings.",
+      youtubeQuery: "rock backing track key E 120 bpm",
+      youtubeEmbed: "https://www.youtube.com/embed/-Te_EMMUyEA"
     },
-    bt_metal_A: {
-      id: "bt_metal_A",
-      genre: "metal",
-      name: "Metal Groove (A)",
+    bt_rock_A_rhythm: {
+      id: "bt_rock_A_rhythm",
+      genre: "rock",
+      name: "Rock Backing Track (A) — Rhythm Mix",
       key: "A",
-      feel: "metal",
-      recommendedBpm: 150,
-      note: "Placeholder — add youtubeEmbed when you pick a track.",
-      youtubeQuery: "metal backing track key A 150 bpm",
-      youtubeEmbed: ""
+      feel: "straight rock",
+      recommendedBpm: 120,
+      note: "Use YouTube player controls.",
+      youtubeQuery: "rock backing track key A 120 bpm",
+      youtubeEmbed: null
     },
-    bt_metal_D: {
-      id: "bt_metal_D",
-      genre: "metal",
-      name: "Metal Groove (D)",
-      key: "D",
-      feel: "metal",
-      recommendedBpm: 150,
-      note: "Placeholder — add youtubeEmbed when you pick a track.",
-      youtubeQuery: "metal backing track key D 150 bpm",
-      youtubeEmbed: ""
+    bt_rock_A_lead: {
+      id: "bt_rock_A_lead",
+      genre: "rock",
+      name: "Rock Backing Track (A) — Lead Mix",
+      key: "A",
+      feel: "straight rock",
+      recommendedBpm: 120,
+      note: "Use YouTube player controls.",
+      youtubeQuery: "rock backing track key A 120 bpm",
+      youtubeEmbed: null
     },
-
-    bt_country_G: {
-      id: "bt_country_G",
-      genre: "country",
-      name: "Country Groove (G)",
+    bt_rock_G_rhythm: {
+      id: "bt_rock_G_rhythm",
+      genre: "rock",
+      name: "Rock Backing Track (G) — Rhythm Mix",
       key: "G",
-      feel: "country",
+      feel: "straight rock",
       recommendedBpm: 110,
-      note: "Placeholder — add youtubeEmbed when you pick a track.",
-      youtubeQuery: "country backing track key G 110 bpm",
-      youtubeEmbed: ""
+      note: "Use YouTube player controls.",
+      youtubeQuery: "rock backing track key G 110 bpm",
+      youtubeEmbed: null
     },
-    bt_country_A: {
-      id: "bt_country_A",
-      genre: "country",
-      name: "Country Groove (A)",
-      key: "A",
-      feel: "country",
+    bt_rock_G_lead: {
+      id: "bt_rock_G_lead",
+      genre: "rock",
+      name: "Rock Backing Track (G) — Lead Mix",
+      key: "G",
+      feel: "straight rock",
       recommendedBpm: 110,
-      note: "Placeholder — add youtubeEmbed when you pick a track.",
-      youtubeQuery: "country backing track key A 110 bpm",
-      youtubeEmbed: ""
-    },
-    bt_country_E: {
-      id: "bt_country_E",
-      genre: "country",
-      name: "Country Groove (E)",
-      key: "E",
-      feel: "country",
-      recommendedBpm: 115,
-      note: "Placeholder — add youtubeEmbed when you pick a track.",
-      youtubeQuery: "country backing track key E 115 bpm",
-      youtubeEmbed: ""
+      note: "Use YouTube player controls.",
+      youtubeQuery: "rock backing track key G 110 bpm",
+      youtubeEmbed: null
     },
 
-    bt_jazz_C: {
-      id: "bt_jazz_C",
-      genre: "jazz",
-      name: "Jazz Swing (C)",
-      key: "C",
-      feel: "swing",
+    // ---------------------------
+    // METAL — YouTube
+    // ---------------------------
+    bt_metal_Em_rhythm: {
+      id: "bt_metal_Em_rhythm",
+      genre: "metal",
+      name: "Metal Backing Track (E minor) — Rhythm Mix",
+      key: "Em",
+      feel: "metal",
       recommendedBpm: 140,
-      note: "Placeholder — add youtubeEmbed when you pick a track.",
-      youtubeQuery: "jazz backing track key C swing 140 bpm",
-      youtubeEmbed: ""
+      note: "Chugs + tight timing. Use YouTube player controls.",
+      youtubeQuery: "metal backing track E minor 140 bpm",
+      youtubeEmbed: "https://www.youtube.com/embed/TSXmRwHK-4w"
     },
-    bt_jazz_F: {
-      id: "bt_jazz_F",
-      genre: "jazz",
-      name: "Jazz Swing (F)",
-      key: "F",
-      feel: "swing",
-      recommendedBpm: 130,
-      note: "Placeholder — add youtubeEmbed when you pick a track.",
-      youtubeQuery: "jazz backing track key F swing 130 bpm",
-      youtubeEmbed: ""
+    bt_metal_Em_lead: {
+      id: "bt_metal_Em_lead",
+      genre: "metal",
+      name: "Metal Backing Track (E minor) — Lead Mix",
+      key: "Em",
+      feel: "metal",
+      recommendedBpm: 140,
+      note: "Practice alternate picking and clean targeting.",
+      youtubeQuery: "metal backing track E minor 140 bpm",
+      youtubeEmbed: "https://www.youtube.com/embed/TSXmRwHK-4w"
     },
-    bt_jazz_Bb: {
-      id: "bt_jazz_Bb",
-      genre: "jazz",
-      name: "Jazz Swing (Bb)",
-      key: "Bb",
-      feel: "swing",
-      recommendedBpm: 125,
-      note: "Placeholder — add youtubeEmbed when you pick a track.",
-      youtubeQuery: "jazz backing track key Bb swing 125 bpm",
-      youtubeEmbed: ""
+    bt_metal_Gm_rhythm: {
+      id: "bt_metal_Gm_rhythm",
+      genre: "metal",
+      name: "Metal Backing Track (G minor) — Rhythm Mix",
+      key: "Gm",
+      feel: "metal",
+      recommendedBpm: 140,
+      note: "Use YouTube player controls.",
+      youtubeQuery: "metal backing track G minor 140 bpm",
+      youtubeEmbed: null
+    },
+    bt_metal_Gm_lead: {
+      id: "bt_metal_Gm_lead",
+      genre: "metal",
+      name: "Metal Backing Track (G minor) — Lead Mix",
+      key: "Gm",
+      feel: "metal",
+      recommendedBpm: 140,
+      note: "Use YouTube player controls.",
+      youtubeQuery: "metal backing track G minor 140 bpm",
+      youtubeEmbed: null
+    },
+    bt_metal_Am_rhythm: {
+      id: "bt_metal_Am_rhythm",
+      genre: "metal",
+      name: "Metal Backing Track (A minor) — Rhythm Mix",
+      key: "Am",
+      feel: "metal",
+      recommendedBpm: 135,
+      note: "Use YouTube player controls.",
+      youtubeQuery: "metal backing track A minor 135 bpm",
+      youtubeEmbed: null
+    },
+    bt_metal_Am_lead: {
+      id: "bt_metal_Am_lead",
+      genre: "metal",
+      name: "Metal Backing Track (A minor) — Lead Mix",
+      key: "Am",
+      feel: "metal",
+      recommendedBpm: 135,
+      note: "Use YouTube player controls.",
+      youtubeQuery: "metal backing track A minor 135 bpm",
+      youtubeEmbed: null
     },
 
-    bt_funk_E: {
-      id: "bt_funk_E",
-      genre: "funk",
-      name: "Funk Groove (E)",
-      key: "E",
-      feel: "funk",
-      recommendedBpm: 105,
-      note: "Placeholder — add youtubeEmbed when you pick a track.",
-      youtubeQuery: "funk backing track key E 105 bpm",
-      youtubeEmbed: ""
-    },
-    bt_funk_A: {
-      id: "bt_funk_A",
-      genre: "funk",
-      name: "Funk Groove (A)",
-      key: "A",
-      feel: "funk",
-      recommendedBpm: 100,
-      note: "Placeholder — add youtubeEmbed when you pick a track.",
-      youtubeQuery: "funk backing track key A 100 bpm",
-      youtubeEmbed: ""
-    },
-    bt_funk_D: {
-      id: "bt_funk_D",
-      genre: "funk",
-      name: "Funk Groove (D)",
-      key: "D",
-      feel: "funk",
-      recommendedBpm: 100,
-      note: "Placeholder — add youtubeEmbed when you pick a track.",
-      youtubeQuery: "funk backing track key D 100 bpm",
-      youtubeEmbed: ""
-    },
-
-    bt_acoustic_G: {
-      id: "bt_acoustic_G",
-      genre: "acoustic",
-      name: "Acoustic Strum (G)",
+    // ---------------------------
+    // COUNTRY — YouTube
+    // ---------------------------
+    bt_country_G_rhythm: {
+      id: "bt_country_G_rhythm",
+      genre: "country",
+      name: "Country Backing Track (G) — Rhythm Mix",
       key: "G",
-      feel: "acoustic",
-      recommendedBpm: 95,
-      note: "Placeholder — add youtubeEmbed when you pick a track.",
-      youtubeQuery: "acoustic backing track key G 95 bpm",
-      youtubeEmbed: ""
+      feel: "country",
+      recommendedBpm: 90,
+      note: "Boom-chick + clean changes. Use YouTube player controls.",
+      youtubeQuery: "country backing track in G 90 bpm",
+      youtubeEmbed: "https://www.youtube.com/embed/rGoYRaHTwGM"
     },
-    bt_acoustic_C: {
-      id: "bt_acoustic_C",
-      genre: "acoustic",
-      name: "Acoustic Strum (C)",
-      key: "C",
-      feel: "acoustic",
-      recommendedBpm: 95,
-      note: "Placeholder — add youtubeEmbed when you pick a track.",
-      youtubeQuery: "acoustic backing track key C 95 bpm",
-      youtubeEmbed: ""
+    bt_country_G_lead: {
+      id: "bt_country_G_lead",
+      genre: "country",
+      name: "Country Backing Track (G) — Lead Mix",
+      key: "G",
+      feel: "country",
+      recommendedBpm: 90,
+      note: "Practice melodic fills that land on chord tones.",
+      youtubeQuery: "country backing track in G 90 bpm",
+      youtubeEmbed: "https://www.youtube.com/embed/rGoYRaHTwGM"
     },
-    bt_acoustic_D: {
-      id: "bt_acoustic_D",
-      genre: "acoustic",
-      name: "Acoustic Strum (D)",
+    bt_country_A_rhythm: {
+      id: "bt_country_A_rhythm",
+      genre: "country",
+      name: "Country Backing Track (A) — Rhythm Mix",
+      key: "A",
+      feel: "country",
+      recommendedBpm: 90,
+      note: "Use YouTube player controls.",
+      youtubeQuery: "country backing track in A 90 bpm",
+      youtubeEmbed: "https://www.youtube.com/embed/HzLCLJAbVOI"
+    },
+    bt_country_A_lead: {
+      id: "bt_country_A_lead",
+      genre: "country",
+      name: "Country Backing Track (A) — Lead Mix",
+      key: "A",
+      feel: "country",
+      recommendedBpm: 90,
+      note: "Use YouTube player controls.",
+      youtubeQuery: "country backing track in A 90 bpm",
+      youtubeEmbed: "https://www.youtube.com/embed/HzLCLJAbVOI"
+    },
+    bt_country_D_rhythm: {
+      id: "bt_country_D_rhythm",
+      genre: "country",
+      name: "Country Backing Track (D) — Rhythm Mix",
       key: "D",
-      feel: "acoustic",
+      feel: "country",
+      recommendedBpm: 95,
+      note: "Use YouTube player controls.",
+      youtubeQuery: "country backing track in D 95 bpm",
+      youtubeEmbed: null
+    },
+    bt_country_D_lead: {
+      id: "bt_country_D_lead",
+      genre: "country",
+      name: "Country Backing Track (D) — Lead Mix",
+      key: "D",
+      feel: "country",
+      recommendedBpm: 95,
+      note: "Use YouTube player controls.",
+      youtubeQuery: "country backing track in D 95 bpm",
+      youtubeEmbed: null
+    },
+
+    // ---------------------------
+    // FUNK — YouTube
+    // ---------------------------
+    bt_funk_Em_rhythm: {
+      id: "bt_funk_Em_rhythm",
+      genre: "funk",
+      name: "Funk Backing Track (E minor) — Rhythm Mix",
+      key: "Em",
+      feel: "funk",
       recommendedBpm: 100,
-      note: "Placeholder — add youtubeEmbed when you pick a track.",
-      youtubeQuery: "acoustic backing track key D 100 bpm",
-      youtubeEmbed: ""
+      note: "Muted 16ths + tight stabs. Use YouTube player controls.",
+      youtubeQuery: "funk backing track in E minor 100 bpm",
+      youtubeEmbed: "https://www.youtube.com/embed/xnvd2nRdU54"
+    },
+    bt_funk_Em_lead: {
+      id: "bt_funk_Em_lead",
+      genre: "funk",
+      name: "Funk Backing Track (E minor) — Lead Mix",
+      key: "Em",
+      feel: "funk",
+      recommendedBpm: 100,
+      note: "Practice short phrases that fit between the stabs.",
+      youtubeQuery: "funk backing track in E minor 100 bpm",
+      youtubeEmbed: "https://www.youtube.com/embed/xnvd2nRdU54"
+    },
+    bt_funk_Am_rhythm: {
+      id: "bt_funk_Am_rhythm",
+      genre: "funk",
+      name: "Funk Backing Track (A minor) — Rhythm Mix",
+      key: "Am",
+      feel: "funk",
+      recommendedBpm: 100,
+      note: "Use YouTube player controls.",
+      youtubeQuery: "funk backing track in A minor 100 bpm",
+      youtubeEmbed: null
+    },
+    bt_funk_Am_lead: {
+      id: "bt_funk_Am_lead",
+      genre: "funk",
+      name: "Funk Backing Track (A minor) — Lead Mix",
+      key: "Am",
+      feel: "funk",
+      recommendedBpm: 100,
+      note: "Use YouTube player controls.",
+      youtubeQuery: "funk backing track in A minor 100 bpm",
+      youtubeEmbed: null
+    },
+    bt_funk_Dm_rhythm: {
+      id: "bt_funk_Dm_rhythm",
+      genre: "funk",
+      name: "Funk Backing Track (D minor) — Rhythm Mix",
+      key: "Dm",
+      feel: "funk",
+      recommendedBpm: 95,
+      note: "Use YouTube player controls.",
+      youtubeQuery: "funk backing track in D minor 95 bpm",
+      youtubeEmbed: null
+    },
+    bt_funk_Dm_lead: {
+      id: "bt_funk_Dm_lead",
+      genre: "funk",
+      name: "Funk Backing Track (D minor) — Lead Mix",
+      key: "Dm",
+      feel: "funk",
+      recommendedBpm: 95,
+      note: "Use YouTube player controls.",
+      youtubeQuery: "funk backing track in D minor 95 bpm",
+      youtubeEmbed: null
     }
   }
 };
