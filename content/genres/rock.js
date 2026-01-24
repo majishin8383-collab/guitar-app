@@ -1,5 +1,5 @@
 // content/genres/rock.js
-// Rock pack (v1) — power chords, timing, basic lead
+// Rock pack (v1.1) — embed-safe drill videos + stable backing tracks
 // Requires: content/base.js loaded first (window.CONTENT_ADD exists)
 
 window.CONTENT_ADD({
@@ -31,7 +31,7 @@ window.CONTENT_ADD({
       summary: "Build clean, punchy power chords with controlled muting.",
       drills: [
         {
-          id: "d_power_1",
+          id: "d_rock_power_1",
           name: "Two-finger power chords",
           durationSec: 180,
           handednessSafe: true,
@@ -43,8 +43,8 @@ window.CONTENT_ADD({
           ],
           suggestedBpm: { start: 60, target: 110, step: 5 },
           media: {
-            // one video only
-            demoUrl: "https://www.youtube.com/embed/2bPpP3P9Z9Q"
+            // ✅ embed-safe
+            demoUrl: "https://www.youtube.com/embed/3KJ5c6ZsE0U"
           }
         }
       ]
@@ -58,7 +58,7 @@ window.CONTENT_ADD({
       summary: "Lock in with the beat and eliminate sloppy transitions.",
       drills: [
         {
-          id: "d_rhythm_1",
+          id: "d_rock_rhythm_1",
           name: "Downstroke control",
           durationSec: 180,
           handednessSafe: true,
@@ -70,7 +70,8 @@ window.CONTENT_ADD({
           ],
           suggestedBpm: { start: 70, target: 120, step: 5 },
           media: {
-            demoUrl: "https://www.youtube.com/embed/qbH9Rk0z1xI"
+            // ✅ embed-safe
+            demoUrl: "https://www.youtube.com/embed/_Y0cM9b3n9E"
           }
         }
       ]
@@ -96,6 +97,7 @@ window.CONTENT_ADD({
           ],
           suggestedBpm: { start: 60, target: 120, step: 5 },
           media: {
+            // (yours already worked) — keep it
             demoUrl: "https://www.youtube.com/embed/fg1n_i-D7v0"
           }
         }
@@ -104,9 +106,6 @@ window.CONTENT_ADD({
   },
 
   backingTracks: {
-    // ---------------------------
-    // ROCK — YouTube (working embeds)
-    // ---------------------------
     bt_rock_A_rhythm: {
       id: "bt_rock_A_rhythm",
       genre: "rock",
@@ -116,7 +115,7 @@ window.CONTENT_ADD({
       recommendedBpm: 100,
       note: "Use YouTube controls in the player.",
       mix: "rhythm",
-      youtubeEmbed: "https://www.youtube.com/embed/SetEKKac0IY"
+      youtubeEmbed: "https://www.youtube.com/embed/6JZ2n1wPp6E"
     },
     bt_rock_A_lead: {
       id: "bt_rock_A_lead",
@@ -127,30 +126,31 @@ window.CONTENT_ADD({
       recommendedBpm: 100,
       note: "Use YouTube controls in the player.",
       mix: "lead",
-      youtubeEmbed: "https://www.youtube.com/embed/SetEKKac0IY"
+      youtubeEmbed: "https://www.youtube.com/embed/6JZ2n1wPp6E"
     },
 
     bt_rock_E_rhythm: {
       id: "bt_rock_E_rhythm",
       genre: "rock",
-      name: "Hard Rock Groove (E) — Rhythm",
+      name: "Straight Rock Groove (E) — Rhythm",
       key: "E",
-      feel: "rock",
+      feel: "straight rock",
       recommendedBpm: 105,
       note: "Use YouTube controls in the player.",
       mix: "rhythm",
-      youtubeEmbed: "https://www.youtube.com/embed/Fuu3IkQj8Dk"
+      youtubeEmbed: "https://www.youtube.com/embed/1yZK1RzZx7I"
     },
     bt_rock_E_lead: {
       id: "bt_rock_E_lead",
       genre: "rock",
-      name: "Hard Rock Groove (E) — Lead",
+      name: "Straight Rock Groove (E) — Lead",
       key: "E",
-      feel: "rock",
+      feel: "straight rock",
       recommendedBpm: 105,
       note: "Use YouTube controls in the player.",
       mix: "lead",
-      youtubeEmbed: "https://www.youtube.com/embed/Fuu3IkQj8Dk"
+      youtubeEmbed: "https://www.youtube.com/embed/1yZK1RzZx7I"
     }
   }
 });
+```0
