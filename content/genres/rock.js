@@ -1,5 +1,5 @@
 // content/genres/rock.js
-// Rock pack (v1.1) — embed-safe drill videos + stable backing tracks
+// Rock pack (v1) — power chords, timing, basic lead
 // Requires: content/base.js loaded first (window.CONTENT_ADD exists)
 
 window.CONTENT_ADD({
@@ -31,7 +31,7 @@ window.CONTENT_ADD({
       summary: "Build clean, punchy power chords with controlled muting.",
       drills: [
         {
-          id: "d_rock_power_1",
+          id: "d_power_1",
           name: "Two-finger power chords",
           durationSec: 180,
           handednessSafe: true,
@@ -42,10 +42,8 @@ window.CONTENT_ADD({
             "Strum evenly with confidence."
           ],
           suggestedBpm: { start: 60, target: 110, step: 5 },
-          media: {
-            // ✅ embed-safe
-            demoUrl: "https://www.youtube.com/embed/3KJ5c6ZsE0U"
-          }
+          // ONE video per drill (matches your new UI)
+          videoUrl: "https://www.youtube.com/embed/2bPpP3P9Z9Q"
         }
       ]
     },
@@ -58,7 +56,7 @@ window.CONTENT_ADD({
       summary: "Lock in with the beat and eliminate sloppy transitions.",
       drills: [
         {
-          id: "d_rock_rhythm_1",
+          id: "d_rhythm_1",
           name: "Downstroke control",
           durationSec: 180,
           handednessSafe: true,
@@ -69,10 +67,7 @@ window.CONTENT_ADD({
             "Focus on consistent attack."
           ],
           suggestedBpm: { start: 70, target: 120, step: 5 },
-          media: {
-            // ✅ embed-safe
-            demoUrl: "https://www.youtube.com/embed/_Y0cM9b3n9E"
-          }
+          videoUrl: "https://www.youtube.com/embed/qbH9Rk0z1xI"
         }
       ]
     },
@@ -96,10 +91,7 @@ window.CONTENT_ADD({
             "Leave space between phrases."
           ],
           suggestedBpm: { start: 60, target: 120, step: 5 },
-          media: {
-            // (yours already worked) — keep it
-            demoUrl: "https://www.youtube.com/embed/fg1n_i-D7v0"
-          }
+          videoUrl: "https://www.youtube.com/embed/fg1n_i-D7v0"
         }
       ]
     }
@@ -128,7 +120,6 @@ window.CONTENT_ADD({
       mix: "lead",
       youtubeEmbed: "https://www.youtube.com/embed/6JZ2n1wPp6E"
     },
-
     bt_rock_E_rhythm: {
       id: "bt_rock_E_rhythm",
       genre: "rock",
@@ -153,4 +144,3 @@ window.CONTENT_ADD({
     }
   }
 });
-```0
