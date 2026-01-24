@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Guitar Trainer</title>
 
-  <!-- cache-busted stylesheet -->
   <link rel="stylesheet" href="styles.css?v=GT-001" />
 </head>
 <body>
@@ -20,17 +19,16 @@
   </footer>
 
   <!-- BASE content (creates window.CONTENT) -->
-  <script src="js/content/base.js?v=GT-001"></script>
+  <script src="content/base.js?v=GT-001"></script>
 
   <!-- GENRE PACKS (merge into window.CONTENT) -->
-  <script src="js/content/genres/blues.js?v=GT-001"></script>
-  <script src="js/content/genres/funk.js?v=GT-001"></script>
-  <script src="js/content/genres/rock.js?v=GT-001"></script>
-  <script src="js/content/genres/metal.js?v=GT-001"></script>
-  <!-- add country only when you're ready -->
-  <!-- <script src="js/content/genres/country.js?v=GT-001"></script> -->
+  <script src="content/genres/blues.js?v=GT-001"></script>
+  <script src="content/genres/funk.js?v=GT-001"></script>
+  <script src="content/genres/rock.js?v=GT-001"></script>
+  <script src="content/genres/metal.js?v=GT-001"></script>
+  <!-- add country later when ready -->
 
-  <!-- entry module cache-busted -->
+  <!-- App entry -->
   <script type="module" src="app.js?v=GT-001"></script>
 </body>
 </html>
