@@ -44,14 +44,60 @@ function ensureMirrorDefault() {
   }
 }
 
-// Drill video helper (unchanged)
+/* -------------------------------------------------
+   🔧 FIXED: YouTube URL → embed normalizer
+   Accepts:
+   - youtube.com/watch?v=ID
+   - youtu.be/ID
+   - youtube.com/shorts/ID
+   - youtube.com/live/ID
+   - already-embed URLs
+-------------------------------------------------- */
 function safeEmbed(url) {
   if (!url || typeof url !== "string") return null;
-  const ok =
-    url.startsWith("https://www.youtube.com/embed/") ||
-    url.startsWith("https://youtube.com/embed/") ||
-    url.startsWith("https://www.youtube-nocookie.com/embed/");
-  return ok ? url : null;
+
+  const u = url.trim();
+
+  // Already an embed URL
+  if (
+    u.startsWith("https://www.youtube.com/embed/") ||
+    u.startsWith("https://youtube.com/embed/") ||
+    u.startsWith("https://www.youtube-nocookie.com/embed/")
+  ) {
+    return u;
+  }
+
+  try {
+    const parsed = new URL(u);
+    const host = parsed.hostname.replace(/^www\./, "");
+    const path = parsed.pathname || "";
+
+    let videoId = null;
+
+    // youtu.be/<id>
+    if (host === "youtu.be") {
+      videoId = path.split("/").filter(Boolean)[0] || null;
+    }
+
+    // youtube.com/*
+    if (!videoId && (host === "youtube.com" || host === "m.youtube.com")) {
+      if (path === "/watch") {
+        videoId = parsed.searchParams.get("v");
+      } else if (path.startsWith("/shorts/")) {
+        videoId = path.split("/shorts/")[1]?.split("/")[0] || null;
+      } else if (path.startsWith("/live/")) {
+        videoId = path.split("/live/")[1]?.split("/")[0] || null;
+      } else if (path.startsWith("/embed/")) {
+        videoId = path.split("/embed/")[1]?.split("/")[0] || null;
+      }
+    }
+
+    if (!videoId) return null;
+
+    return `https://www.youtube-nocookie.com/embed/${videoId}`;
+  } catch {
+    return null;
+  }
 }
 
 function videoBlock(label, url, mirrorOn) {
@@ -64,6 +110,7 @@ function videoBlock(label, url, mirrorOn) {
       </div>
     `;
   }
+
   const mirrorClass = mirrorOn ? "mirror" : "";
   return `
     <div class="videoCard">
