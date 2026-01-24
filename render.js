@@ -2,6 +2,7 @@
 // UI rendering + event wiring
 // Guarded: Role UI only appears if ctx provides role APIs.
 // Backing tracks: YouTube embed ONLY. Dropdown controls what displays (no Stop/Play buttons).
+// Drill videos: ONE video per drill (demo > fix > dont)
 
 import { shouldShowLevelUp } from "./progress.js";
 
@@ -65,8 +66,10 @@ function backingUI(ctx, tracks, rerender) {
 
   const safe = safeYoutubeEmbed(selected.youtubeEmbed);
 
-  // cache-bust parameter so iframe swaps reliably on selection change
-  const iframeSrc = safe ? `${safe}${safe.includes("?") ? "&" : "?"}cb=${encodeURIComponent(selected.id)}` : null;
+  // cache-bust param so iframe swaps reliably on selection change
+  const iframeSrc = safe
+    ? `${safe}${safe.includes("?") ? "&" : "?"}cb=${encodeURIComponent(selected.id)}`
+    : null;
 
   return `
     <div class="card" style="background:#171717; margin-top:10px;">
@@ -127,6 +130,13 @@ function wireBackingDropdown(ctx, tracks, rerender) {
     setSelectedTrackId(ctx, select.value);
     rerender(); // rebuild iframe immediately
   };
+}
+
+// ✅ helper: pick ONE video url per drill (demo > fix > dont)
+function pickOneVideoUrl(d) {
+  const m = d?.media || null;
+  if (!m) return null;
+  return m.demoUrl || m.fixUrl || m.dontUrl || null;
 }
 
 // ------------------ Screens ------------------
@@ -374,13 +384,6 @@ export function renderPractice(ctx) {
   document.getElementById("genre-details").onclick = () => ctx.nav.genre(genre.id);
 }
 
-// ✅ helper: pick ONE video url per drill (demo > fix > dont)
-function pickOneVideoUrl(d) {
-  const m = d?.media || null;
-  if (!m) return null;
-  return m.demoUrl || m.fixUrl || m.dontUrl || null;
-}
-
 export function renderSkill(ctx, skillId, opts = {}) {
   ctx.ensureMirrorDefault();
 
@@ -399,11 +402,6 @@ export function renderSkill(ctx, skillId, opts = {}) {
     return;
   }
 
-  const handedNote =
-    state.handedness === "left"
-      ? "Left-handed: pick with your left hand, fret with your right."
-      : "Right-handed: pick with your right hand, fret with your left.";
-
   app.innerHTML = `
     <div class="card">
       <h2>${skill.name}</h2>
@@ -417,8 +415,6 @@ export function renderSkill(ctx, skillId, opts = {}) {
         ${rolePill(ctx)}
       </div>
 
-      <p class="muted" style="margin-top:0;">${handedNote}</p>
-
       <h3>Drills</h3>
 
       ${skill.drills.map(d => {
@@ -431,7 +427,6 @@ export function renderSkill(ctx, skillId, opts = {}) {
           : "";
 
         const metroRunning = ctx.metro.isRunning() && ctx.metroState.drillId === d.id;
-
         const oneUrl = pickOneVideoUrl(d);
 
         return `
@@ -561,4 +556,4 @@ export function renderSkill(ctx, skillId, opts = {}) {
   });
 
   document.getElementById("back").onclick = backTo;
-    }
+}
