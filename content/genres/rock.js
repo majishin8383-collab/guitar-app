@@ -1,6 +1,6 @@
-// js/content/genres/rock.js
-// Rock pack (v2.1) — FIX: backing tracks use explicit /embed/ URLs (no converters)
-// Requires: js/content/base.js loaded first (window.CONTENT_ADD exists)
+// content/genres/rock.js
+// Rock pack (v1) — power chords, timing, basic lead
+// Requires: content/base.js loaded first (window.CONTENT_ADD exists)
 
 window.CONTENT_ADD({
   genres: {
@@ -43,9 +43,8 @@ window.CONTENT_ADD({
           ],
           suggestedBpm: { start: 60, target: 110, step: 5 },
           media: {
-            demoUrl: "https://www.youtube.com/embed/2bPpP3P9Z9Q",
-            dontUrl: "https://www.youtube.com/embed/9jYF2lK9KxY",
-            fixUrl: "https://www.youtube.com/embed/7pYF6kU4x2M"
+            // one video only
+            demoUrl: "https://www.youtube.com/embed/2bPpP3P9Z9Q"
           }
         }
       ]
@@ -71,9 +70,7 @@ window.CONTENT_ADD({
           ],
           suggestedBpm: { start: 70, target: 120, step: 5 },
           media: {
-            demoUrl: "https://www.youtube.com/embed/qbH9Rk0z1xI",
-            dontUrl: "https://www.youtube.com/embed/9jYF2lK9KxY",
-            fixUrl: "https://www.youtube.com/embed/7pYF6kU4x2M"
+            demoUrl: "https://www.youtube.com/embed/qbH9Rk0z1xI"
           }
         }
       ]
@@ -99,9 +96,7 @@ window.CONTENT_ADD({
           ],
           suggestedBpm: { start: 60, target: 120, step: 5 },
           media: {
-            demoUrl: "https://www.youtube.com/embed/fg1n_i-D7v0",
-            dontUrl: "https://www.youtube.com/embed/5Qc426qgSho",
-            fixUrl: "https://www.youtube.com/embed/83GZUBdupaI"
+            demoUrl: "https://www.youtube.com/embed/fg1n_i-D7v0"
           }
         }
       ]
@@ -109,7 +104,9 @@ window.CONTENT_ADD({
   },
 
   backingTracks: {
-    // STRAIGHT ROCK — YouTube (MUST be /embed/ URLs or render.js rejects them)
+    // ---------------------------
+    // ROCK — YouTube (working embeds)
+    // ---------------------------
     bt_rock_A_rhythm: {
       id: "bt_rock_A_rhythm",
       genre: "rock",
@@ -119,7 +116,7 @@ window.CONTENT_ADD({
       recommendedBpm: 100,
       note: "Use YouTube controls in the player.",
       mix: "rhythm",
-      youtubeEmbed: "https://www.youtube.com/embed/6JZ2n1wPp6E"
+      youtubeEmbed: "https://www.youtube.com/embed/SetEKKac0IY"
     },
     bt_rock_A_lead: {
       id: "bt_rock_A_lead",
@@ -130,30 +127,30 @@ window.CONTENT_ADD({
       recommendedBpm: 100,
       note: "Use YouTube controls in the player.",
       mix: "lead",
-      youtubeEmbed: "https://www.youtube.com/embed/6JZ2n1wPp6E"
+      youtubeEmbed: "https://www.youtube.com/embed/SetEKKac0IY"
     },
 
     bt_rock_E_rhythm: {
       id: "bt_rock_E_rhythm",
       genre: "rock",
-      name: "Straight Rock Groove (E) — Rhythm",
+      name: "Hard Rock Groove (E) — Rhythm",
       key: "E",
-      feel: "straight rock",
+      feel: "rock",
       recommendedBpm: 105,
       note: "Use YouTube controls in the player.",
       mix: "rhythm",
-      youtubeEmbed: "https://www.youtube.com/embed/1yZK1RzZx7I"
+      youtubeEmbed: "https://www.youtube.com/embed/Fuu3IkQj8Dk"
     },
     bt_rock_E_lead: {
       id: "bt_rock_E_lead",
       genre: "rock",
-      name: "Straight Rock Groove (E) — Lead",
+      name: "Hard Rock Groove (E) — Lead",
       key: "E",
-      feel: "straight rock",
+      feel: "rock",
       recommendedBpm: 105,
       note: "Use YouTube controls in the player.",
       mix: "lead",
-      youtubeEmbed: "https://www.youtube.com/embed/1yZK1RzZx7I"
+      youtubeEmbed: "https://www.youtube.com/embed/Fuu3IkQj8Dk"
     }
   }
 });
