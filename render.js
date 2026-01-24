@@ -2,7 +2,6 @@
 // UI rendering + event wiring
 // Guarded: Role UI only appears if ctx provides role APIs.
 // Backing tracks: YouTube embed ONLY. Dropdown controls what displays (no Stop/Play buttons).
-// Drill videos: ONE video per drill (demo > fix > dont)
 
 import { shouldShowLevelUp } from "./progress.js";
 
@@ -66,7 +65,7 @@ function backingUI(ctx, tracks, rerender) {
 
   const safe = safeYoutubeEmbed(selected.youtubeEmbed);
 
-  // cache-bust param so iframe swaps reliably on selection change
+  // cache-bust parameter so iframe swaps reliably on selection change
   const iframeSrc = safe
     ? `${safe}${safe.includes("?") ? "&" : "?"}cb=${encodeURIComponent(selected.id)}`
     : null;
@@ -402,6 +401,11 @@ export function renderSkill(ctx, skillId, opts = {}) {
     return;
   }
 
+  const handedNote =
+    state.handedness === "left"
+      ? "Left-handed: pick with your left hand, fret with your right."
+      : "Right-handed: pick with your right hand, fret with your left.";
+
   app.innerHTML = `
     <div class="card">
       <h2>${skill.name}</h2>
@@ -414,6 +418,8 @@ export function renderSkill(ctx, skillId, opts = {}) {
         <span class="pill">Video mirror: ${state.mirrorVideos ? "ON" : "OFF"}</span>
         ${rolePill(ctx)}
       </div>
+
+      <p class="muted" style="margin-top:0;">${handedNote}</p>
 
       <h3>Drills</h3>
 
