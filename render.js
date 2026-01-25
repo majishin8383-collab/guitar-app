@@ -47,21 +47,40 @@ function setSelectedTrackId(ctx, id) {
 }
 
 // ---------------------------
-// YouTube URL normalization (same idea as app.js)
-// Accepts: embed, nocookie embed, watch?v=, youtu.be, shorts
-// Returns an embed URL or null.
+// YouTube URL normalization (same as app.js)
 // ---------------------------
-function toYoutubeEmbed(url) {
+function normalizeYoutubeInput(url) {
   if (!url || typeof url !== "string") return null;
+  let s = url.trim();
+  if (!s) return null;
+
+  if (s.startsWith("//")) s = "https:" + s;
+
+  if (!/^https?:\/\//i.test(s)) {
+    if (s.startsWith("www.youtube.com/") || s.startsWith("youtube.com/") || s.startsWith("m.youtube.com/")) {
+      s = "https://" + s;
+    } else if (s.startsWith("youtu.be/")) {
+      s = "https://" + s;
+    }
+  }
+  return s;
+}
+
+function toYoutubeEmbed(url) {
+  const s = normalizeYoutubeInput(url);
+  if (!s) return null;
 
   if (
-    url.startsWith("https://www.youtube.com/embed/") ||
-    url.startsWith("https://youtube.com/embed/") ||
-    url.startsWith("https://www.youtube-nocookie.com/embed/")
-  ) return url;
+    s.startsWith("https://www.youtube.com/embed/") ||
+    s.startsWith("http://www.youtube.com/embed/") ||
+    s.startsWith("https://youtube.com/embed/") ||
+    s.startsWith("http://youtube.com/embed/") ||
+    s.startsWith("https://www.youtube-nocookie.com/embed/") ||
+    s.startsWith("http://www.youtube-nocookie.com/embed/")
+  ) return s;
 
   try {
-    const u = new URL(url);
+    const u = new URL(s);
 
     if (u.hostname === "youtu.be") {
       const id = u.pathname.replace("/", "").trim();
@@ -97,8 +116,6 @@ function backingUI(ctx, tracks, rerender) {
   const selected = tracks.find(t => t.id === selectedId) || tracks[0];
 
   const safe = safeYoutubeEmbed(selected.youtubeEmbed);
-
-  // cache-bust parameter so iframe swaps reliably on selection change
   const iframeSrc = safe ? `${safe}${safe.includes("?") ? "&" : "?"}cb=${encodeURIComponent(selected.id)}` : null;
 
   return `
@@ -144,7 +161,7 @@ function backingUI(ctx, tracks, rerender) {
           `
           : `
             <div class="muted">
-              Bad or missing YouTube URL for this track.
+              Backing track unavailable (bad/missing YouTube URL).
             </div>
           `
       }
@@ -158,7 +175,7 @@ function wireBackingDropdown(ctx, tracks, rerender) {
 
   select.onchange = () => {
     setSelectedTrackId(ctx, select.value);
-    rerender(); // rebuild iframe immediately
+    rerender();
   };
 }
 
@@ -457,12 +474,10 @@ export function renderSkill(ctx, skillId, opts = {}) {
       ${skill.drills.map(d => {
         const cfg = d.suggestedBpm || { start: 60, step: 5, target: 120 };
         const p = ctx.progress.getOrInit(state, d);
-
         const showLevelUp = shouldShowLevelUp(p);
         const levelUpMsg = showLevelUp
           ? `✅ Level up: <b>${p.lastLevelUpFrom}</b> → <b>${p.lastLevelUpTo}</b> bpm`
           : "";
-
         const metroRunning = ctx.metro.isRunning() && ctx.metroState.drillId === d.id;
 
         const oneUrl = pickOneVideoUrl(d);
