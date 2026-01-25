@@ -14,13 +14,66 @@ function rolePill(ctx) {
   return `<span class="pill">Role: ${ctx.roleLabel()}</span>`;
 }
 
+/* -----------------------------
+   YouTube normalization (FIX)
+   Accept:
+   - https://www.youtube.com/watch?v=ID
+   - https://youtu.be/ID
+   - https://www.youtube.com/shorts/ID
+   - embed + nocookie embed
+   Return:
+   - https://www.youtube.com/embed/ID
+-------------------------------- */
+function toYoutubeEmbed(url) {
+  if (!url || typeof url !== "string") return null;
+
+  const u = url.trim();
+
+  // Already embed
+  if (u.startsWith("https://www.youtube.com/embed/")) return u;
+  if (u.startsWith("https://youtube.com/embed/")) return u;
+  if (u.startsWith("https://www.youtube-nocookie.com/embed/")) {
+    // normalize to standard embed (optional)
+    const id = u.split("/embed/")[1]?.split("?")[0];
+    return id ? `https://www.youtube.com/embed/${id}` : null;
+  }
+
+  // youtu.be/ID
+  if (u.startsWith("https://youtu.be/")) {
+    const id = u.replace("https://youtu.be/", "").split("?")[0].split("/")[0];
+    return id ? `https://www.youtube.com/embed/${id}` : null;
+  }
+
+  // youtube.com/watch?v=ID
+  if (u.includes("youtube.com/watch")) {
+    try {
+      const parsed = new URL(u);
+      const id = parsed.searchParams.get("v");
+      return id ? `https://www.youtube.com/embed/${id}` : null;
+    } catch {
+      // fallback parse
+      const v = u.split("v=")[1];
+      const id = v ? v.split("&")[0] : null;
+      return id ? `https://www.youtube.com/embed/${id}` : null;
+    }
+  }
+
+  // youtube.com/shorts/ID
+  if (u.includes("youtube.com/shorts/")) {
+    const id = u.split("youtube.com/shorts/")[1]?.split("?")[0]?.split("/")[0];
+    return id ? `https://www.youtube.com/embed/${id}` : null;
+  }
+
+  return null;
+}
+
 // -------- Backing helpers (dropdown + role filtering) --------
 
 function getTrackMix(track) {
-  const mix = track?.mix || track?.generator?.mix;
+  const mix = track && (track.mix || (track.generator && track.generator.mix));
   if (mix === "rhythm" || mix === "lead") return mix;
 
-  const n = String(track?.name || "").toLowerCase();
+  const n = String((track && track.name) || "").toLowerCase();
   if (n.includes("rhythm mix")) return "rhythm";
   if (n.includes("lead mix")) return "lead";
   return null;
@@ -46,15 +99,6 @@ function setSelectedTrackId(ctx, id) {
   ctx.persist();
 }
 
-function safeYoutubeEmbed(url) {
-  if (!url || typeof url !== "string") return null;
-  const ok =
-    url.startsWith("https://www.youtube.com/embed/") ||
-    url.startsWith("https://youtube.com/embed/") ||
-    url.startsWith("https://www.youtube-nocookie.com/embed/");
-  return ok ? url : null;
-}
-
 function backingUI(ctx, tracks, rerender) {
   if (!tracks.length) {
     return `<div class="muted" style="margin-top:8px;">No backing tracks defined for this genre yet.</div>`;
@@ -63,12 +107,10 @@ function backingUI(ctx, tracks, rerender) {
   const selectedId = getSelectedTrackId(ctx, tracks);
   const selected = tracks.find(t => t.id === selectedId) || tracks[0];
 
-  const safe = safeYoutubeEmbed(selected.youtubeEmbed);
+  const safe = toYoutubeEmbed(selected.youtubeEmbed);
 
   // cache-bust parameter so iframe swaps reliably on selection change
-  const iframeSrc = safe
-    ? `${safe}${safe.includes("?") ? "&" : "?"}cb=${encodeURIComponent(selected.id)}`
-    : null;
+  const iframeSrc = safe ? `${safe}${safe.includes("?") ? "&" : "?"}cb=${encodeURIComponent(selected.id)}` : null;
 
   return `
     <div class="card" style="background:#171717; margin-top:10px;">
@@ -113,7 +155,7 @@ function backingUI(ctx, tracks, rerender) {
           `
           : `
             <div class="muted">
-              No <code>youtubeEmbed</code> set for this track yet.
+              No valid YouTube URL set for this track yet.
             </div>
           `
       }
@@ -127,15 +169,8 @@ function wireBackingDropdown(ctx, tracks, rerender) {
 
   select.onchange = () => {
     setSelectedTrackId(ctx, select.value);
-    rerender(); // rebuild iframe immediately
+    rerender();
   };
-}
-
-// ✅ helper: pick ONE video url per drill (demo > fix > dont)
-function pickOneVideoUrl(d) {
-  const m = d?.media || null;
-  if (!m) return null;
-  return m.demoUrl || m.fixUrl || m.dontUrl || null;
 }
 
 // ------------------ Screens ------------------
@@ -383,6 +418,18 @@ export function renderPractice(ctx) {
   document.getElementById("genre-details").onclick = () => ctx.nav.genre(genre.id);
 }
 
+// ✅ helper: pick ONE video url per drill (supports BOTH formats)
+// - d.videoUrl (new)
+// - d.media.demoUrl / fixUrl / dontUrl (old)
+function pickOneVideoUrl(d) {
+  if (!d) return null;
+  if (d.videoUrl) return d.videoUrl;
+
+  const m = d.media || null;
+  if (!m) return null;
+  return m.demoUrl || m.fixUrl || m.dontUrl || null;
+}
+
 export function renderSkill(ctx, skillId, opts = {}) {
   ctx.ensureMirrorDefault();
 
@@ -433,7 +480,9 @@ export function renderSkill(ctx, skillId, opts = {}) {
           : "";
 
         const metroRunning = ctx.metro.isRunning() && ctx.metroState.drillId === d.id;
-        const oneUrl = pickOneVideoUrl(d);
+
+        const rawUrl = pickOneVideoUrl(d);
+        const oneUrl = toYoutubeEmbed(rawUrl);
 
         return `
           <div class="card" style="background:#171717;">
@@ -562,4 +611,4 @@ export function renderSkill(ctx, skillId, opts = {}) {
   });
 
   document.getElementById("back").onclick = backTo;
-}
+    }
