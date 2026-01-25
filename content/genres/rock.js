@@ -43,9 +43,7 @@ window.CONTENT_ADD({
             "Strum evenly — don’t squeeze."
           ],
           suggestedBpm: { start: 60, target: 110, step: 5 },
-          media: {
-            demoUrl: "https://www.youtube.com/embed/yw_OiX3Vm1E"
-          }
+          media: { demoUrl: "https://www.youtube.com/embed/yw_OiX3Vm1E" }
         },
         {
           id: "d_rock_power_2",
@@ -59,9 +57,7 @@ window.CONTENT_ADD({
             "Start slow, then increase BPM."
           ],
           suggestedBpm: { start: 55, target: 105, step: 5 },
-          media: {
-            demoUrl: "https://www.youtube.com/embed/d5R3Re17dgM"
-          }
+          media: { demoUrl: "https://www.youtube.com/embed/d5R3Re17dgM" }
         }
       ]
     },
@@ -85,9 +81,7 @@ window.CONTENT_ADD({
             "Stay relaxed — tension kills timing."
           ],
           suggestedBpm: { start: 70, target: 120, step: 5 },
-          media: {
-            demoUrl: "https://www.youtube.com/embed/KDeqVebUx3Q"
-          }
+          media: { demoUrl: "https://www.youtube.com/embed/KDeqVebUx3Q" }
         },
         {
           id: "d_rock_rhythm_2",
@@ -101,9 +95,7 @@ window.CONTENT_ADD({
             "If timing drifts, drop BPM and rebuild."
           ],
           suggestedBpm: { start: 80, target: 140, step: 5 },
-          media: {
-            demoUrl: "https://www.youtube.com/embed/fg1n_i-D7v0"
-          }
+          media: { demoUrl: "https://www.youtube.com/embed/fg1n_i-D7v0" }
         }
       ]
     },
@@ -127,9 +119,7 @@ window.CONTENT_ADD({
             "Match volume across all notes."
           ],
           suggestedBpm: { start: 60, target: 120, step: 5 },
-          media: {
-            demoUrl: "https://www.youtube.com/embed/fg1n_i-D7v0"
-          }
+          media: { demoUrl: "https://www.youtube.com/embed/fg1n_i-D7v0" }
         },
         {
           id: "d_rock_penta_2",
@@ -143,9 +133,7 @@ window.CONTENT_ADD({
             "Add a gentle bend or vibrato once it’s steady."
           ],
           suggestedBpm: { start: 55, target: 110, step: 5 },
-          media: {
-            demoUrl: "https://www.youtube.com/embed/83GZUBdupaI"
-          }
+          media: { demoUrl: "https://www.youtube.com/embed/83GZUBdupaI" }
         }
       ]
     }
@@ -200,7 +188,7 @@ window.CONTENT_ADD({
       youtubeEmbed: "https://www.youtube.com/embed/nm7WFG2RxvE"
     },
 
-    // G  (FIX: was pointing at a BLUES shuffle track before)
+    // G
     bt_rock_G_rhythm: {
       id: "bt_rock_G_rhythm",
       genre: "rock",
@@ -210,7 +198,7 @@ window.CONTENT_ADD({
       recommendedBpm: 110,
       note: "Use the YouTube controls in the player to play/pause.",
       mix: "rhythm",
-      youtubeEmbed: "https://www.youtube.com/embed/IKbmNxZW0s0"
+      youtubeEmbed: "https://www.youtube.com/embed/3szngdntfyM"
     },
     bt_rock_G_lead: {
       id: "bt_rock_G_lead",
@@ -221,10 +209,10 @@ window.CONTENT_ADD({
       recommendedBpm: 110,
       note: "Use the YouTube controls in the player to play/pause.",
       mix: "lead",
-      youtubeEmbed: "https://www.youtube.com/embed/IKbmNxZW0s0"
+      youtubeEmbed: "https://www.youtube.com/embed/3szngdntfyM"
     },
 
-    // D  (FIX: was pointing at a BLUES shuffle track before)
+    // D
     bt_rock_D_rhythm: {
       id: "bt_rock_D_rhythm",
       genre: "rock",
@@ -234,7 +222,7 @@ window.CONTENT_ADD({
       recommendedBpm: 115,
       note: "Use the YouTube controls in the player to play/pause.",
       mix: "rhythm",
-      youtubeEmbed: "https://www.youtube.com/embed/nm7WFG2RxvE"
+      youtubeEmbed: "https://www.youtube.com/embed/LpxSayM9cBg"
     },
     bt_rock_D_lead: {
       id: "bt_rock_D_lead",
@@ -245,7 +233,7 @@ window.CONTENT_ADD({
       recommendedBpm: 115,
       note: "Use the YouTube controls in the player to play/pause.",
       mix: "lead",
-      youtubeEmbed: "https://www.youtube.com/embed/nm7WFG2RxvE"
+      youtubeEmbed: "https://www.youtube.com/embed/LpxSayM9cBg"
     }
   }
 });
