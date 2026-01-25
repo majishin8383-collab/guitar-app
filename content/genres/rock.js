@@ -42,8 +42,9 @@ window.CONTENT_ADD({
             "Strum evenly with confidence."
           ],
           suggestedBpm: { start: 60, target: 110, step: 5 },
-          // ONE video per drill (matches your new UI)
-          videoUrl: "https://www.youtube.com/embed/2bPpP3P9Z9Q"
+          media: {
+            demoUrl: "https://www.youtube.com/embed/2bPpP3P9Z9Q"
+          }
         }
       ]
     },
@@ -67,7 +68,9 @@ window.CONTENT_ADD({
             "Focus on consistent attack."
           ],
           suggestedBpm: { start: 70, target: 120, step: 5 },
-          videoUrl: "https://www.youtube.com/embed/qbH9Rk0z1xI"
+          media: {
+            demoUrl: "https://www.youtube.com/embed/qbH9Rk0z1xI"
+          }
         }
       ]
     },
@@ -91,7 +94,9 @@ window.CONTENT_ADD({
             "Leave space between phrases."
           ],
           suggestedBpm: { start: 60, target: 120, step: 5 },
-          videoUrl: "https://www.youtube.com/embed/fg1n_i-D7v0"
+          media: {
+            demoUrl: "https://www.youtube.com/embed/fg1n_i-D7v0"
+          }
         }
       ]
     }
