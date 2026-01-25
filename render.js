@@ -14,79 +14,6 @@ function rolePill(ctx) {
   return `<span class="pill">Role: ${ctx.roleLabel()}</span>`;
 }
 
-// ---------------- YouTube URL normalization ----------------
-// Accepts:
-// - https://www.youtube.com/embed/ID
-// - https://www.youtube-nocookie.com/embed/ID
-// - https://www.youtube.com/watch?v=ID
-// - https://youtu.be/ID
-// - https://www.youtube.com/shorts/ID
-// Returns an embed URL or null.
-function normalizeYoutubeToEmbed(url) {
-  if (!url || typeof url !== "string") return null;
-
-  let u = url.trim();
-  if (!u) return null;
-
-  // add protocol if missing
-  if (u.startsWith("//")) u = "https:" + u;
-  if (!u.startsWith("http://") && !u.startsWith("https://")) {
-    // if they pasted just a youtube domain-ish string, make it https
-    if (u.startsWith("www.") || u.startsWith("youtube.") || u.startsWith("youtu.")) {
-      u = "https://" + u;
-    }
-  }
-
-  // already an embed url (allow nocookie too)
-  if (
-    u.startsWith("https://www.youtube.com/embed/") ||
-    u.startsWith("https://youtube.com/embed/") ||
-    u.startsWith("https://www.youtube-nocookie.com/embed/")
-  ) {
-    return u;
-  }
-
-  // youtu.be/VIDEO_ID
-  if (u.startsWith("https://youtu.be/") || u.startsWith("http://youtu.be/")) {
-    const id = u.split("youtu.be/")[1]?.split(/[?&/]/)[0];
-    return id ? `https://www.youtube.com/embed/${id}` : null;
-  }
-
-  try {
-    const parsed = new URL(u);
-
-    const host = parsed.hostname.replace(/^www\./, "");
-
-    // youtube.com/watch?v=VIDEO_ID
-    if (host === "youtube.com" && parsed.pathname === "/watch") {
-      const id = parsed.searchParams.get("v");
-      return id ? `https://www.youtube.com/embed/${id}` : null;
-    }
-
-    // youtube.com/shorts/VIDEO_ID
-    if (host === "youtube.com" && parsed.pathname.startsWith("/shorts/")) {
-      const id = parsed.pathname.split("/shorts/")[1]?.split(/[?&/]/)[0];
-      return id ? `https://www.youtube.com/embed/${id}` : null;
-    }
-
-    // youtube.com/embed/VIDEO_ID but without www or odd variants
-    if (host === "youtube.com" && parsed.pathname.startsWith("/embed/")) {
-      const id = parsed.pathname.split("/embed/")[1]?.split(/[?&/]/)[0];
-      return id ? `https://www.youtube.com/embed/${id}` : null;
-    }
-
-    // youtube-nocookie.com/embed/VIDEO_ID
-    if (host === "youtube-nocookie.com" && parsed.pathname.startsWith("/embed/")) {
-      const id = parsed.pathname.split("/embed/")[1]?.split(/[?&/]/)[0];
-      return id ? `https://www.youtube-nocookie.com/embed/${id}` : null;
-    }
-  } catch {
-    // ignore URL parse errors
-  }
-
-  return null;
-}
-
 // -------- Backing helpers (dropdown + role filtering) --------
 
 function getTrackMix(track) {
@@ -96,6 +23,8 @@ function getTrackMix(track) {
   const n = String(track?.name || "").toLowerCase();
   if (n.includes("rhythm mix")) return "rhythm";
   if (n.includes("lead mix")) return "lead";
+  if (n.includes("— rhythm")) return "rhythm";
+  if (n.includes("— lead")) return "lead";
   return null;
 }
 
@@ -119,6 +48,28 @@ function setSelectedTrackId(ctx, id) {
   ctx.persist();
 }
 
+function toEmbedUrl(url) {
+  if (!url || typeof url !== "string") return null;
+  const u = url.trim();
+
+  // Already embed
+  if (
+    u.startsWith("https://www.youtube.com/embed/") ||
+    u.startsWith("https://youtube.com/embed/") ||
+    u.startsWith("https://www.youtube-nocookie.com/embed/")
+  ) return u;
+
+  // youtu.be/<id>
+  const mShort = u.match(/^https?:\/\/youtu\.be\/([A-Za-z0-9_-]{6,})/);
+  if (mShort) return `https://www.youtube.com/embed/${mShort[1]}`;
+
+  // youtube watch?v=<id>
+  const mWatch = u.match(/[?&]v=([A-Za-z0-9_-]{6,})/);
+  if (mWatch) return `https://www.youtube.com/embed/${mWatch[1]}`;
+
+  return null;
+}
+
 function backingUI(ctx, tracks, rerender) {
   if (!tracks.length) {
     return `<div class="muted" style="margin-top:8px;">No backing tracks defined for this genre yet.</div>`;
@@ -127,8 +78,15 @@ function backingUI(ctx, tracks, rerender) {
   const selectedId = getSelectedTrackId(ctx, tracks);
   const selected = tracks.find(t => t.id === selectedId) || tracks[0];
 
-  // normalize to embed no matter what they paste
-  const safe = normalizeYoutubeToEmbed(selected.youtubeEmbed);
+  // allow a few alias property names (defensive)
+  const rawEmbed =
+    selected.youtubeEmbed ||
+    selected.youtube ||
+    selected.embed ||
+    selected.url ||
+    null;
+
+  const safe = toEmbedUrl(rawEmbed);
 
   // cache-bust parameter so iframe swaps reliably on selection change
   const iframeSrc = safe ? `${safe}${safe.includes("?") ? "&" : "?"}cb=${encodeURIComponent(selected.id)}` : null;
@@ -176,7 +134,7 @@ function backingUI(ctx, tracks, rerender) {
           `
           : `
             <div class="muted">
-              No valid YouTube URL set for this track yet.
+              Backing track unavailable (missing/invalid <code>youtubeEmbed</code>).
             </div>
           `
       }
@@ -439,11 +397,20 @@ export function renderPractice(ctx) {
   document.getElementById("genre-details").onclick = () => ctx.nav.genre(genre.id);
 }
 
-// ✅ helper: pick ONE video url per drill (demo > fix > dont)
+// ✅ helper: pick ONE video url per drill (demo > fix > dont > videoUrl)
 function pickOneVideoUrl(d) {
-  const m = d?.media || null;
-  if (!m) return null;
-  return m.demoUrl || m.fixUrl || m.dontUrl || null;
+  if (!d) return null;
+
+  // Preferred (Blues/Funk schema)
+  const m = d.media || null;
+  const raw =
+    (m && (m.demoUrl || m.fixUrl || m.dontUrl)) ||
+    // Rock schema fallback
+    d.videoUrl ||
+    null;
+
+  // convert watch/short urls to embed if needed
+  return toEmbedUrl(raw);
 }
 
 export function renderSkill(ctx, skillId, opts = {}) {
@@ -497,8 +464,7 @@ export function renderSkill(ctx, skillId, opts = {}) {
 
         const metroRunning = ctx.metro.isRunning() && ctx.metroState.drillId === d.id;
 
-        const rawOneUrl = pickOneVideoUrl(d);
-        const oneUrl = normalizeYoutubeToEmbed(rawOneUrl);
+        const oneUrl = pickOneVideoUrl(d);
 
         return `
           <div class="card" style="background:#171717;">
@@ -627,4 +593,4 @@ export function renderSkill(ctx, skillId, opts = {}) {
   });
 
   document.getElementById("back").onclick = backTo;
-    }
+          }
