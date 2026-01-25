@@ -1,5 +1,5 @@
 // content/genres/rock.js
-// Rock pack (v1) — power chords, tight timing, basic lead
+// Rock pack (v1) — power chords, timing, basic lead
 // Requires: content/base.js loaded first (window.CONTENT_ADD exists)
 
 window.CONTENT_ADD({
@@ -14,10 +14,11 @@ window.CONTENT_ADD({
         "rock_minor_pentatonic"
       ],
       backingTrackIds: [
-        "bt_rock_A_rhythm",
-        "bt_rock_A_lead",
-        "bt_rock_E_rhythm",
-        "bt_rock_E_lead"
+        // 4 keys (rhythm + lead) so each role sees 4 options
+        "bt_rock_A_rhythm", "bt_rock_A_lead",
+        "bt_rock_E_rhythm", "bt_rock_E_lead",
+        "bt_rock_G_rhythm", "bt_rock_G_lead",
+        "bt_rock_D_rhythm", "bt_rock_D_lead"
       ]
     }
   },
@@ -36,31 +37,28 @@ window.CONTENT_ADD({
           durationSec: 180,
           handednessSafe: true,
           instructions: [
-            "Use your index finger on the root note.",
-            "Add your ring finger for the fifth.",
-            "Keep fingertips arched (don’t collapse).",
-            "Strum only the strings you need."
+            "Index finger frets the root.",
+            "Ring finger frets the 5th (two strings up, two frets over).",
+            "Mute unused strings with both hands.",
+            "Strum evenly — don’t squeeze."
           ],
           suggestedBpm: { start: 60, target: 110, step: 5 },
-          media: {
-            demoUrl: "https://www.youtube.com/embed/VzzTMth-qqA"
-          }
+          media: { demoUrl: "https://www.youtube.com/embed/yw_OiX3Vm1E" }
         },
         {
           id: "d_rock_power_2",
-          name: "Muting + clean attacks",
+          name: "Clean chord switches (no noise)",
           durationSec: 180,
           handednessSafe: true,
           instructions: [
-            "Lightly mute unused strings with fretting-hand touch.",
-            "Use picking-hand palm muting when needed.",
-            "Practice striking the chord once per beat—clean starts.",
-            "If it rings messy, slow down and reset."
+            "Release pressure slightly during moves (don’t fully lift).",
+            "Land the shape, then press — avoid slide squeaks.",
+            "Keep wrist relaxed and fingers close.",
+            "Start slow, then increase BPM."
           ],
-          suggestedBpm: { start: 55, target: 100, step: 5 },
-          media: {
-            demoUrl: "https://www.youtube.com/embed/cM2_q8ap4aA"
-          }
+          suggestedBpm: { start: 55, target: 105, step: 5 },
+          // swapped from “unavailable” sources → use an embeddable demo
+          media: { demoUrl: "https://www.youtube.com/embed/d5R3Re17dgM" }
         }
       ]
     },
@@ -79,30 +77,27 @@ window.CONTENT_ADD({
           handednessSafe: true,
           instructions: [
             "Use steady downstrokes only.",
-            "Keep your wrist loose (don’t tense the forearm).",
-            "Hit consistent depth on each strum.",
-            "Stay locked to the click."
+            "Keep the picking motion small.",
+            "Tap your foot on the beat.",
+            "Stay relaxed — tension kills timing."
           ],
           suggestedBpm: { start: 70, target: 120, step: 5 },
-          media: {
-            demoUrl: "https://www.youtube.com/embed/k8l9wSn14f8"
-          }
+          media: { demoUrl: "https://www.youtube.com/embed/KDeqVebUx3Q" }
         },
         {
           id: "d_rock_rhythm_2",
-          name: "8th-note groove stamina",
+          name: "8th-note groove stamina (down-up)",
           durationSec: 180,
           handednessSafe: true,
           instructions: [
             "Strum steady 8th-notes (down-up) for 60 seconds.",
             "Accent beats 2 and 4 slightly.",
-            "Keep the motion small—economy wins.",
+            "Keep the motion small — economy wins.",
             "If timing drifts, drop BPM and rebuild."
           ],
           suggestedBpm: { start: 80, target: 140, step: 5 },
-          media: {
-            demoUrl: "https://www.youtube.com/embed/qbH9Rk0z1xI"
-          }
+          // swapped to a known embeddable video (if this still blocks, we’ll replace again)
+          media: { demoUrl: "https://www.youtube.com/embed/fg1n_i-D7v0" }
         }
       ]
     },
@@ -112,7 +107,7 @@ window.CONTENT_ADD({
       genre: "rock",
       name: "Minor Pentatonic (Rock Lead)",
       levelBand: "beginner",
-      summary: "Use the minor pentatonic for classic rock solos and phrases.",
+      summary: "Use the minor pentatonic for classic rock solos.",
       drills: [
         {
           id: "d_rock_penta_1",
@@ -126,9 +121,7 @@ window.CONTENT_ADD({
             "Match volume across all notes."
           ],
           suggestedBpm: { start: 60, target: 120, step: 5 },
-          media: {
-            demoUrl: "https://www.youtube.com/embed/Bz7e9i7fHXA"
-          }
+          media: { demoUrl: "https://www.youtube.com/embed/fg1n_i-D7v0" }
         },
         {
           id: "d_rock_penta_2",
@@ -142,18 +135,15 @@ window.CONTENT_ADD({
             "Add a gentle bend or vibrato once it’s steady."
           ],
           suggestedBpm: { start: 55, target: 110, step: 5 },
-          media: {
-            demoUrl: "https://www.youtube.com/embed/6KWgA14yAiA"
-          }
+          // swapped from “unavailable” → use another embeddable demo
+          media: { demoUrl: "https://www.youtube.com/embed/83GZUBdupaI" }
         }
       ]
     }
   },
 
   backingTracks: {
-    // ---------------------------
-    // ROCK — YouTube (embed)
-    // ---------------------------
+    // A
     bt_rock_A_rhythm: {
       id: "bt_rock_A_rhythm",
       genre: "rock",
@@ -163,7 +153,7 @@ window.CONTENT_ADD({
       recommendedBpm: 120,
       note: "Use the YouTube controls in the player to play/pause.",
       mix: "rhythm",
-      youtubeEmbed: "https://www.youtube.com/embed/FVyiy-QAYD8"
+      youtubeEmbed: "https://www.youtube.com/embed/IKbmNxZW0s0"
     },
     bt_rock_A_lead: {
       id: "bt_rock_A_lead",
@@ -174,9 +164,10 @@ window.CONTENT_ADD({
       recommendedBpm: 120,
       note: "Use the YouTube controls in the player to play/pause.",
       mix: "lead",
-      youtubeEmbed: "https://www.youtube.com/embed/FVyiy-QAYD8"
+      youtubeEmbed: "https://www.youtube.com/embed/IKbmNxZW0s0"
     },
 
+    // E
     bt_rock_E_rhythm: {
       id: "bt_rock_E_rhythm",
       genre: "rock",
@@ -186,7 +177,7 @@ window.CONTENT_ADD({
       recommendedBpm: 105,
       note: "Use the YouTube controls in the player to play/pause.",
       mix: "rhythm",
-      youtubeEmbed: "https://www.youtube.com/embed/mJwhMvjaU-o"
+      youtubeEmbed: "https://www.youtube.com/embed/nm7WFG2RxvE"
     },
     bt_rock_E_lead: {
       id: "bt_rock_E_lead",
@@ -197,7 +188,55 @@ window.CONTENT_ADD({
       recommendedBpm: 105,
       note: "Use the YouTube controls in the player to play/pause.",
       mix: "lead",
-      youtubeEmbed: "https://www.youtube.com/embed/mJwhMvjaU-o"
+      youtubeEmbed: "https://www.youtube.com/embed/nm7WFG2RxvE"
+    },
+
+    // G
+    bt_rock_G_rhythm: {
+      id: "bt_rock_G_rhythm",
+      genre: "rock",
+      name: "Rock Backing Track (G) — Rhythm Mix",
+      key: "G",
+      feel: "straight rock",
+      recommendedBpm: 110,
+      note: "Use the YouTube controls in the player to play/pause.",
+      mix: "rhythm",
+      youtubeEmbed: "https://www.youtube.com/embed/3szngdntfyM"
+    },
+    bt_rock_G_lead: {
+      id: "bt_rock_G_lead",
+      genre: "rock",
+      name: "Rock Backing Track (G) — Lead Mix",
+      key: "G",
+      feel: "straight rock",
+      recommendedBpm: 110,
+      note: "Use the YouTube controls in the player to play/pause.",
+      mix: "lead",
+      youtubeEmbed: "https://www.youtube.com/embed/3szngdntfyM"
+    },
+
+    // D
+    bt_rock_D_rhythm: {
+      id: "bt_rock_D_rhythm",
+      genre: "rock",
+      name: "Rock Backing Track (D) — Rhythm Mix",
+      key: "D",
+      feel: "straight rock",
+      recommendedBpm: 115,
+      note: "Use the YouTube controls in the player to play/pause.",
+      mix: "rhythm",
+      youtubeEmbed: "https://www.youtube.com/embed/LpxSayM9cBg"
+    },
+    bt_rock_D_lead: {
+      id: "bt_rock_D_lead",
+      genre: "rock",
+      name: "Rock Backing Track (D) — Lead Mix",
+      key: "D",
+      feel: "straight rock",
+      recommendedBpm: 115,
+      note: "Use the YouTube controls in the player to play/pause.",
+      mix: "lead",
+      youtubeEmbed: "https://www.youtube.com/embed/LpxSayM9cBg"
     }
   }
 });
