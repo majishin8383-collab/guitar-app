@@ -46,21 +46,45 @@ function ensureMirrorDefault() {
 
 // ---------------------------
 // YouTube URL normalization
-// Accepts: embed, nocookie embed, watch?v=, youtu.be, shorts
+// Accepts: embed, nocookie embed, watch?v=, youtu.be, shorts,
+// AND allows missing scheme (www.youtube.com/...)
 // Returns an embed URL or null.
 // ---------------------------
-function toYoutubeEmbed(url) {
+function normalizeYoutubeInput(url) {
   if (!url || typeof url !== "string") return null;
+  let s = url.trim();
+  if (!s) return null;
+
+  // allow protocol-relative
+  if (s.startsWith("//")) s = "https:" + s;
+
+  // allow missing scheme like "www.youtube.com/..." or "youtu.be/..."
+  if (!/^https?:\/\//i.test(s)) {
+    if (s.startsWith("www.youtube.com/") || s.startsWith("youtube.com/") || s.startsWith("m.youtube.com/")) {
+      s = "https://" + s;
+    } else if (s.startsWith("youtu.be/")) {
+      s = "https://" + s;
+    }
+  }
+  return s;
+}
+
+function toYoutubeEmbed(url) {
+  const s = normalizeYoutubeInput(url);
+  if (!s) return null;
 
   // already embed
   if (
-    url.startsWith("https://www.youtube.com/embed/") ||
-    url.startsWith("https://youtube.com/embed/") ||
-    url.startsWith("https://www.youtube-nocookie.com/embed/")
-  ) return url;
+    s.startsWith("https://www.youtube.com/embed/") ||
+    s.startsWith("http://www.youtube.com/embed/") ||
+    s.startsWith("https://youtube.com/embed/") ||
+    s.startsWith("http://youtube.com/embed/") ||
+    s.startsWith("https://www.youtube-nocookie.com/embed/") ||
+    s.startsWith("http://www.youtube-nocookie.com/embed/")
+  ) return s;
 
   try {
-    const u = new URL(url);
+    const u = new URL(s);
 
     // youtu.be/<id>
     if (u.hostname === "youtu.be") {
