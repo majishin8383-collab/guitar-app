@@ -1,6 +1,8 @@
 // content/genres/rock.js
-// Rock pack (v1.1) — power chords, timing, basic lead
-// Requires: content/base.js loaded first (window.CONTENT_ADD exists)
+// Rock pack (v1.2) — power chords, timing, basic lead
+// - Matches blues/funk drill structure (uses d.media.*)
+// - 2 drills per skill (so Practice shows the same density as Blues/Funk)
+// - Backing tracks use youtubeEmbed (in-app iframe)
 
 window.CONTENT_ADD({
   genres: {
@@ -32,34 +34,34 @@ window.CONTENT_ADD({
       drills: [
         {
           id: "d_rock_power_1",
-          name: "Two-finger power chords",
+          name: "Two-finger power chord shape",
           durationSec: 180,
           handednessSafe: true,
           instructions: [
-            "Use your index finger on the root note.",
-            "Add your ring finger for the fifth.",
-            "Mute unused strings with both hands.",
-            "Strum evenly with confidence."
+            "Place the root with your fretting hand index finger.",
+            "Add the fifth with your fretting hand ring finger.",
+            "Mute unused strings using both hands.",
+            "Strum evenly—aim for clean, punchy attacks."
           ],
           suggestedBpm: { start: 60, target: 110, step: 5 },
           media: {
-            demoUrl: "https://www.youtube.com/embed/2bPpP3P9Z9Q"
+            demoUrl: "https://www.youtube.com/embed/xe8nmZA4cfQ"
           }
         },
         {
           id: "d_rock_power_2",
-          name: "Power chord changes (A5 ↔ D5 ↔ E5)",
+          name: "Power chord switches (2-chord loop)",
           durationSec: 180,
           handednessSafe: true,
           instructions: [
-            "Switch between A5, D5, and E5 slowly.",
-            "Lift fingers minimally — stay close to the strings.",
-            "Mute string noise between changes.",
-            "Speed comes last; clean changes first."
+            "Choose two power chords (example: A5 and G5).",
+            "Play steady 8th-notes for 2 bars, then switch.",
+            "Keep fretting-hand pressure light—no death grip.",
+            "Goal: the switch is silent + on-time."
           ],
-          suggestedBpm: { start: 60, target: 120, step: 5 },
+          suggestedBpm: { start: 70, target: 120, step: 5 },
           media: {
-            demoUrl: "https://www.youtube.com/embed/7pYF6kU4x2M"
+            demoUrl: "https://www.youtube.com/embed/XacSttupjBA"
           }
         }
       ]
@@ -74,34 +76,34 @@ window.CONTENT_ADD({
       drills: [
         {
           id: "d_rock_rhythm_1",
-          name: "Downstroke control",
+          name: "Downstroke consistency (single string)",
           durationSec: 180,
           handednessSafe: true,
           instructions: [
-            "Use steady downstrokes only.",
-            "Keep the picking hand relaxed.",
-            "Stay perfectly in time with the beat.",
-            "Focus on consistent attack."
+            "Pick one string and play steady 8th-notes.",
+            "Use downstrokes only.",
+            "Keep the picking-hand motion small and relaxed.",
+            "Aim for identical spacing + volume."
           ],
-          suggestedBpm: { start: 70, target: 120, step: 5 },
+          suggestedBpm: { start: 80, target: 140, step: 5 },
           media: {
-            demoUrl: "https://www.youtube.com/embed/qbH9Rk0z1xI"
+            demoUrl: "https://www.youtube.com/embed/M-haPvPnmj8"
           }
         },
         {
           id: "d_rock_rhythm_2",
-          name: "Eighth-note tightness (accent the 2 and 4)",
+          name: "Accent control (2 and 4)",
           durationSec: 180,
           handednessSafe: true,
           instructions: [
-            "Count: 1 & 2 & 3 & 4 &.",
-            "Accent beats 2 and 4 slightly.",
-            "Keep strums even and controlled.",
-            "If you rush, slow the BPM immediately."
+            "Keep steady 8th-notes.",
+            "Accentuate beats 2 and 4 (strong), keep others light.",
+            "If timing wobbles, reduce bpm and reset.",
+            "Goal: accents pop without speeding up."
           ],
-          suggestedBpm: { start: 70, target: 130, step: 5 },
+          suggestedBpm: { start: 80, target: 130, step: 5 },
           media: {
-            demoUrl: "https://www.youtube.com/embed/83GZUBdupaI"
+            demoUrl: "https://www.youtube.com/embed/d5R3Re17dgM"
           }
         }
       ]
@@ -116,14 +118,14 @@ window.CONTENT_ADD({
       drills: [
         {
           id: "d_rock_penta_1",
-          name: "Box 1 rock phrasing",
+          name: "Box 1 ascent / descent (clean)",
           durationSec: 180,
           handednessSafe: true,
           instructions: [
-            "Play the scale slowly and evenly.",
-            "Use alternate picking.",
-            "Add simple bends for expression.",
-            "Leave space between phrases."
+            "Play Box 1 up and down clean.",
+            "Use alternate picking (down-up).",
+            "Keep fretting-hand fingers close to the fretboard.",
+            "Aim for even volume between notes."
           ],
           suggestedBpm: { start: 60, target: 120, step: 5 },
           media: {
@@ -132,16 +134,16 @@ window.CONTENT_ADD({
         },
         {
           id: "d_rock_penta_2",
-          name: "Call-and-response lick (repeat + answer)",
-          durationSec: 180,
+          name: "Call-and-response phrasing (2 bars each)",
+          durationSec: 240,
           handednessSafe: true,
           instructions: [
-            "Play a short lick, pause, then answer it.",
-            "Keep bends in tune (don’t overshoot).",
-            "End phrases cleanly (mute string noise).",
-            "Record yourself once — fix what you hear."
+            "Improvise a short 2-bar phrase in Box 1.",
+            "Answer it with a different 2-bar phrase.",
+            "Leave space—don’t fill every beat.",
+            "End phrases with confident target notes."
           ],
-          suggestedBpm: { start: 60, target: 115, step: 5 },
+          suggestedBpm: { start: 70, target: 110, step: 5 },
           media: {
             demoUrl: "https://www.youtube.com/embed/5Qc426qgSho"
           }
@@ -151,49 +153,57 @@ window.CONTENT_ADD({
   },
 
   backingTracks: {
+    // NOTE: These are WATCH links converted to /embed/ IDs.
+    // If any specific track still shows “Video unavailable”, swap the ID for a different backing track.
+
     bt_rock_A_rhythm: {
       id: "bt_rock_A_rhythm",
       genre: "rock",
-      name: "Straight Rock Groove (A) — Rhythm",
+      name: "Rock Backing Track (A) — Rhythm",
       key: "A",
       feel: "straight rock",
-      recommendedBpm: 100,
+      recommendedBpm: 80,
       note: "Use YouTube controls in the player.",
       mix: "rhythm",
-      youtubeEmbed: "https://www.youtube.com/embed/6JZ2n1wPp6E"
+      youtubeEmbed: "https://www.youtube.com/embed/AAHEWBH7Af4",
+      youtubeQuery: "rock backing track key A 80 bpm"
     },
     bt_rock_A_lead: {
       id: "bt_rock_A_lead",
       genre: "rock",
-      name: "Straight Rock Groove (A) — Lead",
+      name: "Rock Backing Track (A) — Lead",
       key: "A",
       feel: "straight rock",
-      recommendedBpm: 100,
+      recommendedBpm: 80,
       note: "Use YouTube controls in the player.",
       mix: "lead",
-      youtubeEmbed: "https://www.youtube.com/embed/6JZ2n1wPp6E"
+      youtubeEmbed: "https://www.youtube.com/embed/AAHEWBH7Af4",
+      youtubeQuery: "rock backing track key A 80 bpm"
     },
+
     bt_rock_E_rhythm: {
       id: "bt_rock_E_rhythm",
       genre: "rock",
-      name: "Straight Rock Groove (E) — Rhythm",
+      name: "Blues/Rock Backing Track (E) — Rhythm",
       key: "E",
-      feel: "straight rock",
-      recommendedBpm: 105,
+      feel: "blues rock",
+      recommendedBpm: 0,
       note: "Use YouTube controls in the player.",
       mix: "rhythm",
-      youtubeEmbed: "https://www.youtube.com/embed/1yZK1RzZx7I"
+      youtubeEmbed: "https://www.youtube.com/embed/pPQSgFtG394",
+      youtubeQuery: "blues rock backing track key E"
     },
     bt_rock_E_lead: {
       id: "bt_rock_E_lead",
       genre: "rock",
-      name: "Straight Rock Groove (E) — Lead",
+      name: "Blues/Rock Backing Track (E) — Lead",
       key: "E",
-      feel: "straight rock",
-      recommendedBpm: 105,
+      feel: "blues rock",
+      recommendedBpm: 0,
       note: "Use YouTube controls in the player.",
       mix: "lead",
-      youtubeEmbed: "https://www.youtube.com/embed/1yZK1RzZx7I"
+      youtubeEmbed: "https://www.youtube.com/embed/pPQSgFtG394",
+      youtubeQuery: "blues rock backing track key E"
     }
   }
 });
