@@ -44,60 +44,50 @@ function ensureMirrorDefault() {
   }
 }
 
-/* -------------------------------------------------
-   🔧 FIXED: YouTube URL → embed normalizer
-   Accepts:
-   - youtube.com/watch?v=ID
-   - youtu.be/ID
-   - youtube.com/shorts/ID
-   - youtube.com/live/ID
-   - already-embed URLs
--------------------------------------------------- */
-function safeEmbed(url) {
+// ---------------------------
+// YouTube URL normalization
+// Accepts: embed, nocookie embed, watch?v=, youtu.be, shorts
+// Returns an embed URL or null.
+// ---------------------------
+function toYoutubeEmbed(url) {
   if (!url || typeof url !== "string") return null;
 
-  const u = url.trim();
-
-  // Already an embed URL
+  // already embed
   if (
-    u.startsWith("https://www.youtube.com/embed/") ||
-    u.startsWith("https://youtube.com/embed/") ||
-    u.startsWith("https://www.youtube-nocookie.com/embed/")
-  ) {
-    return u;
-  }
+    url.startsWith("https://www.youtube.com/embed/") ||
+    url.startsWith("https://youtube.com/embed/") ||
+    url.startsWith("https://www.youtube-nocookie.com/embed/")
+  ) return url;
 
   try {
-    const parsed = new URL(u);
-    const host = parsed.hostname.replace(/^www\./, "");
-    const path = parsed.pathname || "";
-
-    let videoId = null;
+    const u = new URL(url);
 
     // youtu.be/<id>
-    if (host === "youtu.be") {
-      videoId = path.split("/").filter(Boolean)[0] || null;
+    if (u.hostname === "youtu.be") {
+      const id = u.pathname.replace("/", "").trim();
+      return id ? `https://www.youtube.com/embed/${id}` : null;
     }
 
-    // youtube.com/*
-    if (!videoId && (host === "youtube.com" || host === "m.youtube.com")) {
-      if (path === "/watch") {
-        videoId = parsed.searchParams.get("v");
-      } else if (path.startsWith("/shorts/")) {
-        videoId = path.split("/shorts/")[1]?.split("/")[0] || null;
-      } else if (path.startsWith("/live/")) {
-        videoId = path.split("/live/")[1]?.split("/")[0] || null;
-      } else if (path.startsWith("/embed/")) {
-        videoId = path.split("/embed/")[1]?.split("/")[0] || null;
+    if (u.hostname.includes("youtube.com")) {
+      // /watch?v=<id>
+      if (u.pathname === "/watch") {
+        const id = u.searchParams.get("v");
+        return id ? `https://www.youtube.com/embed/${id}` : null;
       }
+
+      // /shorts/<id>
+      const mShorts = u.pathname.match(/^\/shorts\/([^/?#]+)/);
+      if (mShorts?.[1]) return `https://www.youtube.com/embed/${mShorts[1]}`;
     }
 
-    if (!videoId) return null;
-
-    return `https://www.youtube-nocookie.com/embed/${videoId}`;
+    return null;
   } catch {
     return null;
   }
+}
+
+function safeEmbed(url) {
+  return toYoutubeEmbed(url);
 }
 
 function videoBlock(label, url, mirrorOn) {
@@ -110,7 +100,6 @@ function videoBlock(label, url, mirrorOn) {
       </div>
     `;
   }
-
   const mirrorClass = mirrorOn ? "mirror" : "";
   return `
     <div class="videoCard">
