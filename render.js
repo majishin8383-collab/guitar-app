@@ -14,6 +14,79 @@ function rolePill(ctx) {
   return `<span class="pill">Role: ${ctx.roleLabel()}</span>`;
 }
 
+// ---------------- YouTube URL normalization ----------------
+// Accepts:
+// - https://www.youtube.com/embed/ID
+// - https://www.youtube-nocookie.com/embed/ID
+// - https://www.youtube.com/watch?v=ID
+// - https://youtu.be/ID
+// - https://www.youtube.com/shorts/ID
+// Returns an embed URL or null.
+function normalizeYoutubeToEmbed(url) {
+  if (!url || typeof url !== "string") return null;
+
+  let u = url.trim();
+  if (!u) return null;
+
+  // add protocol if missing
+  if (u.startsWith("//")) u = "https:" + u;
+  if (!u.startsWith("http://") && !u.startsWith("https://")) {
+    // if they pasted just a youtube domain-ish string, make it https
+    if (u.startsWith("www.") || u.startsWith("youtube.") || u.startsWith("youtu.")) {
+      u = "https://" + u;
+    }
+  }
+
+  // already an embed url (allow nocookie too)
+  if (
+    u.startsWith("https://www.youtube.com/embed/") ||
+    u.startsWith("https://youtube.com/embed/") ||
+    u.startsWith("https://www.youtube-nocookie.com/embed/")
+  ) {
+    return u;
+  }
+
+  // youtu.be/VIDEO_ID
+  if (u.startsWith("https://youtu.be/") || u.startsWith("http://youtu.be/")) {
+    const id = u.split("youtu.be/")[1]?.split(/[?&/]/)[0];
+    return id ? `https://www.youtube.com/embed/${id}` : null;
+  }
+
+  try {
+    const parsed = new URL(u);
+
+    const host = parsed.hostname.replace(/^www\./, "");
+
+    // youtube.com/watch?v=VIDEO_ID
+    if (host === "youtube.com" && parsed.pathname === "/watch") {
+      const id = parsed.searchParams.get("v");
+      return id ? `https://www.youtube.com/embed/${id}` : null;
+    }
+
+    // youtube.com/shorts/VIDEO_ID
+    if (host === "youtube.com" && parsed.pathname.startsWith("/shorts/")) {
+      const id = parsed.pathname.split("/shorts/")[1]?.split(/[?&/]/)[0];
+      return id ? `https://www.youtube.com/embed/${id}` : null;
+    }
+
+    // youtube.com/embed/VIDEO_ID but without www or odd variants
+    if (host === "youtube.com" && parsed.pathname.startsWith("/embed/")) {
+      const id = parsed.pathname.split("/embed/")[1]?.split(/[?&/]/)[0];
+      return id ? `https://www.youtube.com/embed/${id}` : null;
+    }
+
+    // youtube-nocookie.com/embed/VIDEO_ID
+    if (host === "youtube-nocookie.com" && parsed.pathname.startsWith("/embed/")) {
+      const id = parsed.pathname.split("/embed/")[1]?.split(/[?&/]/)[0];
+      return id ? `https://www.youtube-nocookie.com/embed/${id}` : null;
+    }
+  } catch {
+    // ignore URL parse errors
+  }
+
+  return null;
+}
+
 // -------- Backing helpers (dropdown + role filtering) --------
 
 function getTrackMix(track) {
@@ -46,67 +119,6 @@ function setSelectedTrackId(ctx, id) {
   ctx.persist();
 }
 
-// ---------------------------
-// YouTube URL normalization (same as app.js)
-// ---------------------------
-function normalizeYoutubeInput(url) {
-  if (!url || typeof url !== "string") return null;
-  let s = url.trim();
-  if (!s) return null;
-
-  if (s.startsWith("//")) s = "https:" + s;
-
-  if (!/^https?:\/\//i.test(s)) {
-    if (s.startsWith("www.youtube.com/") || s.startsWith("youtube.com/") || s.startsWith("m.youtube.com/")) {
-      s = "https://" + s;
-    } else if (s.startsWith("youtu.be/")) {
-      s = "https://" + s;
-    }
-  }
-  return s;
-}
-
-function toYoutubeEmbed(url) {
-  const s = normalizeYoutubeInput(url);
-  if (!s) return null;
-
-  if (
-    s.startsWith("https://www.youtube.com/embed/") ||
-    s.startsWith("http://www.youtube.com/embed/") ||
-    s.startsWith("https://youtube.com/embed/") ||
-    s.startsWith("http://youtube.com/embed/") ||
-    s.startsWith("https://www.youtube-nocookie.com/embed/") ||
-    s.startsWith("http://www.youtube-nocookie.com/embed/")
-  ) return s;
-
-  try {
-    const u = new URL(s);
-
-    if (u.hostname === "youtu.be") {
-      const id = u.pathname.replace("/", "").trim();
-      return id ? `https://www.youtube.com/embed/${id}` : null;
-    }
-
-    if (u.hostname.includes("youtube.com")) {
-      if (u.pathname === "/watch") {
-        const id = u.searchParams.get("v");
-        return id ? `https://www.youtube.com/embed/${id}` : null;
-      }
-
-      const mShorts = u.pathname.match(/^\/shorts\/([^/?#]+)/);
-      if (mShorts?.[1]) return `https://www.youtube.com/embed/${mShorts[1]}`;
-    }
-
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-function safeYoutubeEmbed(url) {
-  return toYoutubeEmbed(url);
-}
-
 function backingUI(ctx, tracks, rerender) {
   if (!tracks.length) {
     return `<div class="muted" style="margin-top:8px;">No backing tracks defined for this genre yet.</div>`;
@@ -115,7 +127,10 @@ function backingUI(ctx, tracks, rerender) {
   const selectedId = getSelectedTrackId(ctx, tracks);
   const selected = tracks.find(t => t.id === selectedId) || tracks[0];
 
-  const safe = safeYoutubeEmbed(selected.youtubeEmbed);
+  // normalize to embed no matter what they paste
+  const safe = normalizeYoutubeToEmbed(selected.youtubeEmbed);
+
+  // cache-bust parameter so iframe swaps reliably on selection change
   const iframeSrc = safe ? `${safe}${safe.includes("?") ? "&" : "?"}cb=${encodeURIComponent(selected.id)}` : null;
 
   return `
@@ -161,7 +176,7 @@ function backingUI(ctx, tracks, rerender) {
           `
           : `
             <div class="muted">
-              Backing track unavailable (bad/missing YouTube URL).
+              No valid YouTube URL set for this track yet.
             </div>
           `
       }
@@ -175,7 +190,7 @@ function wireBackingDropdown(ctx, tracks, rerender) {
 
   select.onchange = () => {
     setSelectedTrackId(ctx, select.value);
-    rerender();
+    rerender(); // rebuild iframe immediately
   };
 }
 
@@ -474,13 +489,16 @@ export function renderSkill(ctx, skillId, opts = {}) {
       ${skill.drills.map(d => {
         const cfg = d.suggestedBpm || { start: 60, step: 5, target: 120 };
         const p = ctx.progress.getOrInit(state, d);
+
         const showLevelUp = shouldShowLevelUp(p);
         const levelUpMsg = showLevelUp
           ? `✅ Level up: <b>${p.lastLevelUpFrom}</b> → <b>${p.lastLevelUpTo}</b> bpm`
           : "";
+
         const metroRunning = ctx.metro.isRunning() && ctx.metroState.drillId === d.id;
 
-        const oneUrl = pickOneVideoUrl(d);
+        const rawOneUrl = pickOneVideoUrl(d);
+        const oneUrl = normalizeYoutubeToEmbed(rawOneUrl);
 
         return `
           <div class="card" style="background:#171717;">
