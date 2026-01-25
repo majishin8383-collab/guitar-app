@@ -1,5 +1,5 @@
 // content/genres/rock.js
-// Rock pack (v1.1) — parity with Blues/Funk (2 drills per skill + media.demoUrl)
+// Rock pack (v1.1) — aligned to Blues/Funk schema (media.demoUrl)
 // Requires: content/base.js loaded first (window.CONTENT_ADD exists)
 
 window.CONTENT_ADD({
@@ -42,22 +42,24 @@ window.CONTENT_ADD({
             "Strum evenly with confidence."
           ],
           suggestedBpm: { start: 60, target: 110, step: 5 },
-          media: { demoUrl: "https://www.youtube.com/embed/2bPpP3P9Z9Q" }
+          media: {
+            // Power chords lesson (embed-friendly pick)
+            demoUrl: "https://www.youtube.com/embed/DVveuwoVmmY"
+          }
         },
         {
           id: "d_rock_power_2",
-          name: "Two-chord switch (E5 ↔ G5)",
-          durationSec: 200,
+          name: "Power chord switches (2 chords)",
+          durationSec: 210,
           handednessSafe: true,
           instructions: [
             "Pick two power chords (example: E5 and G5).",
             "Strum steady 8th-notes.",
-            "Switch every 2 bars without rushing.",
-            "Keep fretting-hand pressure light—clean changes first."
+            "Switch every 2 bars without pausing.",
+            "Keep fretting-hand pressure only as heavy as needed."
           ],
-          suggestedBpm: { start: 70, target: 125, step: 5 },
-          // If you want a different video later, swap the embed id only.
-          media: { demoUrl: "https://www.youtube.com/embed/2bPpP3P9Z9Q" }
+          suggestedBpm: { start: 70, target: 120, step: 5 }
+          // no media needed (keeps UI clean)
         }
       ]
     },
@@ -81,21 +83,23 @@ window.CONTENT_ADD({
             "Focus on consistent attack."
           ],
           suggestedBpm: { start: 70, target: 120, step: 5 },
-          media: { demoUrl: "https://www.youtube.com/embed/qbH9Rk0z1xI" }
+          media: {
+            // Downpicking / downstroke lesson (embed-friendly pick)
+            demoUrl: "https://www.youtube.com/embed/RD4Jqs50gqk"
+          }
         },
         {
           id: "d_rock_rhythm_2",
-          name: "Accent the backbeat (2 and 4)",
-          durationSec: 210,
+          name: "Accent control (2 and 4)",
+          durationSec: 180,
           handednessSafe: true,
           instructions: [
             "Keep steady 8th-notes.",
             "Accentuate beats 2 and 4.",
-            "Keep non-accent notes light and even.",
+            "Keep non-accent notes lighter and even.",
             "If tension shows up, slow down and reset."
           ],
-          suggestedBpm: { start: 75, target: 130, step: 5 },
-          media: { demoUrl: "https://www.youtube.com/embed/qbH9Rk0z1xI" }
+          suggestedBpm: { start: 80, target: 130, step: 5 }
         }
       ]
     },
@@ -119,7 +123,10 @@ window.CONTENT_ADD({
             "Leave space between phrases."
           ],
           suggestedBpm: { start: 60, target: 120, step: 5 },
-          media: { demoUrl: "https://www.youtube.com/embed/fg1n_i-D7v0" }
+          media: {
+            // This one was already working for you
+            demoUrl: "https://www.youtube.com/embed/fg1n_i-D7v0"
+          }
         },
         {
           id: "d_rock_penta_2",
@@ -130,59 +137,59 @@ window.CONTENT_ADD({
             "Improvise a short 2-bar phrase.",
             "Answer it with a different 2-bar phrase.",
             "Leave space between phrases.",
-            "Make bends land in tune before adding speed."
+            "End phrases on strong notes (root or fifth)."
           ],
-          suggestedBpm: { start: 70, target: 110, step: 5 },
-          media: { demoUrl: "https://www.youtube.com/embed/fg1n_i-D7v0" }
+          suggestedBpm: { start: 70, target: 110, step: 5 }
         }
       ]
     }
   },
 
   backingTracks: {
+    // Straight Rock — YouTube (embed-friendly picks)
     bt_rock_A_rhythm: {
       id: "bt_rock_A_rhythm",
       genre: "rock",
-      name: "Straight Rock Groove (A) — Rhythm",
+      name: "Straight Rock Backing (A) — Rhythm",
       key: "A",
       feel: "straight rock",
       recommendedBpm: 100,
       note: "Use YouTube controls in the player.",
       mix: "rhythm",
-      youtubeEmbed: "https://www.youtube.com/embed/6JZ2n1wPp6E"
+      youtubeEmbed: "https://www.youtube.com/embed/WJvBfTs_0j4"
     },
     bt_rock_A_lead: {
       id: "bt_rock_A_lead",
       genre: "rock",
-      name: "Straight Rock Groove (A) — Lead",
+      name: "Straight Rock Backing (A) — Lead",
       key: "A",
       feel: "straight rock",
       recommendedBpm: 100,
       note: "Use YouTube controls in the player.",
       mix: "lead",
-      youtubeEmbed: "https://www.youtube.com/embed/6JZ2n1wPp6E"
+      youtubeEmbed: "https://www.youtube.com/embed/WJvBfTs_0j4"
     },
     bt_rock_E_rhythm: {
       id: "bt_rock_E_rhythm",
       genre: "rock",
-      name: "Straight Rock Groove (E) — Rhythm",
+      name: "Straight Rock Backing (E) — Rhythm",
       key: "E",
       feel: "straight rock",
       recommendedBpm: 105,
       note: "Use YouTube controls in the player.",
       mix: "rhythm",
-      youtubeEmbed: "https://www.youtube.com/embed/1yZK1RzZx7I"
+      youtubeEmbed: "https://www.youtube.com/embed/Ii0d4bqrpnA"
     },
     bt_rock_E_lead: {
       id: "bt_rock_E_lead",
       genre: "rock",
-      name: "Straight Rock Groove (E) — Lead",
+      name: "Straight Rock Backing (E) — Lead",
       key: "E",
       feel: "straight rock",
       recommendedBpm: 105,
       note: "Use YouTube controls in the player.",
       mix: "lead",
-      youtubeEmbed: "https://www.youtube.com/embed/1yZK1RzZx7I"
+      youtubeEmbed: "https://www.youtube.com/embed/Ii0d4bqrpnA"
     }
   }
 });
