@@ -42,8 +42,10 @@ window.CONTENT_ADD({
             "Strum evenly with confidence."
           ],
           suggestedBpm: { start: 60, target: 110, step: 5 },
+
+          // ✅ matches render.js (pickOneVideoUrl reads d.media.*)
           media: {
-            demoUrl: "https://www.youtube.com/embed/2bPpP3P9Z9Q"
+            demoUrl: "https://www.youtube.com/embed/gH6cCY-UA3Y"
           }
         }
       ]
@@ -68,8 +70,10 @@ window.CONTENT_ADD({
             "Focus on consistent attack."
           ],
           suggestedBpm: { start: 70, target: 120, step: 5 },
+
+          // ✅ matches render.js
           media: {
-            demoUrl: "https://www.youtube.com/embed/qbH9Rk0z1xI"
+            demoUrl: "https://www.youtube.com/embed/fBzYD2cpUGg"
           }
         }
       ]
@@ -94,6 +98,8 @@ window.CONTENT_ADD({
             "Leave space between phrases."
           ],
           suggestedBpm: { start: 60, target: 120, step: 5 },
+
+          // ✅ this one was already known-working in your Blues pack
           media: {
             demoUrl: "https://www.youtube.com/embed/fg1n_i-D7v0"
           }
@@ -103,6 +109,7 @@ window.CONTENT_ADD({
   },
 
   backingTracks: {
+    // STRAIGHT ROCK — YouTube (REAL embed IDs)
     bt_rock_A_rhythm: {
       id: "bt_rock_A_rhythm",
       genre: "rock",
@@ -112,7 +119,7 @@ window.CONTENT_ADD({
       recommendedBpm: 100,
       note: "Use YouTube controls in the player.",
       mix: "rhythm",
-      youtubeEmbed: "https://www.youtube.com/embed/6JZ2n1wPp6E"
+      youtubeEmbed: "https://www.youtube.com/embed/X6-EPuO69RE"
     },
     bt_rock_A_lead: {
       id: "bt_rock_A_lead",
@@ -123,8 +130,9 @@ window.CONTENT_ADD({
       recommendedBpm: 100,
       note: "Use YouTube controls in the player.",
       mix: "lead",
-      youtubeEmbed: "https://www.youtube.com/embed/6JZ2n1wPp6E"
+      youtubeEmbed: "https://www.youtube.com/embed/X6-EPuO69RE"
     },
+
     bt_rock_E_rhythm: {
       id: "bt_rock_E_rhythm",
       genre: "rock",
@@ -134,7 +142,7 @@ window.CONTENT_ADD({
       recommendedBpm: 105,
       note: "Use YouTube controls in the player.",
       mix: "rhythm",
-      youtubeEmbed: "https://www.youtube.com/embed/1yZK1RzZx7I"
+      youtubeEmbed: "https://www.youtube.com/embed/ksjeW0QBUoU"
     },
     bt_rock_E_lead: {
       id: "bt_rock_E_lead",
@@ -145,7 +153,7 @@ window.CONTENT_ADD({
       recommendedBpm: 105,
       note: "Use YouTube controls in the player.",
       mix: "lead",
-      youtubeEmbed: "https://www.youtube.com/embed/1yZK1RzZx7I"
+      youtubeEmbed: "https://www.youtube.com/embed/ksjeW0QBUoU"
     }
   }
 });
