@@ -23,8 +23,6 @@ function getTrackMix(track) {
   const n = String(track?.name || "").toLowerCase();
   if (n.includes("rhythm mix")) return "rhythm";
   if (n.includes("lead mix")) return "lead";
-  if (n.includes("— rhythm")) return "rhythm";
-  if (n.includes("— lead")) return "lead";
   return null;
 }
 
@@ -48,26 +46,13 @@ function setSelectedTrackId(ctx, id) {
   ctx.persist();
 }
 
-function toEmbedUrl(url) {
+function safeYoutubeEmbed(url) {
   if (!url || typeof url !== "string") return null;
-  const u = url.trim();
-
-  // Already embed
-  if (
-    u.startsWith("https://www.youtube.com/embed/") ||
-    u.startsWith("https://youtube.com/embed/") ||
-    u.startsWith("https://www.youtube-nocookie.com/embed/")
-  ) return u;
-
-  // youtu.be/<id>
-  const mShort = u.match(/^https?:\/\/youtu\.be\/([A-Za-z0-9_-]{6,})/);
-  if (mShort) return `https://www.youtube.com/embed/${mShort[1]}`;
-
-  // youtube watch?v=<id>
-  const mWatch = u.match(/[?&]v=([A-Za-z0-9_-]{6,})/);
-  if (mWatch) return `https://www.youtube.com/embed/${mWatch[1]}`;
-
-  return null;
+  const ok =
+    url.startsWith("https://www.youtube.com/embed/") ||
+    url.startsWith("https://youtube.com/embed/") ||
+    url.startsWith("https://www.youtube-nocookie.com/embed/");
+  return ok ? url : null;
 }
 
 function backingUI(ctx, tracks, rerender) {
@@ -78,15 +63,7 @@ function backingUI(ctx, tracks, rerender) {
   const selectedId = getSelectedTrackId(ctx, tracks);
   const selected = tracks.find(t => t.id === selectedId) || tracks[0];
 
-  // allow a few alias property names (defensive)
-  const rawEmbed =
-    selected.youtubeEmbed ||
-    selected.youtube ||
-    selected.embed ||
-    selected.url ||
-    null;
-
-  const safe = toEmbedUrl(rawEmbed);
+  const safe = safeYoutubeEmbed(selected.youtubeEmbed);
 
   // cache-bust parameter so iframe swaps reliably on selection change
   const iframeSrc = safe ? `${safe}${safe.includes("?") ? "&" : "?"}cb=${encodeURIComponent(selected.id)}` : null;
@@ -98,7 +75,7 @@ function backingUI(ctx, tracks, rerender) {
       <select id="bt-select" style="width:100%; max-width:560px; margin-top:6px;">
         ${tracks.map(t => {
           const sel = t.id === selected.id ? "selected" : "";
-          const label = `${t.name} — Key ${t.key} • ${t.feel} • ~${t.recommendedBpm} bpm`;
+          const label = `${t.name} — Key ${t.key} • ${t.feel}${t.recommendedBpm ? ` • ~${t.recommendedBpm} bpm` : ""}`;
           return `<option value="${t.id}" ${sel}>${label}</option>`;
         }).join("")}
       </select>
@@ -116,7 +93,7 @@ function backingUI(ctx, tracks, rerender) {
           ? `
             <div style="font-weight:700;">Backing Track (in-app)</div>
             <div class="muted" style="font-size:14px; margin-bottom:10px;">
-              ${selected.name} • Key ${selected.key} • ~${selected.recommendedBpm} bpm
+              ${selected.name} • Key ${selected.key}${selected.recommendedBpm ? ` • ~${selected.recommendedBpm} bpm` : ""}
             </div>
 
             <div class="videoWrap">
@@ -134,7 +111,7 @@ function backingUI(ctx, tracks, rerender) {
           `
           : `
             <div class="muted">
-              Backing track unavailable (missing/invalid <code>youtubeEmbed</code>).
+              No <code>youtubeEmbed</code> set for this track yet.
             </div>
           `
       }
@@ -148,7 +125,7 @@ function wireBackingDropdown(ctx, tracks, rerender) {
 
   select.onchange = () => {
     setSelectedTrackId(ctx, select.value);
-    rerender(); // rebuild iframe immediately
+    rerender();
   };
 }
 
@@ -210,7 +187,6 @@ export function renderHome(ctx) {
     </div>
   `;
 
-  // Role buttons
   if (hasRole(ctx)) {
     const rr = document.getElementById("role-rhythm");
     const rl = document.getElementById("role-lead");
@@ -227,7 +203,6 @@ export function renderHome(ctx) {
     rl.onclick = () => { state.role = "lead"; ctx.persist(); renderHome(ctx); };
   }
 
-  // genre list
   const list = document.getElementById("genre-list");
   list.innerHTML = genres.map(g => {
     const active = g.id === state.genre;
@@ -247,7 +222,6 @@ export function renderHome(ctx) {
     };
   });
 
-  // handedness buttons
   const rightBtn = document.getElementById("hand-right");
   const leftBtn = document.getElementById("hand-left");
 
@@ -397,20 +371,17 @@ export function renderPractice(ctx) {
   document.getElementById("genre-details").onclick = () => ctx.nav.genre(genre.id);
 }
 
-// ✅ helper: pick ONE video url per drill (demo > fix > dont > videoUrl)
+// ✅ helper: pick ONE video url per drill (videoUrl OR media)
 function pickOneVideoUrl(d) {
   if (!d) return null;
 
-  // Preferred (Blues/Funk schema)
-  const m = d.media || null;
-  const raw =
-    (m && (m.demoUrl || m.fixUrl || m.dontUrl)) ||
-    // Rock schema fallback
-    d.videoUrl ||
-    null;
+  // If a drill uses the older "videoUrl" shortcut, support it:
+  if (d.videoUrl && typeof d.videoUrl === "string") return d.videoUrl;
 
-  // convert watch/short urls to embed if needed
-  return toEmbedUrl(raw);
+  // Otherwise use the blues/funk "media" object:
+  const m = d.media || null;
+  if (!m) return null;
+  return m.demoUrl || m.fixUrl || m.dontUrl || null;
 }
 
 export function renderSkill(ctx, skillId, opts = {}) {
@@ -463,7 +434,6 @@ export function renderSkill(ctx, skillId, opts = {}) {
           : "";
 
         const metroRunning = ctx.metro.isRunning() && ctx.metroState.drillId === d.id;
-
         const oneUrl = pickOneVideoUrl(d);
 
         return `
@@ -529,7 +499,6 @@ export function renderSkill(ctx, skillId, opts = {}) {
     </div>
   `;
 
-  // Mirror toggle (global)
   app.querySelectorAll("button[data-toggle-mirror]").forEach(btn => {
     btn.onclick = () => {
       state.mirrorVideos = !state.mirrorVideos;
@@ -538,7 +507,6 @@ export function renderSkill(ctx, skillId, opts = {}) {
     };
   });
 
-  // Drill controls
   skill.drills.forEach(d => {
     const cfg = d.suggestedBpm || { start: 60, step: 5, target: 120 };
 
@@ -593,4 +561,4 @@ export function renderSkill(ctx, skillId, opts = {}) {
   });
 
   document.getElementById("back").onclick = backTo;
-          }
+      }
