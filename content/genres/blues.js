@@ -1,6 +1,11 @@
 // js/content/genres/blues.js
 // Blues pack (v1) — drills + YouTube backing embeds
 // Requires: js/content/base.js loaded first (window.CONTENT_ADD exists)
+//
+// ✅ Audit pass (CORE mapping) added:
+// - drill.coreId / drill.difficultyStep / drill.focus / drill.needsDiagram
+// - beginner-friendly drill names (IDs unchanged)
+// - NO functional changes to rendering/logic
 
 window.CONTENT_ADD({
   genres: {
@@ -43,9 +48,17 @@ window.CONTENT_ADD({
       drills: [
         {
           id: "d_shuffle_1",
-          name: "Muted shuffle strum",
+          // kid-friendly rename
+          name: "Keep the Beat (Muted Strum)",
           durationSec: 120,
           handednessSafe: true,
+
+          // CORE mapping
+          coreId: "CORE_5",          // Time & Rhythm
+          difficultyStep: 1,
+          focus: "timing",
+          needsDiagram: false,
+
           instructions: [
             "Lightly mute strings with your fretting hand.",
             "Strum a steady shuffle: long-short, long-short.",
@@ -61,9 +74,17 @@ window.CONTENT_ADD({
         },
         {
           id: "d_shuffle_2",
-          name: "12-bar rhythm hits",
+          // kid-friendly rename
+          name: "Count the Bars (Simple Groove)",
           durationSec: 180,
           handednessSafe: true,
+
+          // CORE mapping
+          coreId: "CORE_5",          // Time & Rhythm
+          difficultyStep: 2,
+          focus: "timing",
+          needsDiagram: false,
+
           instructions: [
             "Play a simple 12-bar rhythm (even just on one chord).",
             "Count bars out loud if needed.",
@@ -89,9 +110,17 @@ window.CONTENT_ADD({
       drills: [
         {
           id: "d_penta_1",
-          name: "Box 1 ascent / descent",
+          // kid-friendly rename
+          name: "Two Notes, One String",
           durationSec: 180,
           handednessSafe: true,
+
+          // CORE mapping
+          coreId: "CORE_6",          // First Shape (repeatable pattern)
+          difficultyStep: 1,
+          focus: "one-string",
+          needsDiagram: true,
+
           instructions: [
             "Play Box 1 up and down clean.",
             "Use alternate picking (down-up).",
@@ -107,9 +136,17 @@ window.CONTENT_ADD({
         },
         {
           id: "d_penta_2",
-          name: "Two-notes-per-string accuracy",
+          // kid-friendly rename
+          name: "Switch Strings Clean",
           durationSec: 180,
           handednessSafe: true,
+
+          // CORE mapping
+          coreId: "CORE_4",          // String Changes (crossing clean)
+          difficultyStep: 1,
+          focus: "string-change",
+          needsDiagram: true,
+
           instructions: [
             "Play slowly: two notes per string, then move to the next string.",
             "Listen for buzzes and uneven volume.",
@@ -135,9 +172,17 @@ window.CONTENT_ADD({
       drills: [
         {
           id: "d_bend_1",
-          name: "Quarter/half-step bend checks",
+          // kid-friendly rename
+          name: "Match the Note (Mini Bend)",
           durationSec: 180,
           handednessSafe: true,
+
+          // CORE mapping
+          coreId: "CORE_7",          // Expression
+          difficultyStep: 1,
+          focus: "expression",
+          needsDiagram: false,
+
           instructions: [
             "Pick the target note first (destination pitch).",
             "Then bend up to match it.",
@@ -153,9 +198,17 @@ window.CONTENT_ADD({
         },
         {
           id: "d_vib_1",
-          name: "Slow wide vibrato",
+          // kid-friendly rename
+          name: "Make It Sing (Slow Vibrato)",
           durationSec: 180,
           handednessSafe: true,
+
+          // CORE mapping
+          coreId: "CORE_7",          // Expression
+          difficultyStep: 2,
+          focus: "expression",
+          needsDiagram: false,
+
           instructions: [
             "Hold a note firmly with your fretting hand.",
             "Rock the wrist slowly for a wide vibrato.",
@@ -319,3 +372,4 @@ window.CONTENT_ADD({
     }
   }
 });
+```0
