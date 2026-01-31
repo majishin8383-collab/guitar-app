@@ -1,6 +1,11 @@
 // content/genres/rock.js
 // Rock pack (v1) — power chords, timing, basic lead
 // Requires: content/base.js loaded first (window.CONTENT_ADD exists)
+//
+// Audit pass (CORE mapping) added:
+// - drill.coreId / drill.difficultyStep / drill.focus / drill.needsDiagram
+// - IDs unchanged
+// - No functional changes
 
 window.CONTENT_ADD({
   genres: {
@@ -36,6 +41,13 @@ window.CONTENT_ADD({
           name: "Two-finger power chords",
           durationSec: 180,
           handednessSafe: true,
+
+          // CORE mapping
+          coreId: "CORE_6",
+          difficultyStep: 1,
+          focus: "shape",
+          needsDiagram: true,
+
           instructions: [
             "Index finger frets the root.",
             "Ring finger frets the 5th (two strings up, two frets over).",
@@ -50,6 +62,13 @@ window.CONTENT_ADD({
           name: "Clean chord switches (no noise)",
           durationSec: 180,
           handednessSafe: true,
+
+          // CORE mapping
+          coreId: "CORE_6",
+          difficultyStep: 2,
+          focus: "switching",
+          needsDiagram: true,
+
           instructions: [
             "Release pressure slightly during moves (don’t fully lift).",
             "Land the shape, then press — avoid slide squeaks.",
@@ -74,6 +93,13 @@ window.CONTENT_ADD({
           name: "Downstroke control",
           durationSec: 180,
           handednessSafe: true,
+
+          // CORE mapping
+          coreId: "CORE_5",
+          difficultyStep: 1,
+          focus: "timing",
+          needsDiagram: false,
+
           instructions: [
             "Use steady downstrokes only.",
             "Keep the picking motion small.",
@@ -88,6 +114,13 @@ window.CONTENT_ADD({
           name: "8th-note groove stamina (down-up)",
           durationSec: 180,
           handednessSafe: true,
+
+          // CORE mapping
+          coreId: "CORE_5",
+          difficultyStep: 2,
+          focus: "timing",
+          needsDiagram: false,
+
           instructions: [
             "Strum steady 8th-notes (down-up) for 60 seconds.",
             "Accent beats 2 and 4 slightly.",
@@ -112,6 +145,13 @@ window.CONTENT_ADD({
           name: "Box 1 ascent / descent (clean)",
           durationSec: 180,
           handednessSafe: true,
+
+          // CORE mapping
+          coreId: "CORE_6",
+          difficultyStep: 1,
+          focus: "shape",
+          needsDiagram: true,
+
           instructions: [
             "Play Box 1 up and down clean.",
             "Use alternate picking (down-up).",
@@ -126,6 +166,13 @@ window.CONTENT_ADD({
           name: "Simple rock licks (timing + space)",
           durationSec: 180,
           handednessSafe: true,
+
+          // CORE mapping
+          coreId: "CORE_7",
+          difficultyStep: 1,
+          focus: "phrasing",
+          needsDiagram: false,
+
           instructions: [
             "Play one short lick, then REST for 1 beat.",
             "Repeat: lick → space → lick → space.",
