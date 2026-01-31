@@ -14,6 +14,14 @@ function rolePill(ctx) {
   return `<span class="pill">Role: ${ctx.roleLabel()}</span>`;
 }
 
+// ---------------- Cache-bust helpers (mobile-safe) ----------------
+
+function withCb(url, token) {
+  if (!url || typeof url !== "string") return null;
+  const cb = encodeURIComponent(String(token || "cb"));
+  return `${url}${url.includes("?") ? "&" : "?"}cb=${cb}`;
+}
+
 // -------- Backing helpers (dropdown + role filtering) --------
 
 function getTrackMix(track) {
@@ -64,25 +72,27 @@ function backingUI(ctx, tracks, rerender) {
   const selected = tracks.find(t => t.id === selectedId) || tracks[0];
 
   const safe = safeYoutubeEmbed(selected.youtubeEmbed);
-
-  // cache-bust parameter so iframe swaps reliably on selection change
-  const iframeSrc = safe ? `${safe}${safe.includes("?") ? "&" : "?"}cb=${encodeURIComponent(selected.id)}` : null;
+  const iframeSrc = safe ? withCb(safe, selected.id) : null;
 
   return `
     <div class="card" style="background:#171717; margin-top:10px;">
       <div class="muted" style="font-size:14px;">Choose track</div>
 
       <select id="bt-select" style="width:100%; max-width:560px; margin-top:6px;">
-        ${tracks.map(t => {
-          const sel = t.id === selected.id ? "selected" : "";
-          const label = `${t.name} — Key ${t.key} • ${t.feel}${t.recommendedBpm ? ` • ~${t.recommendedBpm} bpm` : ""}`;
-          return `<option value="${t.id}" ${sel}>${label}</option>`;
-        }).join("")}
+        ${tracks
+          .map(t => {
+            const sel = t.id === selected.id ? "selected" : "";
+            const label = `${t.name} — Key ${t.key} • ${t.feel}${t.recommendedBpm ? ` • ~${t.recommendedBpm} bpm` : ""}`;
+            return `<option value="${t.id}" ${sel}>${label}</option>`;
+          })
+          .join("")}
       </select>
 
-      ${hasRole(ctx)
-        ? `<div class="muted" style="font-size:14px; margin-top:6px;">Auto-filtered by Role: <b>${ctx.roleLabel()}</b></div>`
-        : ""}
+      ${
+        hasRole(ctx)
+          ? `<div class="muted" style="font-size:14px; margin-top:6px;">Auto-filtered by Role: <b>${ctx.roleLabel()}</b></div>`
+          : ""
+      }
 
       ${selected.note ? `<div class="muted" style="font-size:13px; margin-top:10px;">${selected.note}</div>` : ""}
 
@@ -138,7 +148,8 @@ export function renderHome(ctx) {
   const genres = Object.values(C.genres);
   const activeGenre = C.genres[state.genre];
 
-  const roleCard = hasRole(ctx) ? `
+  const roleCard = hasRole(ctx)
+    ? `
     <div class="card">
       <h3 style="margin-top:0;">Your Focus</h3>
       <p class="muted">Pick what you're practicing most right now.</p>
@@ -148,7 +159,8 @@ export function renderHome(ctx) {
         ${rolePill(ctx)}
       </div>
     </div>
-  ` : "";
+  `
+    : "";
 
   app.innerHTML = `
     <div class="card">
@@ -199,20 +211,30 @@ export function renderHome(ctx) {
       rl.classList.add("secondary");
     }
 
-    rr.onclick = () => { state.role = "rhythm"; ctx.persist(); renderHome(ctx); };
-    rl.onclick = () => { state.role = "lead"; ctx.persist(); renderHome(ctx); };
+    rr.onclick = () => {
+      state.role = "rhythm";
+      ctx.persist();
+      renderHome(ctx);
+    };
+    rl.onclick = () => {
+      state.role = "lead";
+      ctx.persist();
+      renderHome(ctx);
+    };
   }
 
   const list = document.getElementById("genre-list");
-  list.innerHTML = genres.map(g => {
-    const active = g.id === state.genre;
-    return `
+  list.innerHTML = genres
+    .map(g => {
+      const active = g.id === state.genre;
+      return `
       <div style="display:flex; gap:10px; align-items:center; margin:10px 0;">
         <button data-genre="${g.id}" class="${active ? "" : "secondary"}">${g.name}</button>
         <span class="muted">${g.description}</span>
       </div>
     `;
-  }).join("");
+    })
+    .join("");
 
   list.querySelectorAll("button[data-genre]").forEach(btn => {
     btn.onclick = () => {
@@ -292,14 +314,18 @@ export function renderGenre(ctx, genreId) {
   `;
 
   const skillList = document.getElementById("skill-list");
-  skillList.innerHTML = skills.map(s => `
+  skillList.innerHTML = skills
+    .map(
+      s => `
     <div class="card" style="background:#171717;">
       <h4 style="margin:0 0 6px 0;">${s.name}</h4>
       <div class="muted" style="margin-bottom:10px;">${s.summary}</div>
       <div class="muted" style="font-size:14px;">Drills: ${s.drills.length} • Level: ${s.levelBand}</div>
       <button data-skill="${s.id}" style="margin-top:10px;">Open Skill</button>
     </div>
-  `).join("");
+  `
+    )
+    .join("");
 
   skillList.querySelectorAll("button[data-skill]").forEach(btn => {
     btn.onclick = () => ctx.nav.skill(btn.dataset.skill, { backTo: () => ctx.nav.genre(genreId) });
@@ -354,14 +380,18 @@ export function renderPractice(ctx) {
   wireBackingDropdown(ctx, bts, () => renderPractice(ctx));
 
   const skillList = document.getElementById("skill-list");
-  skillList.innerHTML = skills.map(s => `
+  skillList.innerHTML = skills
+    .map(
+      s => `
     <div class="card" style="background:#171717;">
       <h4 style="margin:0 0 6px 0;">${s.name}</h4>
       <div class="muted" style="margin-bottom:10px;">${s.summary}</div>
       <div class="muted" style="font-size:14px;">Drills: ${s.drills.length} • Level: ${s.levelBand}</div>
       <button data-skill="${s.id}" style="margin-top:10px;">Open Skill</button>
     </div>
-  `).join("");
+  `
+    )
+    .join("");
 
   skillList.querySelectorAll("button[data-skill]").forEach(btn => {
     btn.onclick = () => ctx.nav.skill(btn.dataset.skill, { backTo: () => ctx.nav.practice() });
@@ -424,19 +454,20 @@ export function renderSkill(ctx, skillId, opts = {}) {
 
       <h3>Drills</h3>
 
-      ${skill.drills.map(d => {
-        const cfg = d.suggestedBpm || { start: 60, step: 5, target: 120 };
-        const p = ctx.progress.getOrInit(state, d);
+      ${skill.drills
+        .map(d => {
+          const cfg = d.suggestedBpm || { start: 60, step: 5, target: 120 };
+          const p = ctx.progress.getOrInit(state, d);
 
-        const showLevelUp = shouldShowLevelUp(p);
-        const levelUpMsg = showLevelUp
-          ? `✅ Level up: <b>${p.lastLevelUpFrom}</b> → <b>${p.lastLevelUpTo}</b> bpm`
-          : "";
+          const showLevelUp = shouldShowLevelUp(p);
+          const levelUpMsg = showLevelUp ? `✅ Level up: <b>${p.lastLevelUpFrom}</b> → <b>${p.lastLevelUpTo}</b> bpm` : "";
 
-        const metroRunning = ctx.metro.isRunning() && ctx.metroState.drillId === d.id;
-        const oneUrl = pickOneVideoUrl(d);
+          const metroRunning = ctx.metro.isRunning() && ctx.metroState.drillId === d.id;
 
-        return `
+          const rawUrl = pickOneVideoUrl(d);
+          const oneUrl = rawUrl ? withCb(rawUrl, `${skill.id}_${d.id}`) : null;
+
+          return `
           <div class="card" style="background:#171717;">
             <h4 style="margin:0 0 6px 0;">${d.name}</h4>
 
@@ -491,7 +522,8 @@ export function renderSkill(ctx, skillId, opts = {}) {
             </div>
           </div>
         `;
-      }).join("")}
+        })
+        .join("")}
 
       <div style="margin-top:16px;" class="row">
         <button class="secondary" id="back">Back</button>
@@ -517,48 +549,54 @@ export function renderSkill(ctx, skillId, opts = {}) {
     const reset = app.querySelector(`button[data-reset="${d.id}"]`);
     const metroBtn = app.querySelector(`button[data-metro="${d.id}"]`);
 
-    if (down) down.onclick = () => {
-      const p = ctx.progress.getOrInit(state, d);
-      ctx.progress.setBpm(state, d, (p.bpm || cfg.start) - (cfg.step || 5));
-      const p2 = ctx.progress.getOrInit(state, d);
-      ctx.metroSetBpmIfActive(d.id, p2.bpm);
-      renderSkill(ctx, skillId, opts);
-    };
+    if (down)
+      down.onclick = () => {
+        const p = ctx.progress.getOrInit(state, d);
+        ctx.progress.setBpm(state, d, (p.bpm || cfg.start) - (cfg.step || 5));
+        const p2 = ctx.progress.getOrInit(state, d);
+        ctx.metroSetBpmIfActive(d.id, p2.bpm);
+        renderSkill(ctx, skillId, opts);
+      };
 
-    if (up) up.onclick = () => {
-      const p = ctx.progress.getOrInit(state, d);
-      ctx.progress.setBpm(state, d, (p.bpm || cfg.start) + (cfg.step || 5));
-      const p2 = ctx.progress.getOrInit(state, d);
-      ctx.metroSetBpmIfActive(d.id, p2.bpm);
-      renderSkill(ctx, skillId, opts);
-    };
+    if (up)
+      up.onclick = () => {
+        const p = ctx.progress.getOrInit(state, d);
+        ctx.progress.setBpm(state, d, (p.bpm || cfg.start) + (cfg.step || 5));
+        const p2 = ctx.progress.getOrInit(state, d);
+        ctx.metroSetBpmIfActive(d.id, p2.bpm);
+        renderSkill(ctx, skillId, opts);
+      };
 
-    if (clean) clean.onclick = () => {
-      ctx.progress.clean(state, d);
-      const p2 = ctx.progress.getOrInit(state, d);
-      ctx.metroSetBpmIfActive(d.id, p2.bpm);
-      renderSkill(ctx, skillId, opts);
-    };
+    if (clean)
+      clean.onclick = () => {
+        ctx.progress.clean(state, d);
+        const p2 = ctx.progress.getOrInit(state, d);
+        ctx.metroSetBpmIfActive(d.id, p2.bpm);
+        renderSkill(ctx, skillId, opts);
+      };
 
-    if (sloppy) sloppy.onclick = () => {
-      ctx.progress.sloppy(state, d);
-      const p2 = ctx.progress.getOrInit(state, d);
-      ctx.metroSetBpmIfActive(d.id, p2.bpm);
-      renderSkill(ctx, skillId, opts);
-    };
+    if (sloppy)
+      sloppy.onclick = () => {
+        ctx.progress.sloppy(state, d);
+        const p2 = ctx.progress.getOrInit(state, d);
+        ctx.metroSetBpmIfActive(d.id, p2.bpm);
+        renderSkill(ctx, skillId, opts);
+      };
 
-    if (reset) reset.onclick = () => {
-      ctx.progress.reset(state, d);
-      ctx.metroStopIfOwnedBy(d.id);
-      renderSkill(ctx, skillId, opts);
-    };
+    if (reset)
+      reset.onclick = () => {
+        ctx.progress.reset(state, d);
+        ctx.metroStopIfOwnedBy(d.id);
+        renderSkill(ctx, skillId, opts);
+      };
 
-    if (metroBtn) metroBtn.onclick = () => {
-      const p = ctx.progress.getOrInit(state, d);
-      ctx.metroToggle(d.id, p.bpm);
-      renderSkill(ctx, skillId, opts);
-    };
+    if (metroBtn)
+      metroBtn.onclick = () => {
+        const p = ctx.progress.getOrInit(state, d);
+        ctx.metroToggle(d.id, p.bpm);
+        renderSkill(ctx, skillId, opts);
+      };
   });
 
   document.getElementById("back").onclick = backTo;
-      }
+}
