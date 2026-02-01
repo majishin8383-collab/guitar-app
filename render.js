@@ -3,17 +3,17 @@
 // Guarded: Role UI only appears if ctx provides role APIs.
 // Backing tracks: YouTube embed ONLY. Dropdown controls what displays (no Stop/Play buttons).
 
-import { shouldShowLevelUp } from "./progress.js";
 import { SONGS } from "./songs.js";
 
 import { getView, setView } from "./state/viewState.js";
-import { withCb } from "./ui/video.js";
+import { withCb, safeYoutubeEmbed } from "./ui/video.js";
 
 import { backingUI, wireBackingDropdown, filterTracksByRole } from "./ui/backing.js";
 import { createCoreUI } from "./ui/core.js";
 import { createSettingsUI } from "./ui/settings.js";
 import { createSongsUI } from "./ui/songs.js";
 import { createSkillUI } from "./ui/skill.js";
+import { shouldShowLevelUp } from "./progress.js";
 
 /* ============================================================
    SECTION 0 — Small shared guards
@@ -57,7 +57,7 @@ const SettingsUI = createSettingsUI({
 
 const SongsUI = createSongsUI(SONGS, {
   withCb,
-  // IMPORTANT: wrap View.set so clicking Easy/Medium/Hard actually navigates
+  safeYoutubeEmbed, // ✅ REQUIRED so renderSong doesn't crash
   View: { set: setViewAndRerender }
 });
 
