@@ -1,13 +1,110 @@
 // ui/songs.js
 // Songs engine + screens (renderSongs + renderSong)
-// Keeps internal ticker + song state logic isolated.
-// FIX: Stop flashing/reloading the YouTube iframe by NOT re-rendering renderSong() every second.
-//      The ticker now updates a small DOM label + runs completion logic, and only re-renders on state transitions.
+// FIXES:
+// 1) Timer no longer stops the YouTube video when you press Start Playing.
+// 2) Timer can auto-start/pause based on the YouTube player's Play/Pause (YouTube IFrame API).
+// 3) Unlock tuning: Medium unlocks after 1 Easy completion; Hard unlocks after 1 Medium completion.
+// 4) No full re-render every second; ticker updates only small DOM labels.
 
 export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
   let SONG_TICKER = null;
 
-  // Fallback safety if render.js didn't pass safeYoutubeEmbed
+  // --- YouTube IFrame API integration (optional but used when showTrack=true) ---
+  let YT_API_PROMISE = null;
+  let YT_PLAYER = null;
+  let YT_PLAYER_KEY = null; // identify if player matches current song+variant+track
+
+  function ensureYoutubeApiLoaded() {
+    if (YT_API_PROMISE) return YT_API_PROMISE;
+
+    YT_API_PROMISE = new Promise(resolve => {
+      if (window.YT && window.YT.Player) return resolve(true);
+
+      // Avoid double-inserting the script
+      const existing = document.querySelector('script[data-yt-iframe-api="1"]');
+      if (!existing) {
+        const s = document.createElement("script");
+        s.src = "https://www.youtube.com/iframe_api";
+        s.async = true;
+        s.dataset.ytIframeApi = "1";
+        document.head.appendChild(s);
+      }
+
+      // YouTube calls this global when ready
+      const prev = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => {
+        if (typeof prev === "function") {
+          try { prev(); } catch (_) {}
+        }
+        resolve(true);
+      };
+    });
+
+    return YT_API_PROMISE;
+  }
+
+  function addJsApiParams(embedUrl) {
+    if (!embedUrl || typeof embedUrl !== "string") return embedUrl;
+
+    // We must add enablejsapi=1 and origin for the IFrame API to control and receive events reliably.
+    // Preserve any existing params.
+    const origin = encodeURIComponent(window.location.origin);
+    const hasQ = embedUrl.includes("?");
+    const base = embedUrl + (hasQ ? "&" : "?");
+    return `${base}enablejsapi=1&origin=${origin}`;
+  }
+
+  function destroyYoutubePlayer() {
+    if (YT_PLAYER && typeof YT_PLAYER.destroy === "function") {
+      try { YT_PLAYER.destroy(); } catch (_) {}
+    }
+    YT_PLAYER = null;
+    YT_PLAYER_KEY = null;
+  }
+
+  function setupYoutubePlayerIfNeeded(ctx, renderHome, playerKey) {
+    const iframe = document.getElementById("song-yt-iframe");
+    if (!iframe) {
+      destroyYoutubePlayer();
+      return;
+    }
+
+    // If we already have a player for this exact key, do nothing.
+    if (YT_PLAYER && YT_PLAYER_KEY === playerKey) return;
+
+    // New screen / new track / new variant => rebuild player
+    destroyYoutubePlayer();
+
+    ensureYoutubeApiLoaded().then(() => {
+      // iframe may be gone if user navigated
+      const iframeNow = document.getElementById("song-yt-iframe");
+      if (!iframeNow) return;
+
+      if (!window.YT || !window.YT.Player) return;
+
+      YT_PLAYER_KEY = playerKey;
+
+      // Create a Player wrapper around the existing iframe element id.
+      YT_PLAYER = new window.YT.Player("song-yt-iframe", {
+        events: {
+          onStateChange: e => {
+            // 1 = playing, 2 = paused, 0 = ended
+            if (!e || typeof e.data !== "number") return;
+
+            if (e.data === 1) {
+              // User pressed Play in the iframe -> start/resume timer
+              startSessionFromExternalPlay(ctx, renderHome);
+            } else if (e.data === 2 || e.data === 0) {
+              // Pause or End -> pause timer (do not count as "Stop" penalty)
+              pauseSession(ctx);
+            }
+          }
+        }
+      });
+    });
+  }
+
+  // --- helpers for URL safety ---
   function safeEmbedFallback(url) {
     if (!url || typeof url !== "string") return null;
     const ok =
@@ -18,12 +115,15 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
   }
   const safeEmbed = typeof safeYoutubeEmbed === "function" ? safeYoutubeEmbed : safeEmbedFallback;
 
+  // --- state ---
   function ensureSongState(state) {
     if (!state.songs || typeof state.songs !== "object") state.songs = {};
     if (!state.songs.progress || typeof state.songs.progress !== "object") state.songs.progress = {};
     if (!state.songs.requirements || typeof state.songs.requirements !== "object") state.songs.requirements = {};
     if (!state.songs.session || typeof state.songs.session !== "object") state.songs.session = {};
-    if (!state.songs.lastSong || typeof state.songs.lastSong !== "object") state.songs.lastSong = { songId: "song1", variant: "easy" };
+    if (!state.songs.lastSong || typeof state.songs.lastSong !== "object")
+      state.songs.lastSong = { songId: "song1", variant: "easy" };
+
     if (!("showTrack" in state.songs)) state.songs.showTrack = false;
     if (!("guidanceOpen" in state.songs)) state.songs.guidanceOpen = false;
     if (!("explainOpen" in state.songs)) state.songs.explainOpen = false;
@@ -33,20 +133,14 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
   function getSongProgress(state, songId) {
     ensureSongState(state);
     if (!state.songs.progress[songId]) {
-      state.songs.progress[songId] = {
-        easyCompletions: 0,
-        mediumCompletions: 0,
-        hardCompletions: 0
-      };
+      state.songs.progress[songId] = { easyCompletions: 0, mediumCompletions: 0, hardCompletions: 0 };
     }
     return state.songs.progress[songId];
   }
 
   function getSongReqs(state, songId) {
     ensureSongState(state);
-    if (!state.songs.requirements[songId]) {
-      state.songs.requirements[songId] = {};
-    }
+    if (!state.songs.requirements[songId]) state.songs.requirements[songId] = {};
     return state.songs.requirements[songId];
   }
 
@@ -56,12 +150,50 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
     return song.requirements.every(r => req[r.id] === true);
   }
 
+  // ✅ Unlock tuning per your expectation:
+  // Medium unlocks after 1 Easy completion; Hard after 1 Medium completion.
   function isVariantUnlocked(state, songId, variantId) {
     const p = getSongProgress(state, songId);
     if (variantId === "easy") return isSong1Unlocked(state);
-    if (variantId === "medium") return p.easyCompletions >= 2;
+    if (variantId === "medium") return p.easyCompletions >= 1;
     if (variantId === "hard") return p.mediumCompletions >= 1;
     return false;
+  }
+
+  // --- session math (no flashing) ---
+  function getActiveSession(state) {
+    ensureSongState(state);
+    if (!state.songs.session || typeof state.songs.session !== "object") state.songs.session = {};
+    return state.songs.session;
+  }
+
+  // session fields:
+  // running: boolean (timer ticking)
+  // startedAt: ms timestamp when current run began
+  // accumulatedSec: seconds accumulated across pauses (float ok)
+  // elapsedSec: integer for display
+  // stopCount: counts user "Stop" presses
+  function computeElapsedSec(sess) {
+    const acc = typeof sess.accumulatedSec === "number" ? sess.accumulatedSec : 0;
+    if (sess.running === true && typeof sess.startedAt === "number" && sess.startedAt > 0) {
+      const now = Date.now();
+      const run = (now - sess.startedAt) / 1000;
+      return Math.max(0, Math.floor(acc + run));
+    }
+    return Math.max(0, Math.floor(acc));
+  }
+
+  function updateSessionUI(sess) {
+    const el = document.getElementById("song-elapsed");
+    if (el) el.textContent = `${sess.elapsedSec || 0}s`;
+
+    const status = document.getElementById("song-session-status");
+    if (status) status.textContent = sess.running === true ? "Session running." : "";
+
+    const startBtn = document.getElementById("song-start");
+    const stopBtn = document.getElementById("song-stop");
+    if (startBtn) startBtn.disabled = sess.running === true;
+    if (stopBtn) stopBtn.disabled = sess.running !== true;
   }
 
   function stopSongTicker() {
@@ -71,38 +203,23 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
     }
   }
 
-  // tiny UI updates without re-rendering the entire screen
-  function updateSessionUI(sess) {
-    const el = document.getElementById("song-elapsed");
-    if (el) el.textContent = `${sess.elapsedSec || 0}s`;
-
-    const status = document.getElementById("song-session-status");
-    if (status) status.textContent = sess.running === true ? "Session running." : "";
-  }
-
   function startSongTicker(ctx, renderHome) {
     stopSongTicker();
 
     SONG_TICKER = setInterval(() => {
       const state = ctx.state;
       ensureSongState(state);
+      const sess = getActiveSession(state);
 
-      const sess = state.songs.session || {};
       if (sess.running !== true) return;
 
-      const now = Date.now();
-      const startedAt = sess.startedAt || now;
-      const elapsedSec = Math.max(0, Math.floor((now - startedAt) / 1000));
-      sess.elapsedSec = elapsedSec;
-
-      // Persist session progress, but DO NOT rebuild the whole screen
+      sess.elapsedSec = computeElapsedSec(sess);
       state.songs.session = sess;
       ctx.persist();
 
-      // Update small DOM fields only
       updateSessionUI(sess);
 
-      // Completion check (runs in ticker, triggers ONE re-render when completed)
+      // Completion check
       const songId = sess.songId || state.songs.lastSong?.songId || "song1";
       const variantId = sess.variantId || state.songs.lastSong?.variant || "easy";
 
@@ -115,13 +232,14 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
       const target = variant.targetSeconds || 90;
       const stopLimit = typeof variant.stopLimit === "number" ? variant.stopLimit : 1;
 
-      const passesTime = elapsedSec >= target;
+      const passesTime = (sess.elapsedSec || 0) >= target;
       const passesStops = (sess.stopCount || 0) <= stopLimit;
 
       if (passesTime && passesStops) {
         stopSongTicker();
-        sess.running = false;
-        state.songs.session = sess;
+
+        // finalize session
+        pauseSession(ctx); // converts running->false but keeps time
 
         const prog = getSongProgress(state, songId);
         if (variantId === "easy") prog.easyCompletions += 1;
@@ -131,12 +249,72 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
         state.songs.completedOverlay = true;
         ctx.persist();
 
-        // ONE re-render to show overlay (no more flashing)
+        // ONE re-render to show overlay
         renderSong(ctx, renderHome);
       }
-    }, 1000);
+    }, 250); // smoother UI without heavy cost
   }
 
+  function pauseSession(ctx) {
+    const state = ctx.state;
+    ensureSongState(state);
+    const sess = getActiveSession(state);
+
+    if (sess.running === true) {
+      const acc = typeof sess.accumulatedSec === "number" ? sess.accumulatedSec : 0;
+      const run = typeof sess.startedAt === "number" && sess.startedAt > 0 ? (Date.now() - sess.startedAt) / 1000 : 0;
+
+      sess.accumulatedSec = acc + Math.max(0, run);
+      sess.startedAt = 0;
+      sess.running = false;
+      sess.elapsedSec = computeElapsedSec(sess);
+
+      state.songs.session = sess;
+      ctx.persist();
+      updateSessionUI(sess);
+    }
+  }
+
+  // Called when user presses Play in the YouTube iframe (PLAYING)
+  function startSessionFromExternalPlay(ctx, renderHome) {
+    const state = ctx.state;
+    ensureSongState(state);
+    const sess = getActiveSession(state);
+
+    // If not initialized for current song, initialize now based on lastSong
+    const songId = state.songs.lastSong?.songId || "song1";
+    const variantId = state.songs.lastSong?.variant || "easy";
+
+    // If already running, do nothing
+    if (sess.running === true && sess.songId === songId && sess.variantId === variantId) return;
+
+    // If session belongs to another song/variant, reset it
+    if (sess.songId !== songId || sess.variantId !== variantId) {
+      state.songs.session = {
+        running: false,
+        songId,
+        variantId,
+        startedAt: 0,
+        accumulatedSec: 0,
+        elapsedSec: 0,
+        stopCount: 0
+      };
+    }
+
+    const s2 = getActiveSession(state);
+    if (s2.running !== true) {
+      s2.running = true;
+      s2.startedAt = Date.now();
+      if (typeof s2.accumulatedSec !== "number") s2.accumulatedSec = 0;
+      s2.elapsedSec = computeElapsedSec(s2);
+      state.songs.session = s2;
+      ctx.persist();
+      updateSessionUI(s2);
+      startSongTicker(ctx, renderHome);
+    }
+  }
+
+  // --- navigation ---
   function openSong(ctx, songId, variantId, renderHome) {
     ensureSongState(ctx.state);
     ctx.state.songs.lastSong = { songId, variant: variantId };
@@ -145,6 +323,7 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
     renderHome(ctx);
   }
 
+  // --- screens ---
   function renderSongs(ctx, renderHome) {
     ctx.ensureMirrorDefault();
 
@@ -307,11 +486,14 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
 
     const track = C.backingTracks ? C.backingTracks[variant.backingTrackId] : null;
     const safe = track ? safeEmbed(track.youtubeEmbed) : null;
-    const iframeSrc = safe ? withCb(safe, `song_${songId}_${variantId}`) : null;
 
-    const sess = state.songs.session || {};
+    // IMPORTANT: add enablejsapi=1 + origin, then add cb
+    const apiUrl = safe ? addJsApiParams(safe) : null;
+    const iframeSrc = apiUrl ? withCb(apiUrl, `song_${songId}_${variantId}`) : null;
+
+    const sess = getActiveSession(state);
     const isRunning = sess.running === true && sess.songId === songId && sess.variantId === variantId;
-    const elapsedSec = isRunning ? (sess.elapsedSec || 0) : 0;
+    sess.elapsedSec = computeElapsedSec(sess);
 
     const showCounts = !!variant.showCountMarkers;
 
@@ -385,6 +567,7 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
               <div style="height:10px"></div>
               <div class="videoWrap">
                 <iframe
+                  id="song-yt-iframe"
                   src="${iframeSrc}"
                   title="Backing track"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -392,7 +575,7 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
                 ></iframe>
               </div>
               <div class="muted" style="font-size:12px; margin-top:8px;">
-                Use the YouTube controls in the player to play/pause.
+                Tip: press Play in the player to start the timer automatically.
               </div>
             `
             : ""
@@ -421,7 +604,7 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
         <div class="row">
           <button id="song-start" ${isRunning ? "disabled" : ""}>Start Playing</button>
           <button id="song-stop" class="secondary" ${isRunning ? "" : "disabled"}>Stop</button>
-          <span class="pill">Elapsed: <span id="song-elapsed">${elapsedSec}s</span></span>
+          <span class="pill">Elapsed: <span id="song-elapsed">${sess.elapsedSec || 0}s</span></span>
         </div>
 
         <div id="song-session-status" class="muted" style="margin-top:10px; font-size:13px;">
@@ -455,6 +638,14 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
       </div>
     `;
 
+    // If track shown, hook YouTube API so Play/Pause controls timer
+    if (state.songs.showTrack && iframeSrc) {
+      const key = `${songId}__${variantId}__${variant.backingTrackId || "none"}`;
+      setupYoutubePlayerIfNeeded(ctx, renderHome, key);
+    } else {
+      destroyYoutubePlayer();
+    }
+
     document.getElementById("toggle-track").onclick = () => {
       state.songs.showTrack = !state.songs.showTrack;
       ctx.persist();
@@ -479,41 +670,61 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
       renderSong(ctx, renderHome);
     };
 
+    // ✅ Start Playing now starts timer WITHOUT re-rendering / killing iframe
     document.getElementById("song-start").onclick = () => {
       ensureSongState(state);
+
+      // If switching to a new song/variant, reset session (but don't touch iframe)
+      if (sess.songId !== songId || sess.variantId !== variantId) {
+        state.songs.session = {
+          running: false,
+          songId,
+          variantId,
+          startedAt: 0,
+          accumulatedSec: 0,
+          elapsedSec: 0,
+          stopCount: 0
+        };
+      }
+
+      const s2 = getActiveSession(state);
       state.songs.completedOverlay = false;
 
-      state.songs.session = {
-        running: true,
-        songId,
-        variantId,
-        startedAt: Date.now(),
-        elapsedSec: 0,
-        stopCount: 0
-      };
+      if (s2.running !== true) {
+        s2.running = true;
+        s2.songId = songId;
+        s2.variantId = variantId;
+        if (typeof s2.accumulatedSec !== "number") s2.accumulatedSec = 0;
+        s2.startedAt = Date.now();
+        s2.elapsedSec = computeElapsedSec(s2);
 
-      ctx.persist();
+        state.songs.session = s2;
+        ctx.persist();
 
-      // Start ticker (updates elapsed label without re-rendering)
-      startSongTicker(ctx, renderHome);
-
-      // One render to update buttons/states (no repeated flashing)
-      renderSong(ctx, renderHome);
+        updateSessionUI(s2);
+        startSongTicker(ctx, renderHome);
+      }
     };
 
+    // ✅ Stop pauses timer; optionally pauses video (only if YT API player is active)
     document.getElementById("song-stop").onclick = () => {
       ensureSongState(state);
-      const s = state.songs.session || {};
-      if (s.running === true) {
-        s.stopCount = (s.stopCount || 0) + 1;
-        s.running = false;
-        state.songs.session = s;
+
+      const s2 = getActiveSession(state);
+      if (s2.running === true) {
+        // Stop counts as a stop penalty
+        s2.stopCount = (s2.stopCount || 0) + 1;
+        state.songs.session = s2;
         ctx.persist();
       }
+
+      pauseSession(ctx);
       stopSongTicker();
 
-      // One render to update buttons/states (stopping the iframe is fine here)
-      renderSong(ctx, renderHome);
+      // Pause the YouTube player if we have API access (best UX)
+      if (YT_PLAYER && typeof YT_PLAYER.pauseVideo === "function") {
+        try { YT_PLAYER.pauseVideo(); } catch (_) {}
+      }
     };
 
     const playAgainBtn = document.getElementById("song-play-again");
@@ -521,8 +732,17 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
       playAgainBtn.onclick = () => {
         ensureSongState(state);
         state.songs.completedOverlay = false;
-        state.songs.session = { running: false, songId, variantId, startedAt: 0, elapsedSec: 0, stopCount: 0 };
+        state.songs.session = {
+          running: false,
+          songId,
+          variantId,
+          startedAt: 0,
+          accumulatedSec: 0,
+          elapsedSec: 0,
+          stopCount: 0
+        };
         ctx.persist();
+        stopSongTicker();
         renderSong(ctx, renderHome);
       };
     }
@@ -539,8 +759,8 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
     }
 
     document.getElementById("back-songs").onclick = () => {
+      pauseSession(ctx);
       stopSongTicker();
-      if (state.songs.session) state.songs.session.running = false;
       ctx.persist();
       View.set(ctx, "songs");
       renderHome(ctx);
@@ -553,4 +773,4 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
     renderSong,
     stopSongTicker
   };
-      }
+}
