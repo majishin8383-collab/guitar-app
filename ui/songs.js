@@ -3,10 +3,15 @@
 // FIXES:
 // 1) Variant-specific chord display via variant.chordBlocks (fallback song.chordBlocks)
 // 2) Variant-specific display key/bpm via variant.displayKey/displayBpm (fallback track data)
-// 3) Start Playing will attempt to start the YouTube player (YT IFrame API) deterministically
+// 3) Start Playing can start the YouTube player deterministically (YT IFrame API)
+// 4) Medium + Hard forced unlocked for testing (toggle FORCE_UNLOCK_FOR_TESTING)
+// 5) Start Playing auto-enables the track embed (no “nothing happens” if track is hidden)
 
 export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
   let SONG_TICKER = null;
+
+  // ✅ Toggle for your current testing session
+  const FORCE_UNLOCK_FOR_TESTING = true;
 
   // --- YouTube IFrame API integration ---
   let YT_API_PROMISE = null;
@@ -31,7 +36,9 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
       const prev = window.onYouTubeIframeAPIReady;
       window.onYouTubeIframeAPIReady = () => {
         if (typeof prev === "function") {
-          try { prev(); } catch (_) {}
+          try {
+            prev();
+          } catch (_) {}
         }
         resolve(true);
       };
@@ -50,7 +57,9 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
 
   function destroyYoutubePlayer() {
     if (YT_PLAYER && typeof YT_PLAYER.destroy === "function") {
-      try { YT_PLAYER.destroy(); } catch (_) {}
+      try {
+        YT_PLAYER.destroy();
+      } catch (_) {}
     }
     YT_PLAYER = null;
     YT_PLAYER_KEY = null;
@@ -88,6 +97,21 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
           }
         }
       });
+
+      // ✅ If Start Playing requested autostart, kick playback now that player exists
+      const st = ctx.state;
+      ensureSongState(st);
+      if (st.songs.autoStartTrack === true) {
+        st.songs.autoStartTrack = false;
+        ctx.persist();
+
+        if (YT_PLAYER && typeof YT_PLAYER.playVideo === "function") {
+          try {
+            YT_PLAYER.playVideo();
+          } catch (_) {}
+        }
+        // Session will start via onStateChange(play) OR (if blocked) user hits play manually.
+      }
     });
   }
 
@@ -115,6 +139,9 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
     if (!("guidanceOpen" in state.songs)) state.songs.guidanceOpen = false;
     if (!("explainOpen" in state.songs)) state.songs.explainOpen = false;
     if (!("completedOverlay" in state.songs)) state.songs.completedOverlay = false;
+
+    // internal flag: Start Playing can request track+autoplay
+    if (!("autoStartTrack" in state.songs)) state.songs.autoStartTrack = false;
   }
 
   function getSongProgress(state, songId) {
@@ -137,10 +164,15 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
     return song.requirements.every(r => req[r.id] === true);
   }
 
-  // Unlock tuning: Medium after 1 Easy completion; Hard after 1 Medium completion
+  // Unlock tuning:
+  // - Normal: Medium after 1 Easy completion; Hard after 1 Medium completion
+  // - Testing: Force unlock Medium/Hard once song is unlocked
   function isVariantUnlocked(state, songId, variantId) {
-    const p = getSongProgress(state, songId);
     if (variantId === "easy") return isSong1Unlocked(state);
+
+    if (FORCE_UNLOCK_FOR_TESTING) return isSong1Unlocked(state);
+
+    const p = getSongProgress(state, songId);
     if (variantId === "medium") return p.easyCompletions >= 1;
     if (variantId === "hard") return p.mediumCompletions >= 1;
     return false;
@@ -211,8 +243,7 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
     const songId = state.songs.lastSong?.songId || "song1";
     const variantId = state.songs.lastSong?.variant || "easy";
 
-    if (sess.running === true && sess.songId === songId && sess.variantId === variantId) return;
-
+    // Ensure session is aligned to current song/variant
     if (sess.songId !== songId || sess.variantId !== variantId) {
       state.songs.session = {
         running: false,
@@ -233,7 +264,9 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
       s2.elapsedSec = computeElapsedSec(s2);
       state.songs.session = s2;
 
+      state.songs.completedOverlay = false;
       ctx.persist();
+
       updateSessionUI(s2);
       startSongTicker(ctx, renderHome);
     }
@@ -456,9 +489,12 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
     const variant = song.variants[variantId] || song.variants.easy;
 
     // ✅ Use variant chordBlocks if provided
-    const chordBlocks = Array.isArray(variant.chordBlocks) && variant.chordBlocks.length
-      ? variant.chordBlocks
-      : (Array.isArray(song.chordBlocks) ? song.chordBlocks : []);
+    const chordBlocks =
+      Array.isArray(variant.chordBlocks) && variant.chordBlocks.length
+        ? variant.chordBlocks
+        : Array.isArray(song.chordBlocks)
+          ? song.chordBlocks
+          : [];
 
     const track = C.backingTracks ? C.backingTracks[variant.backingTrackId] : null;
     const safe = track ? safeEmbed(track.youtubeEmbed) : null;
@@ -473,11 +509,7 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
     const showCounts = !!variant.showCountMarkers;
 
     // ✅ Display key/bpm can come from variant overrides (preferred)
-    const displayKey =
-      (variant.displayKey && String(variant.displayKey)) ||
-      (track && track.key) ||
-      "—";
-
+    const displayKey = (variant.displayKey && String(variant.displayKey)) || (track && track.key) || "—";
     const displayBpm =
       (typeof variant.displayBpm === "number" ? variant.displayBpm : null) ??
       (track && typeof track.recommendedBpm === "number" ? track.recommendedBpm : null);
@@ -654,11 +686,14 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
       renderSong(ctx, renderHome);
     };
 
-    // ✅ Start Playing now ALSO tries to start the YouTube player deterministically
+    // ✅ Start Playing:
+    // - ensures track is shown (so player exists)
+    // - requests autoplay
+    // - session begins when the player actually enters PLAYING state
     document.getElementById("song-start").onclick = () => {
       ensureSongState(state);
 
-      // Ensure session aligned to current song/variant
+      // Align session to current song/variant
       const sess0 = getActiveSession(state);
       if (sess0.songId !== songId || sess0.variantId !== variantId) {
         state.songs.session = {
@@ -672,28 +707,26 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
         };
       }
 
-      const s2 = getActiveSession(state);
       state.songs.completedOverlay = false;
 
-      // Try to start video first (if API player exists)
-      if (YT_PLAYER && typeof YT_PLAYER.playVideo === "function") {
-        try { YT_PLAYER.playVideo(); } catch (_) {}
-      }
-
-      if (s2.running !== true) {
-        s2.running = true;
-        s2.songId = songId;
-        s2.variantId = variantId;
-        if (typeof s2.accumulatedSec !== "number") s2.accumulatedSec = 0;
-        s2.startedAt = Date.now();
-        s2.elapsedSec = computeElapsedSec(s2);
-
-        state.songs.session = s2;
+      // If track is hidden, show it and request autostart; render will mount iframe + player
+      if (!state.songs.showTrack && iframeSrc) {
+        state.songs.showTrack = true;
+        state.songs.autoStartTrack = true;
         ctx.persist();
-
-        updateSessionUI(s2);
-        startSongTicker(ctx, renderHome);
+        renderSong(ctx, renderHome);
+        return;
       }
+
+      // If player exists, request play. Session starts via onStateChange(PLAYING).
+      if (YT_PLAYER && typeof YT_PLAYER.playVideo === "function") {
+        try {
+          YT_PLAYER.playVideo();
+        } catch (_) {}
+      }
+
+      // If autoplay is blocked, user can press play; we still want session to start on external play.
+      // No forced session start here (keeps behavior identical across variants).
     };
 
     document.getElementById("song-stop").onclick = () => {
@@ -710,7 +743,9 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
       stopSongTicker();
 
       if (YT_PLAYER && typeof YT_PLAYER.pauseVideo === "function") {
-        try { YT_PLAYER.pauseVideo(); } catch (_) {}
+        try {
+          YT_PLAYER.pauseVideo();
+        } catch (_) {}
       }
     };
 
