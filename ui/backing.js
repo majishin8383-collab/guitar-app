@@ -17,6 +17,53 @@ function getTrackMix(track) {
   return null;
 }
 
+// Convert common YouTube URL forms into an embed URL.
+// Accepts watch?v=, youtu.be, shorts, embed.
+function normalizeToEmbedUrl(url) {
+  if (!url || typeof url !== "string") return null;
+
+  // First try existing helper (may already return an embed)
+  try {
+    const maybe = safeYoutubeEmbed(url);
+    if (maybe && typeof maybe === "string" && maybe.includes("/embed/")) return maybe;
+  } catch (_) {}
+
+  // If already embed, accept
+  if (
+    url.startsWith("https://www.youtube.com/embed/") ||
+    url.startsWith("https://youtube.com/embed/") ||
+    url.startsWith("https://www.youtube-nocookie.com/embed/")
+  ) {
+    return url;
+  }
+
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\./, "");
+    let videoId = null;
+
+    if (host === "youtu.be") {
+      videoId = u.pathname.replace("/", "").trim();
+    } else if (host === "youtube.com" || host === "m.youtube.com" || host === "www.youtube.com") {
+      if (u.pathname === "/watch") {
+        videoId = u.searchParams.get("v");
+      } else if (u.pathname.startsWith("/embed/")) {
+        videoId = u.pathname.split("/embed/")[1] || null;
+      } else if (u.pathname.startsWith("/shorts/")) {
+        videoId = u.pathname.split("/shorts/")[1] || null;
+      }
+    }
+
+    if (!videoId) return null;
+    videoId = String(videoId).split(/[?&/]/)[0].trim();
+    if (!videoId) return null;
+
+    return `https://www.youtube.com/embed/${videoId}`;
+  } catch (_) {
+    return null;
+  }
+}
+
 export function filterTracksByRole(ctx, tracks) {
   if (!hasRole(ctx)) return tracks;
   const want = ctx.state.role === "lead" ? "lead" : "rhythm";
@@ -45,7 +92,7 @@ export function backingUI(ctx, tracks) {
   const selectedId = getSelectedTrackId(ctx, tracks);
   const selected = tracks.find(t => t.id === selectedId) || tracks[0];
 
-  const safe = safeYoutubeEmbed(selected.youtubeEmbed);
+  const safe = normalizeToEmbedUrl(selected.youtubeEmbed);
   const iframeSrc = safe ? withCb(safe, selected.id) : null;
 
   return `
@@ -95,7 +142,7 @@ export function backingUI(ctx, tracks) {
           `
           : `
             <div class="muted">
-              No <code>youtubeEmbed</code> set for this track yet.
+              No valid YouTube URL found for this track.
             </div>
           `
       }
