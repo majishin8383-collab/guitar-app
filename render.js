@@ -8,6 +8,7 @@ import { SONGS } from "./songs.js";
 
 import { getView, setView } from "./state/viewState.js";
 import { withCb, safeYoutubeEmbed } from "./ui/video.js";
+import { backingUI, wireBackingDropdown, filterTracksByRole } from "./ui/backing.js";
 
 /* ============================================================
    SECTION 0 — Small shared guards
@@ -21,118 +22,6 @@ function rolePill(ctx) {
   if (!hasRole(ctx)) return "";
   return `<span class="pill">Role: ${ctx.roleLabel()}</span>`;
 }
-
-/* ============================================================
-   SECTION 3 — Backing track UI helpers
-============================================================ */
-
-const Backing = {
-  getTrackMix(track) {
-    const mix = track?.mix || track?.generator?.mix;
-    if (mix === "rhythm" || mix === "lead") return mix;
-
-    const n = String(track?.name || "").toLowerCase();
-    if (n.includes("rhythm mix")) return "rhythm";
-    if (n.includes("lead mix")) return "lead";
-    return null;
-  },
-
-  filterTracksByRole(ctx, tracks) {
-    if (!hasRole(ctx)) return tracks;
-    const want = ctx.state.role === "lead" ? "lead" : "rhythm";
-    return tracks.filter(t => {
-      const tm = Backing.getTrackMix(t);
-      return tm ? tm === want : true;
-    });
-  },
-
-  getSelectedTrackId(ctx, tracks) {
-    const id = ctx.state.btSelectedId;
-    if (id && tracks.some(t => t.id === id)) return id;
-    return tracks.length ? tracks[0].id : null;
-  },
-
-  setSelectedTrackId(ctx, id) {
-    ctx.state.btSelectedId = id;
-    ctx.persist();
-  },
-
-  ui(ctx, tracks, rerender) {
-    if (!tracks.length) {
-      return `<div class="muted" style="margin-top:8px;">No backing tracks defined for this genre yet.</div>`;
-    }
-
-    const selectedId = Backing.getSelectedTrackId(ctx, tracks);
-    const selected = tracks.find(t => t.id === selectedId) || tracks[0];
-
-    const safe = safeYoutubeEmbed(selected.youtubeEmbed);
-    const iframeSrc = safe ? withCb(safe, selected.id) : null;
-
-    return `
-      <div class="card" style="background:#171717; margin-top:10px;">
-        <div class="muted" style="font-size:14px;">Choose track</div>
-
-        <select id="bt-select" style="width:100%; max-width:560px; margin-top:6px;">
-          ${tracks
-            .map(t => {
-              const sel = t.id === selected.id ? "selected" : "";
-              const label = `${t.name} — Key ${t.key} • ${t.feel}${t.recommendedBpm ? ` • ~${t.recommendedBpm} bpm` : ""}`;
-              return `<option value="${t.id}" ${sel}>${label}</option>`;
-            })
-            .join("")}
-        </select>
-
-        ${
-          hasRole(ctx)
-            ? `<div class="muted" style="font-size:14px; margin-top:6px;">Auto-filtered by Role: <b>${ctx.roleLabel()}</b></div>`
-            : ""
-        }
-
-        ${selected.note ? `<div class="muted" style="font-size:13px; margin-top:10px;">${selected.note}</div>` : ""}
-
-        <div class="hr" style="margin:12px 0;"></div>
-
-        ${
-          iframeSrc
-            ? `
-              <div style="font-weight:700;">Backing Track (in-app)</div>
-              <div class="muted" style="font-size:14px; margin-bottom:10px;">
-                ${selected.name} • Key ${selected.key}${selected.recommendedBpm ? ` • ~${selected.recommendedBpm} bpm` : ""}
-              </div>
-
-              <div class="videoWrap">
-                <iframe
-                  src="${iframeSrc}"
-                  title="${selected.name}"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  allowfullscreen
-                ></iframe>
-              </div>
-
-              <div class="muted" style="font-size:12px; margin-top:8px;">
-                Use the YouTube controls in the player to play/pause.
-              </div>
-            `
-            : `
-              <div class="muted">
-                No <code>youtubeEmbed</code> set for this track yet.
-              </div>
-            `
-        }
-      </div>
-    `;
-  },
-
-  wireDropdown(ctx, tracks, rerender) {
-    const select = document.getElementById("bt-select");
-    if (!select) return;
-
-    select.onchange = () => {
-      Backing.setSelectedTrackId(ctx, select.value);
-      rerender();
-    };
-  }
-};
 
 /* ============================================================
    SECTION 4 — Core Learning aggregation
@@ -954,7 +843,7 @@ export function renderGenre(ctx, genreId) {
 
   const skills = genre.starterSkillIds.map(id => C.skills[id]).filter(Boolean);
   const btsAll = genre.backingTrackIds.map(id => C.backingTracks[id]).filter(Boolean);
-  const bts = Backing.filterTracksByRole(ctx, btsAll);
+  const bts = filterTracksByRole(ctx, btsAll);
 
   app.innerHTML = `
     <div class="card">
@@ -1014,8 +903,8 @@ export function renderGenre(ctx, genreId) {
   });
 
   const btArea = document.getElementById("bt-area");
-  btArea.innerHTML = Backing.ui(ctx, bts, () => renderGenre(ctx, genreId));
-  Backing.wireDropdown(ctx, bts, () => renderGenre(ctx, genreId));
+  btArea.innerHTML = backingUI(ctx, bts);
+  wireBackingDropdown(ctx, bts, () => renderGenre(ctx, genreId));
 
   document.getElementById("back-home").onclick = () => ctx.nav.home();
   document.getElementById("go-practice").onclick = () => ctx.nav.practice();
@@ -1030,7 +919,7 @@ export function renderPractice(ctx) {
 
   const skills = genre.starterSkillIds.map(id => C.skills[id]).filter(Boolean);
   const btsAll = genre.backingTrackIds.map(id => C.backingTracks[id]).filter(Boolean);
-  const bts = Backing.filterTracksByRole(ctx, btsAll);
+  const bts = filterTracksByRole(ctx, btsAll);
 
   app.innerHTML = `
     <div class="card">
@@ -1073,8 +962,8 @@ export function renderPractice(ctx) {
   };
 
   const btArea = document.getElementById("bt-area");
-  btArea.innerHTML = Backing.ui(ctx, bts, () => renderPractice(ctx));
-  Backing.wireDropdown(ctx, bts, () => renderPractice(ctx));
+  btArea.innerHTML = backingUI(ctx, bts);
+  wireBackingDropdown(ctx, bts, () => renderPractice(ctx));
 
   const skillList = document.getElementById("skill-list");
   skillList.innerHTML = skills
@@ -1298,4 +1187,4 @@ export function renderSkill(ctx, skillId, opts = {}) {
   });
 
   document.getElementById("back").onclick = backTo;
-       }
+         }
