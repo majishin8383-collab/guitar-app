@@ -29,7 +29,20 @@ function rolePill(ctx) {
 }
 
 /* ============================================================
-   SECTION 1 — External UIs
+   SECTION 1 — Re-render hook (fixes Songs nav)
+   Songs UI may call View.set(...) without re-rendering.
+   We inject a View.set wrapper that always re-renders the current screen.
+============================================================ */
+
+let RERENDER_HOME = null;
+
+function setViewAndRerender(ctx, viewName) {
+  setView(ctx, viewName);
+  if (typeof RERENDER_HOME === "function") RERENDER_HOME();
+}
+
+/* ============================================================
+   SECTION 2 — External UIs
 ============================================================ */
 
 const CoreUI = createCoreUI({
@@ -44,7 +57,8 @@ const SettingsUI = createSettingsUI({
 
 const SongsUI = createSongsUI(SONGS, {
   withCb,
-  View: { set: setView }
+  // IMPORTANT: wrap View.set so clicking Easy/Medium/Hard actually navigates
+  View: { set: setViewAndRerender }
 });
 
 const SkillUI = createSkillUI({
@@ -54,10 +68,13 @@ const SkillUI = createSkillUI({
 });
 
 /* ============================================================
-   SECTION 2 — Screens (Home / Genre / Practice / Skill)
+   SECTION 3 — Screens (Home / Genre / Practice / Skill)
 ============================================================ */
 
 export function renderHome(ctx) {
+  // keep a stable "rerender this screen" hook for child modules
+  RERENDER_HOME = () => renderHome(ctx);
+
   ctx.ensureMirrorDefault();
 
   const { app, C, state } = ctx;
