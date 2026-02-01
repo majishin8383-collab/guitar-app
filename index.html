@@ -22,20 +22,43 @@
     <small>Practice smarter. Play music.</small>
   </footer>
 
-  <!-- BASE content -->
+  <!-- =====================================================
+       BASE CONTENT (creates window.CONTENT)
+  ====================================================== -->
   <script src="content/base.js?v=GT-001"></script>
 
-  <!-- GENRES -->
+  <!-- =====================================================
+       SONG REGISTRY (PARALLEL TO GENRES)
+       This is what was missing.
+  ====================================================== -->
+  <script>
+    // Ensure songs bucket exists
+    window.CONTENT.songs = window.CONTENT.songs || {};
+
+    // Song-specific helper (mirrors CONTENT_ADD pattern)
+    window.CONTENT_ADD_SONG = function addSong(song) {
+      if (!song || !song.id) return;
+      window.CONTENT.songs[song.id] = song;
+    };
+  </script>
+
+  <!-- =====================================================
+       GENRE PACKS
+  ====================================================== -->
   <script src="content/genres/blues.js?v=GT-001"></script>
   <script src="content/genres/funk.js?v=GT-001"></script>
   <script src="content/genres/rock.js?v=GT-001"></script>
   <script src="content/genres/metal.js?v=GT-001"></script>
 
-  <!-- SONGS (NEW – SAME PATTERN AS GENRES) -->
+  <!-- =====================================================
+       SONG PACKS (ONE FILE PER SONG)
+  ====================================================== -->
   <script src="content/songs/song1.js?v=GT-001"></script>
-  <!-- add song2.js, song3.js, etc -->
+  <!-- song2.js, song3.js, etc go here -->
 
-  <!-- APP ENTRY -->
+  <!-- =====================================================
+       APP ENTRY
+  ====================================================== -->
   <script type="module" src="app.js?v=GT-001"></script>
 </body>
 </html>
