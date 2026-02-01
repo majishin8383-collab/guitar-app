@@ -6,6 +6,9 @@
 import { shouldShowLevelUp } from "./progress.js";
 import { SONGS } from "./songs.js";
 
+import { getView, setView } from "./state/viewState.js";
+import { withCb, safeYoutubeEmbed } from "./ui/video.js";
+
 /* ============================================================
    SECTION 0 — Small shared guards
 ============================================================ */
@@ -18,41 +21,6 @@ function rolePill(ctx) {
   if (!hasRole(ctx)) return "";
   return `<span class="pill">Role: ${ctx.roleLabel()}</span>`;
 }
-
-/* ============================================================
-   SECTION 1 — Cache-bust + embed safety
-============================================================ */
-
-function withCb(url, token) {
-  if (!url || typeof url !== "string") return null;
-  const cb = encodeURIComponent(String(token || "cb"));
-  return `${url}${url.includes("?") ? "&" : "?"}cb=${cb}`;
-}
-
-function safeYoutubeEmbed(url) {
-  if (!url || typeof url !== "string") return null;
-  const ok =
-    url.startsWith("https://www.youtube.com/embed/") ||
-    url.startsWith("https://youtube.com/embed/") ||
-    url.startsWith("https://www.youtube-nocookie.com/embed/");
-  return ok ? url : null;
-}
-
-/* ============================================================
-   SECTION 2 — Local view routing (no app.js changes)
-   state.view: "home" | "settings" | "core" | "songs" | "song"
-============================================================ */
-
-const View = {
-  get(state) {
-    const v = state && typeof state.view === "string" ? state.view : "home";
-    return v || "home";
-  },
-  set(ctx, viewName) {
-    ctx.state.view = viewName;
-    ctx.persist();
-  }
-};
 
 /* ============================================================
    SECTION 3 — Backing track UI helpers
@@ -243,7 +211,7 @@ const Core = {
     });
 
     document.getElementById("back-home").onclick = () => {
-      View.set(ctx, "home");
+      setView(ctx, "home");
       renderHome(ctx);
     };
     document.getElementById("go-practice").onclick = () => ctx.nav.practice();
@@ -362,7 +330,7 @@ function renderSettings(ctx) {
   };
 
   document.getElementById("back-home").onclick = () => {
-    View.set(ctx, "home");
+    setView(ctx, "home");
     renderHome(ctx);
   };
 }
@@ -379,7 +347,8 @@ const Songs = (function () {
     if (!state.songs.progress || typeof state.songs.progress !== "object") state.songs.progress = {};
     if (!state.songs.requirements || typeof state.songs.requirements !== "object") state.songs.requirements = {};
     if (!state.songs.session || typeof state.songs.session !== "object") state.songs.session = {};
-    if (!state.songs.lastSong || typeof state.songs.lastSong !== "object") state.songs.lastSong = { songId: "song1", variant: "easy" };
+    if (!state.songs.lastSong || typeof state.songs.lastSong !== "object")
+      state.songs.lastSong = { songId: "song1", variant: "easy" };
   }
 
   function getSongProgress(state, songId) {
@@ -446,7 +415,7 @@ const Songs = (function () {
     ensureSongState(ctx.state);
     ctx.state.songs.lastSong = { songId, variant: variantId };
     ctx.persist();
-    View.set(ctx, "song");
+    setView(ctx, "song");
     renderHome(ctx);
   }
 
@@ -578,7 +547,7 @@ const Songs = (function () {
     }
 
     document.getElementById("back-home").onclick = () => {
-      View.set(ctx, "home");
+      setView(ctx, "home");
       renderHome(ctx);
     };
   }
@@ -594,7 +563,7 @@ const Songs = (function () {
 
     const song = SONGS[songId];
     if (!song) {
-      View.set(ctx, "songs");
+      setView(ctx, "songs");
       return renderHome(ctx);
     }
 
@@ -604,7 +573,7 @@ const Songs = (function () {
     }
 
     if (!isSong1Unlocked(state)) {
-      View.set(ctx, "songs");
+      setView(ctx, "songs");
       return renderHome(ctx);
     }
 
@@ -854,7 +823,7 @@ const Songs = (function () {
         ensureSongState(state);
         state.songs.completedOverlay = false;
         ctx.persist();
-        View.set(ctx, "core");
+        setView(ctx, "core");
         renderHome(ctx);
       };
     }
@@ -863,7 +832,7 @@ const Songs = (function () {
       stopSongTicker();
       if (state.songs.session) state.songs.session.running = false;
       ctx.persist();
-      View.set(ctx, "songs");
+      setView(ctx, "songs");
       renderHome(ctx);
     };
   }
@@ -884,7 +853,7 @@ export function renderHome(ctx) {
 
   const { app, C, state } = ctx;
 
-  const view = View.get(state);
+  const view = getView(state);
   if (view === "settings") return renderSettings(ctx);
   if (view === "core") return Core.render(ctx);
   if (view === "songs") return Songs.renderSongs(ctx);
@@ -958,17 +927,17 @@ export function renderHome(ctx) {
   }
 
   document.getElementById("open-settings").onclick = () => {
-    View.set(ctx, "settings");
+    setView(ctx, "settings");
     renderHome(ctx);
   };
 
   document.getElementById("open-core").onclick = () => {
-    View.set(ctx, "core");
+    setView(ctx, "core");
     renderHome(ctx);
   };
 
   document.getElementById("open-songs").onclick = () => {
-    View.set(ctx, "songs");
+    setView(ctx, "songs");
     renderHome(ctx);
   };
 
@@ -1022,7 +991,7 @@ export function renderGenre(ctx, genreId) {
   `;
 
   document.getElementById("go-core").onclick = () => {
-    View.set(ctx, "core");
+    setView(ctx, "core");
     renderHome(ctx);
   };
 
@@ -1099,7 +1068,7 @@ export function renderPractice(ctx) {
   `;
 
   document.getElementById("go-core").onclick = () => {
-    View.set(ctx, "core");
+    setView(ctx, "core");
     renderHome(ctx);
   };
 
@@ -1329,4 +1298,4 @@ export function renderSkill(ctx, skillId, opts = {}) {
   });
 
   document.getElementById("back").onclick = backTo;
-}
+       }
