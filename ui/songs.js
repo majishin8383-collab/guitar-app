@@ -2,7 +2,22 @@
 // Songs engine + screens (renderSongs + renderSong)
 // Keeps internal ticker + song state logic isolated.
 
-export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
+export function createSongsUI(SONGS, deps = {}) {
+  const withCb = deps.withCb || ((u) => u);
+  const View = deps.View || { set: () => {} };
+
+  // Safe fallback so we never hard-crash if render.js forgets to pass it.
+  const safeYoutubeEmbed =
+    deps.safeYoutubeEmbed ||
+    function (url) {
+      if (!url || typeof url !== "string") return null;
+      const ok =
+        url.startsWith("https://www.youtube.com/embed/") ||
+        url.startsWith("https://youtube.com/embed/") ||
+        url.startsWith("https://www.youtube-nocookie.com/embed/");
+      return ok ? url : null;
+    };
+
   let SONG_TICKER = null;
 
   function ensureSongState(state) {
@@ -10,7 +25,9 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
     if (!state.songs.progress || typeof state.songs.progress !== "object") state.songs.progress = {};
     if (!state.songs.requirements || typeof state.songs.requirements !== "object") state.songs.requirements = {};
     if (!state.songs.session || typeof state.songs.session !== "object") state.songs.session = {};
-    if (!state.songs.lastSong || typeof state.songs.lastSong !== "object") state.songs.lastSong = { songId: "song1", variant: "easy" };
+    if (!state.songs.lastSong || typeof state.songs.lastSong !== "object")
+      state.songs.lastSong = { songId: "song1", variant: "easy" };
+
     if (!("showTrack" in state.songs)) state.songs.showTrack = false;
     if (!("guidanceOpen" in state.songs)) state.songs.guidanceOpen = false;
     if (!("explainOpen" in state.songs)) state.songs.explainOpen = false;
@@ -40,7 +57,7 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
   function isSong1Unlocked(state) {
     const song = SONGS.song1;
     const req = getSongReqs(state, song.id);
-    return song.requirements.every(r => req[r.id] === true);
+    return song.requirements.every((r) => req[r.id] === true);
   }
 
   function isVariantUnlocked(state, songId, variantId) {
@@ -81,7 +98,11 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
     ensureSongState(ctx.state);
     ctx.state.songs.lastSong = { songId, variant: variantId };
     ctx.persist();
+
+    // IMPORTANT: View.set may be wrapped in render.js to auto-rerender.
     View.set(ctx, "song");
+
+    // Still call renderHome to support non-wrapped View.set.
     renderHome(ctx);
   }
 
@@ -170,7 +191,7 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
       const req = getSongReqs(state, song.id);
 
       const reqHtml = song.requirements
-        .map(r => {
+        .map((r) => {
           const done = req[r.id] === true;
           return `
             <div class="card" style="background:#111; border:1px solid #222; margin-top:10px;">
@@ -186,7 +207,7 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
         })
         .join("");
 
-      app.querySelector(".card .card").insertAdjacentHTML(
+      app.querySelector(".card .card")?.insertAdjacentHTML(
         "beforeend",
         `
           <div style="height:10px"></div>
@@ -201,7 +222,7 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
         `
       );
 
-      app.querySelectorAll("button[data-req]").forEach(btn => {
+      app.querySelectorAll("button[data-req]").forEach((btn) => {
         btn.onclick = () => {
           const id = btn.getAttribute("data-req");
           const r = getSongReqs(state, song.id);
@@ -256,7 +277,7 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
     const showCounts = !!variant.showCountMarkers;
 
     const chordRow = song.chordBlocks
-      .map(b => {
+      .map((b) => {
         return `
           <div style="flex:1; min-width:90px; background:#111; border:1px solid #222; border-radius:12px; padding:12px; text-align:center;">
             <div style="font-size:20px; font-weight:800;">${b.chord}</div>
@@ -509,4 +530,4 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
     renderSong,
     stopSongTicker
   };
-      }
+                    }
