@@ -13,6 +13,11 @@ import { createMetronome } from "./metronome.js";
 const app = document.getElementById("app");
 const C = window.CONTENT;
 
+// ✅ Defensive: ensure songs bucket exists even if older base.js is present
+if (C && typeof C === "object") {
+  C.songs = C.songs || {};
+}
+
 const DEFAULT_STATE = {
   genre: "blues",
   role: "rhythm",          // "rhythm" | "lead"
