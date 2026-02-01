@@ -7,7 +7,10 @@
 // 4) Medium + Hard forced unlocked for testing (toggle FORCE_UNLOCK_FOR_TESTING)
 // 5) Start Playing auto-enables the track embed (no “nothing happens” if track is hidden)
 // 6) Robust YouTube URL normalization so Easy/Medium behave exactly like Hard
-// 7) Next Step advances variant progression (easy → medium → hard). Hard → Songs list.
+// 7) Next Step is now FULL progression:
+//    - easy → medium → hard
+//    - hard → next core skills (if any) else next song (if configured) else songs list
+// 8) Stores a "resume target" so Core can send the user back to the next song later
 
 export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
   let SONG_TICKER = null;
@@ -112,7 +115,6 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
 
   /* ============================================================
      URL Safety + Normalization
-     Goal: Easy/Medium/Hard behave identically even if URLs differ
   ============================================================ */
 
   function safeEmbedFallback(url) {
@@ -182,6 +184,10 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
 
     // internal flag: Start Playing can request track+autoplay
     if (!("autoStartTrack" in state.songs)) state.songs.autoStartTrack = false;
+
+    // ✅ progression support: if Core needs to send user back into Songs
+    // Core UI can optionally look at this later.
+    if (!("resumeAfterCore" in state.songs)) state.songs.resumeAfterCore = null;
   }
 
   function getSongProgress(state, songId) {
@@ -359,7 +365,7 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
   }
 
   /* ============================================================
-     Progression helpers (song1 only for now)
+     Progression (data-driven for all songs)
   ============================================================ */
 
   function getNextVariantId(currentVariantId) {
@@ -371,6 +377,46 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
   function goToSongsList(ctx, renderHome) {
     View.set(ctx, "songs");
     renderHome(ctx);
+  }
+
+  // After hard, decide what comes next:
+  // - If song defines nextCoreIds (and has items) => go to core, store resume target
+  // - Else if song defines nextSongId => go to that song (easy)
+  // - Else => songs list
+  function handlePostHardProgression(ctx, renderHome, songIdJustCompleted) {
+    const state = ctx.state;
+    ensureSongState(state);
+
+    const song = SONGS[songIdJustCompleted];
+    if (!song) return goToSongsList(ctx, renderHome);
+
+    const nextSongId = song.nextSongId || null;
+    const nextCoreIds = Array.isArray(song.nextCoreIds) ? song.nextCoreIds.filter(Boolean) : [];
+    const nextCoreView = song.nextCoreView || "core";
+
+    if (nextCoreIds.length) {
+      // Store where Core should return the user afterwards
+      state.songs.resumeAfterCore = {
+        songId: nextSongId || null,
+        variant: "easy",
+        coreIds: nextCoreIds.slice(0)
+      };
+      ctx.persist();
+
+      View.set(ctx, nextCoreView);
+      renderHome(ctx);
+      return;
+    }
+
+    if (nextSongId && SONGS[nextSongId]) {
+      state.songs.lastSong = { songId: nextSongId, variant: "easy" };
+      ctx.persist();
+      View.set(ctx, "song");
+      renderHome(ctx);
+      return;
+    }
+
+    goToSongsList(ctx, renderHome);
   }
 
   /* ============================================================
@@ -828,28 +874,19 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
           try { YT_PLAYER.pauseVideo(); } catch (_) {}
         }
 
-        // ✅ Variant progression (song1 for now)
-        if (songId === "song1") {
-          const nextVariant = getNextVariantId(variantId);
-
-          // Easy -> Medium, Medium -> Hard (if unlocked), otherwise go to list
-          if (nextVariant && isVariantUnlocked(state, "song1", nextVariant)) {
-            state.songs.lastSong = { songId: "song1", variant: nextVariant };
-            ctx.persist();
-            View.set(ctx, "song");
-            renderHome(ctx);
-            return;
-          }
-
-          // Hard (or locked) -> Songs list
+        // ✅ 1) Progress within song: easy → medium → hard
+        const nextVariant = getNextVariantId(variantId);
+        if (nextVariant && isVariantUnlocked(state, songId, nextVariant)) {
+          state.songs.lastSong = { songId, variant: nextVariant };
           ctx.persist();
-          goToSongsList(ctx, renderHome);
+          View.set(ctx, "song");
+          renderHome(ctx);
           return;
         }
 
-        // Default fallback
-        ctx.persist();
-        goToSongsList(ctx, renderHome);
+        // ✅ 2) If hard completed (or no next variant), progress to core/next song
+        // We treat "no nextVariant" as "post-hard" step.
+        handlePostHardProgression(ctx, renderHome, songId);
       };
     }
 
@@ -868,4 +905,4 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
     renderSong,
     stopSongTicker
   };
-      }
+}
