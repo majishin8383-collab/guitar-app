@@ -7,7 +7,7 @@
 // 4) Medium + Hard forced unlocked for testing (toggle FORCE_UNLOCK_FOR_TESTING)
 // 5) Start Playing auto-enables the track embed (no “nothing happens” if track is hidden)
 // 6) Robust YouTube URL normalization so Easy/Medium behave exactly like Hard
-// 7) Next Step now advances variant progression (easy → medium → hard) instead of always going to Core
+// 7) Next Step advances variant progression (easy → medium → hard). Hard → Songs list.
 
 export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
   let SONG_TICKER = null;
@@ -38,9 +38,7 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
       const prev = window.onYouTubeIframeAPIReady;
       window.onYouTubeIframeAPIReady = () => {
         if (typeof prev === "function") {
-          try {
-            prev();
-          } catch (_) {}
+          try { prev(); } catch (_) {}
         }
         resolve(true);
       };
@@ -59,9 +57,7 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
 
   function destroyYoutubePlayer() {
     if (YT_PLAYER && typeof YT_PLAYER.destroy === "function") {
-      try {
-        YT_PLAYER.destroy();
-      } catch (_) {}
+      try { YT_PLAYER.destroy(); } catch (_) {}
     }
     YT_PLAYER = null;
     YT_PLAYER_KEY = null;
@@ -108,11 +104,8 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
         ctx.persist();
 
         if (YT_PLAYER && typeof YT_PLAYER.playVideo === "function") {
-          try {
-            YT_PLAYER.playVideo();
-          } catch (_) {}
+          try { YT_PLAYER.playVideo(); } catch (_) {}
         }
-        // Session will start via onStateChange(play) OR (if blocked) user hits play manually.
       }
     });
   }
@@ -133,25 +126,15 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
 
   const safeEmbed = typeof safeYoutubeEmbed === "function" ? safeYoutubeEmbed : safeEmbedFallback;
 
-  // Convert common YouTube URL forms into a safe embed URL.
-  // Accepts:
-  // - https://www.youtube.com/watch?v=VIDEO
-  // - https://youtu.be/VIDEO
-  // - https://www.youtube.com/embed/VIDEO
-  // - https://www.youtube-nocookie.com/embed/VIDEO
   function normalizeToEmbedUrl(url) {
     if (!url || typeof url !== "string") return null;
 
-    // If caller already provides a safe embed, accept it.
     const alreadySafe = safeEmbedFallback(url);
     if (alreadySafe) return alreadySafe;
 
-    // If safeYoutubeEmbed exists (in the future), it might convert watch URLs.
-    // Try it, but verify it returns an embed.
     const maybe = safeEmbed(url);
     if (maybe && safeEmbedFallback(maybe)) return maybe;
 
-    // Manual parsing (no exceptions if URL is weird)
     try {
       const u = new URL(url);
       const host = u.hostname.replace(/^www\./, "");
@@ -171,11 +154,9 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
 
       if (!videoId) return null;
 
-      // strip any extra path/query junk
       videoId = String(videoId).split(/[?&/]/)[0].trim();
       if (!videoId) return null;
 
-      // Use standard youtube embed
       return `https://www.youtube.com/embed/${videoId}`;
     } catch (_) {
       return null;
@@ -223,9 +204,6 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
     return song.requirements.every(r => req[r.id] === true);
   }
 
-  // Unlock tuning:
-  // - Normal: Medium after 1 Easy completion; Hard after 1 Medium completion
-  // - Testing: Force unlock Medium/Hard once song is unlocked
   function isVariantUnlocked(state, songId, variantId) {
     if (variantId === "easy") return isSong1Unlocked(state);
 
@@ -305,7 +283,6 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
     const songId = state.songs.lastSong?.songId || "song1";
     const variantId = state.songs.lastSong?.variant || "easy";
 
-    // Ensure session is aligned to current song/variant
     if (sess.songId !== songId || sess.variantId !== variantId) {
       state.songs.session = {
         running: false,
@@ -382,7 +359,7 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
   }
 
   /* ============================================================
-     Progression: Next Step routing (song1 only for now)
+     Progression helpers (song1 only for now)
   ============================================================ */
 
   function getNextVariantId(currentVariantId) {
@@ -568,7 +545,6 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
 
     const variant = song.variants[variantId] || song.variants.easy;
 
-    // ✅ Use variant chordBlocks if provided
     const chordBlocks =
       Array.isArray(variant.chordBlocks) && variant.chordBlocks.length
         ? variant.chordBlocks
@@ -578,7 +554,6 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
 
     const track = C.backingTracks ? C.backingTracks[variant.backingTrackId] : null;
 
-    // ✅ Robust URL normalization: watch/youtu.be/embed all become safe embed
     const rawUrl = track ? track.youtubeEmbed : null;
     const safeBaseEmbed = normalizeToEmbedUrl(rawUrl);
     const apiUrl = safeBaseEmbed ? addJsApiParams(safeBaseEmbed) : null;
@@ -590,7 +565,6 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
 
     const showCounts = !!variant.showCountMarkers;
 
-    // ✅ Display key/bpm can come from variant overrides (preferred)
     const displayKey = (variant.displayKey && String(variant.displayKey)) || (track && track.key) || "—";
     const displayBpm =
       (typeof variant.displayBpm === "number" ? variant.displayBpm : null) ??
@@ -772,14 +746,9 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
       renderSong(ctx, renderHome);
     };
 
-    // ✅ Start Playing:
-    // - ensures track is shown (so player exists)
-    // - requests autoplay
-    // - session begins when the player actually enters PLAYING state
     document.getElementById("song-start").onclick = () => {
       ensureSongState(state);
 
-      // Align session to current song/variant
       const sess0 = getActiveSession(state);
       if (sess0.songId !== songId || sess0.variantId !== variantId) {
         state.songs.session = {
@@ -795,7 +764,6 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
 
       state.songs.completedOverlay = false;
 
-      // If track is hidden, show it and request autostart; render will mount iframe + player
       if (!state.songs.showTrack && iframeSrc) {
         state.songs.showTrack = true;
         state.songs.autoStartTrack = true;
@@ -804,11 +772,8 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
         return;
       }
 
-      // If player exists, request play. Session starts via onStateChange(PLAYING).
       if (YT_PLAYER && typeof YT_PLAYER.playVideo === "function") {
-        try {
-          YT_PLAYER.playVideo();
-        } catch (_) {}
+        try { YT_PLAYER.playVideo(); } catch (_) {}
       }
     };
 
@@ -826,9 +791,7 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
       stopSongTicker();
 
       if (YT_PLAYER && typeof YT_PLAYER.pauseVideo === "function") {
-        try {
-          YT_PLAYER.pauseVideo();
-        } catch (_) {}
+        try { YT_PLAYER.pauseVideo(); } catch (_) {}
       }
     };
 
@@ -858,18 +821,27 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
         ensureSongState(state);
         state.songs.completedOverlay = false;
 
+        // Always end playback cleanly before navigating
+        pauseSession(ctx);
+        stopSongTicker();
+        if (YT_PLAYER && typeof YT_PLAYER.pauseVideo === "function") {
+          try { YT_PLAYER.pauseVideo(); } catch (_) {}
+        }
+
         // ✅ Variant progression (song1 for now)
         if (songId === "song1") {
           const nextVariant = getNextVariantId(variantId);
-          if (nextVariant) {
+
+          // Easy -> Medium, Medium -> Hard (if unlocked), otherwise go to list
+          if (nextVariant && isVariantUnlocked(state, "song1", nextVariant)) {
             state.songs.lastSong = { songId: "song1", variant: nextVariant };
             ctx.persist();
-            // Send user back to Songs so they can see the newly available difficulty
-            goToSongsList(ctx, renderHome);
+            View.set(ctx, "song");
+            renderHome(ctx);
             return;
           }
 
-          // Hard completed → back to Songs (future: jump to Song 2 once it exists)
+          // Hard (or locked) -> Songs list
           ctx.persist();
           goToSongsList(ctx, renderHome);
           return;
