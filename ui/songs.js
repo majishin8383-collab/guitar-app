@@ -6,6 +6,8 @@
 // 3) Start Playing can start the YouTube player deterministically (YT IFrame API)
 // 4) Medium + Hard forced unlocked for testing (toggle FORCE_UNLOCK_FOR_TESTING)
 // 5) Start Playing auto-enables the track embed (no “nothing happens” if track is hidden)
+// 6) Robust YouTube URL normalization so Easy/Medium behave exactly like Hard
+// 7) Next Step now advances variant progression (easy → medium → hard) instead of always going to Core
 
 export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
   let SONG_TICKER = null;
@@ -115,7 +117,11 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
     });
   }
 
-  // --- URL safety ---
+  /* ============================================================
+     URL Safety + Normalization
+     Goal: Easy/Medium/Hard behave identically even if URLs differ
+  ============================================================ */
+
   function safeEmbedFallback(url) {
     if (!url || typeof url !== "string") return null;
     const ok =
@@ -124,9 +130,62 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
       url.startsWith("https://www.youtube-nocookie.com/embed/");
     return ok ? url : null;
   }
+
   const safeEmbed = typeof safeYoutubeEmbed === "function" ? safeYoutubeEmbed : safeEmbedFallback;
 
-  // --- state ---
+  // Convert common YouTube URL forms into a safe embed URL.
+  // Accepts:
+  // - https://www.youtube.com/watch?v=VIDEO
+  // - https://youtu.be/VIDEO
+  // - https://www.youtube.com/embed/VIDEO
+  // - https://www.youtube-nocookie.com/embed/VIDEO
+  function normalizeToEmbedUrl(url) {
+    if (!url || typeof url !== "string") return null;
+
+    // If caller already provides a safe embed, accept it.
+    const alreadySafe = safeEmbedFallback(url);
+    if (alreadySafe) return alreadySafe;
+
+    // If safeYoutubeEmbed exists (in the future), it might convert watch URLs.
+    // Try it, but verify it returns an embed.
+    const maybe = safeEmbed(url);
+    if (maybe && safeEmbedFallback(maybe)) return maybe;
+
+    // Manual parsing (no exceptions if URL is weird)
+    try {
+      const u = new URL(url);
+      const host = u.hostname.replace(/^www\./, "");
+      let videoId = null;
+
+      if (host === "youtu.be") {
+        videoId = u.pathname.replace("/", "").trim();
+      } else if (host === "youtube.com" || host === "m.youtube.com" || host === "www.youtube.com") {
+        if (u.pathname === "/watch") {
+          videoId = u.searchParams.get("v");
+        } else if (u.pathname.startsWith("/embed/")) {
+          videoId = u.pathname.split("/embed/")[1] || null;
+        } else if (u.pathname.startsWith("/shorts/")) {
+          videoId = u.pathname.split("/shorts/")[1] || null;
+        }
+      }
+
+      if (!videoId) return null;
+
+      // strip any extra path/query junk
+      videoId = String(videoId).split(/[?&/]/)[0].trim();
+      if (!videoId) return null;
+
+      // Use standard youtube embed
+      return `https://www.youtube.com/embed/${videoId}`;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /* ============================================================
+     State
+  ============================================================ */
+
   function ensureSongState(state) {
     if (!state.songs || typeof state.songs !== "object") state.songs = {};
     if (!state.songs.progress || typeof state.songs.progress !== "object") state.songs.progress = {};
@@ -178,7 +237,10 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
     return false;
   }
 
-  // --- session ---
+  /* ============================================================
+     Session
+  ============================================================ */
+
   function getActiveSession(state) {
     ensureSongState(state);
     if (!state.songs.session || typeof state.songs.session !== "object") state.songs.session = {};
@@ -319,7 +381,25 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
     }, 250);
   }
 
-  // --- nav ---
+  /* ============================================================
+     Progression: Next Step routing (song1 only for now)
+  ============================================================ */
+
+  function getNextVariantId(currentVariantId) {
+    if (currentVariantId === "easy") return "medium";
+    if (currentVariantId === "medium") return "hard";
+    return null;
+  }
+
+  function goToSongsList(ctx, renderHome) {
+    View.set(ctx, "songs");
+    renderHome(ctx);
+  }
+
+  /* ============================================================
+     Nav
+  ============================================================ */
+
   function openSong(ctx, songId, variantId, renderHome) {
     ensureSongState(ctx.state);
     ctx.state.songs.lastSong = { songId, variant: variantId };
@@ -497,9 +577,11 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
           : [];
 
     const track = C.backingTracks ? C.backingTracks[variant.backingTrackId] : null;
-    const safe = track ? safeEmbed(track.youtubeEmbed) : null;
 
-    const apiUrl = safe ? addJsApiParams(safe) : null;
+    // ✅ Robust URL normalization: watch/youtu.be/embed all become safe embed
+    const rawUrl = track ? track.youtubeEmbed : null;
+    const safeBaseEmbed = normalizeToEmbedUrl(rawUrl);
+    const apiUrl = safeBaseEmbed ? addJsApiParams(safeBaseEmbed) : null;
     const iframeSrc = apiUrl ? withCb(apiUrl, `song_${songId}_${variantId}`) : null;
 
     const sess = getActiveSession(state);
@@ -595,7 +677,11 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
                 Tip: press Play in the player to start the timer automatically.
               </div>
             `
-            : ""
+            : `
+              <div class="muted" style="margin-top:10px;">
+                No backing track embed configured for this variant yet.
+              </div>
+            `
         }
 
         <div style="height:14px"></div>
@@ -724,9 +810,6 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
           YT_PLAYER.playVideo();
         } catch (_) {}
       }
-
-      // If autoplay is blocked, user can press play; we still want session to start on external play.
-      // No forced session start here (keeps behavior identical across variants).
     };
 
     document.getElementById("song-stop").onclick = () => {
@@ -774,9 +857,27 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
       nextStepBtn.onclick = () => {
         ensureSongState(state);
         state.songs.completedOverlay = false;
+
+        // ✅ Variant progression (song1 for now)
+        if (songId === "song1") {
+          const nextVariant = getNextVariantId(variantId);
+          if (nextVariant) {
+            state.songs.lastSong = { songId: "song1", variant: nextVariant };
+            ctx.persist();
+            // Send user back to Songs so they can see the newly available difficulty
+            goToSongsList(ctx, renderHome);
+            return;
+          }
+
+          // Hard completed → back to Songs (future: jump to Song 2 once it exists)
+          ctx.persist();
+          goToSongsList(ctx, renderHome);
+          return;
+        }
+
+        // Default fallback
         ctx.persist();
-        View.set(ctx, "core");
-        renderHome(ctx);
+        goToSongsList(ctx, renderHome);
       };
     }
 
@@ -795,4 +896,4 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
     renderSong,
     stopSongTicker
   };
-}
+      }
