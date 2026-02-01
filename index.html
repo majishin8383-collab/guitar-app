@@ -5,11 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Guitar Trainer</title>
 
-  <!--
-    BUILD STAMP
-    Change this ONE value per deploy.
-    Mobile-safe cache busting (Android/iOS tested pattern)
-  -->
   <script>
     window.__BUILD__ = "GT-001";
   </script>
@@ -27,17 +22,20 @@
     <small>Practice smarter. Play music.</small>
   </footer>
 
-  <!-- BASE content (creates window.CONTENT) -->
+  <!-- BASE content -->
   <script src="content/base.js?v=GT-001"></script>
 
-  <!-- GENRE PACKS (merge into window.CONTENT) -->
+  <!-- GENRES -->
   <script src="content/genres/blues.js?v=GT-001"></script>
   <script src="content/genres/funk.js?v=GT-001"></script>
   <script src="content/genres/rock.js?v=GT-001"></script>
   <script src="content/genres/metal.js?v=GT-001"></script>
-  <!-- add country later when ready -->
 
-  <!-- App entry -->
+  <!-- SONGS (NEW – SAME PATTERN AS GENRES) -->
+  <script src="content/songs/song1.js?v=GT-001"></script>
+  <!-- add song2.js, song3.js, etc -->
+
+  <!-- APP ENTRY -->
   <script type="module" src="app.js?v=GT-001"></script>
 </body>
 </html>
