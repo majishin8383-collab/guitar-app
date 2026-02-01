@@ -1,33 +1,29 @@
 // ui/songs.js
 // Songs engine + screens (renderSongs + renderSong)
 // Keeps internal ticker + song state logic isolated.
+// FIX: Stop flashing/reloading the YouTube iframe by NOT re-rendering renderSong() every second.
+//      The ticker now updates a small DOM label + runs completion logic, and only re-renders on state transitions.
 
-export function createSongsUI(SONGS, deps = {}) {
-  const withCb = deps.withCb || ((u) => u);
-  const View = deps.View || { set: () => {} };
-
-  // Safe fallback so we never hard-crash if render.js forgets to pass it.
-  const safeYoutubeEmbed =
-    deps.safeYoutubeEmbed ||
-    function (url) {
-      if (!url || typeof url !== "string") return null;
-      const ok =
-        url.startsWith("https://www.youtube.com/embed/") ||
-        url.startsWith("https://youtube.com/embed/") ||
-        url.startsWith("https://www.youtube-nocookie.com/embed/");
-      return ok ? url : null;
-    };
-
+export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
   let SONG_TICKER = null;
+
+  // Fallback safety if render.js didn't pass safeYoutubeEmbed
+  function safeEmbedFallback(url) {
+    if (!url || typeof url !== "string") return null;
+    const ok =
+      url.startsWith("https://www.youtube.com/embed/") ||
+      url.startsWith("https://youtube.com/embed/") ||
+      url.startsWith("https://www.youtube-nocookie.com/embed/");
+    return ok ? url : null;
+  }
+  const safeEmbed = typeof safeYoutubeEmbed === "function" ? safeYoutubeEmbed : safeEmbedFallback;
 
   function ensureSongState(state) {
     if (!state.songs || typeof state.songs !== "object") state.songs = {};
     if (!state.songs.progress || typeof state.songs.progress !== "object") state.songs.progress = {};
     if (!state.songs.requirements || typeof state.songs.requirements !== "object") state.songs.requirements = {};
     if (!state.songs.session || typeof state.songs.session !== "object") state.songs.session = {};
-    if (!state.songs.lastSong || typeof state.songs.lastSong !== "object")
-      state.songs.lastSong = { songId: "song1", variant: "easy" };
-
+    if (!state.songs.lastSong || typeof state.songs.lastSong !== "object") state.songs.lastSong = { songId: "song1", variant: "easy" };
     if (!("showTrack" in state.songs)) state.songs.showTrack = false;
     if (!("guidanceOpen" in state.songs)) state.songs.guidanceOpen = false;
     if (!("explainOpen" in state.songs)) state.songs.explainOpen = false;
@@ -57,7 +53,7 @@ export function createSongsUI(SONGS, deps = {}) {
   function isSong1Unlocked(state) {
     const song = SONGS.song1;
     const req = getSongReqs(state, song.id);
-    return song.requirements.every((r) => req[r.id] === true);
+    return song.requirements.every(r => req[r.id] === true);
   }
 
   function isVariantUnlocked(state, songId, variantId) {
@@ -75,22 +71,69 @@ export function createSongsUI(SONGS, deps = {}) {
     }
   }
 
+  // tiny UI updates without re-rendering the entire screen
+  function updateSessionUI(sess) {
+    const el = document.getElementById("song-elapsed");
+    if (el) el.textContent = `${sess.elapsedSec || 0}s`;
+
+    const status = document.getElementById("song-session-status");
+    if (status) status.textContent = sess.running === true ? "Session running." : "";
+  }
+
   function startSongTicker(ctx, renderHome) {
     stopSongTicker();
-    SONG_TICKER = setInterval(() => {
-      const s = ctx.state;
-      ensureSongState(s);
-      const sess = s.songs.session;
 
-      if (!sess || sess.running !== true) return;
+    SONG_TICKER = setInterval(() => {
+      const state = ctx.state;
+      ensureSongState(state);
+
+      const sess = state.songs.session || {};
+      if (sess.running !== true) return;
 
       const now = Date.now();
       const startedAt = sess.startedAt || now;
       const elapsedSec = Math.max(0, Math.floor((now - startedAt) / 1000));
       sess.elapsedSec = elapsedSec;
+
+      // Persist session progress, but DO NOT rebuild the whole screen
+      state.songs.session = sess;
       ctx.persist();
 
-      renderSong(ctx, renderHome);
+      // Update small DOM fields only
+      updateSessionUI(sess);
+
+      // Completion check (runs in ticker, triggers ONE re-render when completed)
+      const songId = sess.songId || state.songs.lastSong?.songId || "song1";
+      const variantId = sess.variantId || state.songs.lastSong?.variant || "easy";
+
+      const song = SONGS[songId];
+      if (!song) return;
+
+      const variant = song.variants?.[variantId] || song.variants?.easy;
+      if (!variant) return;
+
+      const target = variant.targetSeconds || 90;
+      const stopLimit = typeof variant.stopLimit === "number" ? variant.stopLimit : 1;
+
+      const passesTime = elapsedSec >= target;
+      const passesStops = (sess.stopCount || 0) <= stopLimit;
+
+      if (passesTime && passesStops) {
+        stopSongTicker();
+        sess.running = false;
+        state.songs.session = sess;
+
+        const prog = getSongProgress(state, songId);
+        if (variantId === "easy") prog.easyCompletions += 1;
+        if (variantId === "medium") prog.mediumCompletions += 1;
+        if (variantId === "hard") prog.hardCompletions += 1;
+
+        state.songs.completedOverlay = true;
+        ctx.persist();
+
+        // ONE re-render to show overlay (no more flashing)
+        renderSong(ctx, renderHome);
+      }
     }, 1000);
   }
 
@@ -98,11 +141,7 @@ export function createSongsUI(SONGS, deps = {}) {
     ensureSongState(ctx.state);
     ctx.state.songs.lastSong = { songId, variant: variantId };
     ctx.persist();
-
-    // IMPORTANT: View.set may be wrapped in render.js to auto-rerender.
     View.set(ctx, "song");
-
-    // Still call renderHome to support non-wrapped View.set.
     renderHome(ctx);
   }
 
@@ -191,7 +230,7 @@ export function createSongsUI(SONGS, deps = {}) {
       const req = getSongReqs(state, song.id);
 
       const reqHtml = song.requirements
-        .map((r) => {
+        .map(r => {
           const done = req[r.id] === true;
           return `
             <div class="card" style="background:#111; border:1px solid #222; margin-top:10px;">
@@ -207,7 +246,7 @@ export function createSongsUI(SONGS, deps = {}) {
         })
         .join("");
 
-      app.querySelector(".card .card")?.insertAdjacentHTML(
+      app.querySelector(".card .card").insertAdjacentHTML(
         "beforeend",
         `
           <div style="height:10px"></div>
@@ -222,7 +261,7 @@ export function createSongsUI(SONGS, deps = {}) {
         `
       );
 
-      app.querySelectorAll("button[data-req]").forEach((btn) => {
+      app.querySelectorAll("button[data-req]").forEach(btn => {
         btn.onclick = () => {
           const id = btn.getAttribute("data-req");
           const r = getSongReqs(state, song.id);
@@ -267,7 +306,7 @@ export function createSongsUI(SONGS, deps = {}) {
     const variant = song.variants[variantId] || song.variants.easy;
 
     const track = C.backingTracks ? C.backingTracks[variant.backingTrackId] : null;
-    const safe = track ? safeYoutubeEmbed(track.youtubeEmbed) : null;
+    const safe = track ? safeEmbed(track.youtubeEmbed) : null;
     const iframeSrc = safe ? withCb(safe, `song_${songId}_${variantId}`) : null;
 
     const sess = state.songs.session || {};
@@ -277,7 +316,7 @@ export function createSongsUI(SONGS, deps = {}) {
     const showCounts = !!variant.showCountMarkers;
 
     const chordRow = song.chordBlocks
-      .map((b) => {
+      .map(b => {
         return `
           <div style="flex:1; min-width:90px; background:#111; border:1px solid #222; border-radius:12px; padding:12px; text-align:center;">
             <div style="font-size:20px; font-weight:800;">${b.chord}</div>
@@ -382,9 +421,12 @@ export function createSongsUI(SONGS, deps = {}) {
         <div class="row">
           <button id="song-start" ${isRunning ? "disabled" : ""}>Start Playing</button>
           <button id="song-stop" class="secondary" ${isRunning ? "" : "disabled"}>Stop</button>
+          <span class="pill">Elapsed: <span id="song-elapsed">${elapsedSec}s</span></span>
         </div>
 
-        ${isRunning ? `<div class="muted" style="margin-top:10px; font-size:13px;">Session running.</div>` : ""}
+        <div id="song-session-status" class="muted" style="margin-top:10px; font-size:13px;">
+          ${isRunning ? "Session running." : ""}
+        </div>
 
         <div style="height:14px"></div>
 
@@ -451,7 +493,11 @@ export function createSongsUI(SONGS, deps = {}) {
       };
 
       ctx.persist();
+
+      // Start ticker (updates elapsed label without re-rendering)
       startSongTicker(ctx, renderHome);
+
+      // One render to update buttons/states (no repeated flashing)
       renderSong(ctx, renderHome);
     };
 
@@ -465,33 +511,10 @@ export function createSongsUI(SONGS, deps = {}) {
         ctx.persist();
       }
       stopSongTicker();
+
+      // One render to update buttons/states (stopping the iframe is fine here)
       renderSong(ctx, renderHome);
     };
-
-    // Completion check
-    if (isRunning) {
-      const target = variant.targetSeconds || 90;
-      const stopLimit = typeof variant.stopLimit === "number" ? variant.stopLimit : 1;
-
-      const passesTime = elapsedSec >= target;
-      const passesStops = (sess.stopCount || 0) <= stopLimit;
-
-      if (passesTime && passesStops) {
-        stopSongTicker();
-        sess.running = false;
-        state.songs.session = sess;
-
-        const prog = getSongProgress(state, songId);
-        if (variantId === "easy") prog.easyCompletions += 1;
-        if (variantId === "medium") prog.mediumCompletions += 1;
-        if (variantId === "hard") prog.hardCompletions += 1;
-
-        state.songs.completedOverlay = true;
-        ctx.persist();
-        renderSong(ctx, renderHome);
-        return;
-      }
-    }
 
     const playAgainBtn = document.getElementById("song-play-again");
     if (playAgainBtn) {
@@ -530,4 +553,4 @@ export function createSongsUI(SONGS, deps = {}) {
     renderSong,
     stopSongTicker
   };
-                    }
+      }
