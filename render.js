@@ -6,6 +6,10 @@
 import { shouldShowLevelUp } from "./progress.js";
 import { SONGS } from "./songs.js";
 
+/* ============================================================
+   SECTION 0 — Small shared guards
+============================================================ */
+
 function hasRole(ctx) {
   return typeof ctx.roleLabel === "function" && ctx.state && typeof ctx.state.role === "string";
 }
@@ -15,58 +19,14 @@ function rolePill(ctx) {
   return `<span class="pill">Role: ${ctx.roleLabel()}</span>`;
 }
 
-// ---------------- Cache-bust helpers (mobile-safe) ----------------
+/* ============================================================
+   SECTION 1 — Cache-bust + embed safety
+============================================================ */
 
 function withCb(url, token) {
   if (!url || typeof url !== "string") return null;
   const cb = encodeURIComponent(String(token || "cb"));
   return `${url}${url.includes("?") ? "&" : "?"}cb=${cb}`;
-}
-
-// ---------------- Local view routing (no app.js changes) ----------------
-// We keep this entirely inside render.js by storing ctx.state.view.
-// Allowed: "home" (default), "settings", "core", "songs", "song"
-
-function getView(state) {
-  const v = state && typeof state.view === "string" ? state.view : "home";
-  return v || "home";
-}
-
-function setView(ctx, viewName) {
-  ctx.state.view = viewName;
-  ctx.persist();
-}
-
-// -------- Backing helpers (dropdown + role filtering) --------
-
-function getTrackMix(track) {
-  const mix = track?.mix || track?.generator?.mix;
-  if (mix === "rhythm" || mix === "lead") return mix;
-
-  const n = String(track?.name || "").toLowerCase();
-  if (n.includes("rhythm mix")) return "rhythm";
-  if (n.includes("lead mix")) return "lead";
-  return null;
-}
-
-function filterTracksByRole(ctx, tracks) {
-  if (!hasRole(ctx)) return tracks;
-  const want = ctx.state.role === "lead" ? "lead" : "rhythm";
-  return tracks.filter(t => {
-    const tm = getTrackMix(t);
-    return tm ? tm === want : true;
-  });
-}
-
-function getSelectedTrackId(ctx, tracks) {
-  const id = ctx.state.btSelectedId;
-  if (id && tracks.some(t => t.id === id)) return id;
-  return tracks.length ? tracks[0].id : null;
-}
-
-function setSelectedTrackId(ctx, id) {
-  ctx.state.btSelectedId = id;
-  ctx.persist();
 }
 
 function safeYoutubeEmbed(url) {
@@ -78,182 +38,221 @@ function safeYoutubeEmbed(url) {
   return ok ? url : null;
 }
 
-function backingUI(ctx, tracks, rerender) {
-  if (!tracks.length) {
-    return `<div class="muted" style="margin-top:8px;">No backing tracks defined for this genre yet.</div>`;
+/* ============================================================
+   SECTION 2 — Local view routing (no app.js changes)
+   state.view: "home" | "settings" | "core" | "songs" | "song"
+============================================================ */
+
+const View = {
+  get(state) {
+    const v = state && typeof state.view === "string" ? state.view : "home";
+    return v || "home";
+  },
+  set(ctx, viewName) {
+    ctx.state.view = viewName;
+    ctx.persist();
   }
+};
 
-  const selectedId = getSelectedTrackId(ctx, tracks);
-  const selected = tracks.find(t => t.id === selectedId) || tracks[0];
+/* ============================================================
+   SECTION 3 — Backing track UI helpers
+============================================================ */
 
-  const safe = safeYoutubeEmbed(selected.youtubeEmbed);
-  const iframeSrc = safe ? withCb(safe, selected.id) : null;
+const Backing = {
+  getTrackMix(track) {
+    const mix = track?.mix || track?.generator?.mix;
+    if (mix === "rhythm" || mix === "lead") return mix;
 
-  return `
-    <div class="card" style="background:#171717; margin-top:10px;">
-      <div class="muted" style="font-size:14px;">Choose track</div>
+    const n = String(track?.name || "").toLowerCase();
+    if (n.includes("rhythm mix")) return "rhythm";
+    if (n.includes("lead mix")) return "lead";
+    return null;
+  },
 
-      <select id="bt-select" style="width:100%; max-width:560px; margin-top:6px;">
-        ${tracks
-          .map(t => {
-            const sel = t.id === selected.id ? "selected" : "";
-            const label = `${t.name} — Key ${t.key} • ${t.feel}${t.recommendedBpm ? ` • ~${t.recommendedBpm} bpm` : ""}`;
-            return `<option value="${t.id}" ${sel}>${label}</option>`;
-          })
-          .join("")}
-      </select>
-
-      ${
-        hasRole(ctx)
-          ? `<div class="muted" style="font-size:14px; margin-top:6px;">Auto-filtered by Role: <b>${ctx.roleLabel()}</b></div>`
-          : ""
-      }
-
-      ${selected.note ? `<div class="muted" style="font-size:13px; margin-top:10px;">${selected.note}</div>` : ""}
-
-      <div class="hr" style="margin:12px 0;"></div>
-
-      ${
-        iframeSrc
-          ? `
-            <div style="font-weight:700;">Backing Track (in-app)</div>
-            <div class="muted" style="font-size:14px; margin-bottom:10px;">
-              ${selected.name} • Key ${selected.key}${selected.recommendedBpm ? ` • ~${selected.recommendedBpm} bpm` : ""}
-            </div>
-
-            <div class="videoWrap">
-              <iframe
-                src="${iframeSrc}"
-                title="${selected.name}"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowfullscreen
-              ></iframe>
-            </div>
-
-            <div class="muted" style="font-size:12px; margin-top:8px;">
-              Use the YouTube controls in the player to play/pause.
-            </div>
-          `
-          : `
-            <div class="muted">
-              No <code>youtubeEmbed</code> set for this track yet.
-            </div>
-          `
-      }
-    </div>
-  `;
-}
-
-function wireBackingDropdown(ctx, tracks, rerender) {
-  const select = document.getElementById("bt-select");
-  if (!select) return;
-
-  select.onchange = () => {
-    setSelectedTrackId(ctx, select.value);
-    rerender();
-  };
-}
-
-// ------------------ Core aggregation (no content changes) ------------------
-// We build a "Core Learning" module by aggregating skills that look beginner/core.
-// Rule (safe + non-destructive):
-// - include skills where levelBand === "beginner"
-// - sorted by (genre, name)
-
-function getCoreSkills(C) {
-  const all = Object.values(C.skills || {});
-  return all
-    .filter(s => s && s.levelBand === "beginner" && Array.isArray(s.drills) && s.drills.length)
-    .sort((a, b) => {
-      const ga = String(a.genre || "");
-      const gb = String(b.genre || "");
-      if (ga !== gb) return ga.localeCompare(gb);
-      return String(a.name || "").localeCompare(String(b.name || ""));
+  filterTracksByRole(ctx, tracks) {
+    if (!hasRole(ctx)) return tracks;
+    const want = ctx.state.role === "lead" ? "lead" : "rhythm";
+    return tracks.filter(t => {
+      const tm = Backing.getTrackMix(t);
+      return tm ? tm === want : true;
     });
-}
+  },
 
-// ------------------ Songs: state helpers ------------------
+  getSelectedTrackId(ctx, tracks) {
+    const id = ctx.state.btSelectedId;
+    if (id && tracks.some(t => t.id === id)) return id;
+    return tracks.length ? tracks[0].id : null;
+  },
 
-let SONG_TICKER = null;
+  setSelectedTrackId(ctx, id) {
+    ctx.state.btSelectedId = id;
+    ctx.persist();
+  },
 
-function ensureSongState(state) {
-  if (!state.songs || typeof state.songs !== "object") state.songs = {};
-  if (!state.songs.progress || typeof state.songs.progress !== "object") state.songs.progress = {};
-  if (!state.songs.requirements || typeof state.songs.requirements !== "object") state.songs.requirements = {};
-  if (!state.songs.session || typeof state.songs.session !== "object") state.songs.session = {};
-  if (!state.songs.lastSong || typeof state.songs.lastSong !== "object") state.songs.lastSong = { songId: "song1", variant: "easy" };
-}
+  ui(ctx, tracks, rerender) {
+    if (!tracks.length) {
+      return `<div class="muted" style="margin-top:8px;">No backing tracks defined for this genre yet.</div>`;
+    }
 
-function getSongProgress(state, songId) {
-  ensureSongState(state);
-  if (!state.songs.progress[songId]) {
-    state.songs.progress[songId] = {
-      easyCompletions: 0,
-      mediumCompletions: 0,
-      hardCompletions: 0
+    const selectedId = Backing.getSelectedTrackId(ctx, tracks);
+    const selected = tracks.find(t => t.id === selectedId) || tracks[0];
+
+    const safe = safeYoutubeEmbed(selected.youtubeEmbed);
+    const iframeSrc = safe ? withCb(safe, selected.id) : null;
+
+    return `
+      <div class="card" style="background:#171717; margin-top:10px;">
+        <div class="muted" style="font-size:14px;">Choose track</div>
+
+        <select id="bt-select" style="width:100%; max-width:560px; margin-top:6px;">
+          ${tracks
+            .map(t => {
+              const sel = t.id === selected.id ? "selected" : "";
+              const label = `${t.name} — Key ${t.key} • ${t.feel}${t.recommendedBpm ? ` • ~${t.recommendedBpm} bpm` : ""}`;
+              return `<option value="${t.id}" ${sel}>${label}</option>`;
+            })
+            .join("")}
+        </select>
+
+        ${
+          hasRole(ctx)
+            ? `<div class="muted" style="font-size:14px; margin-top:6px;">Auto-filtered by Role: <b>${ctx.roleLabel()}</b></div>`
+            : ""
+        }
+
+        ${selected.note ? `<div class="muted" style="font-size:13px; margin-top:10px;">${selected.note}</div>` : ""}
+
+        <div class="hr" style="margin:12px 0;"></div>
+
+        ${
+          iframeSrc
+            ? `
+              <div style="font-weight:700;">Backing Track (in-app)</div>
+              <div class="muted" style="font-size:14px; margin-bottom:10px;">
+                ${selected.name} • Key ${selected.key}${selected.recommendedBpm ? ` • ~${selected.recommendedBpm} bpm` : ""}
+              </div>
+
+              <div class="videoWrap">
+                <iframe
+                  src="${iframeSrc}"
+                  title="${selected.name}"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowfullscreen
+                ></iframe>
+              </div>
+
+              <div class="muted" style="font-size:12px; margin-top:8px;">
+                Use the YouTube controls in the player to play/pause.
+              </div>
+            `
+            : `
+              <div class="muted">
+                No <code>youtubeEmbed</code> set for this track yet.
+              </div>
+            `
+        }
+      </div>
+    `;
+  },
+
+  wireDropdown(ctx, tracks, rerender) {
+    const select = document.getElementById("bt-select");
+    if (!select) return;
+
+    select.onchange = () => {
+      Backing.setSelectedTrackId(ctx, select.value);
+      rerender();
     };
   }
-  return state.songs.progress[songId];
-}
+};
 
-function getSongReqs(state, songId) {
-  ensureSongState(state);
-  if (!state.songs.requirements[songId]) {
-    state.songs.requirements[songId] = {};
+/* ============================================================
+   SECTION 4 — Core Learning aggregation
+============================================================ */
+
+const Core = {
+  getCoreSkills(C) {
+    const all = Object.values(C.skills || {});
+    return all
+      .filter(s => s && s.levelBand === "beginner" && Array.isArray(s.drills) && s.drills.length)
+      .sort((a, b) => {
+        const ga = String(a.genre || "");
+        const gb = String(b.genre || "");
+        if (ga !== gb) return ga.localeCompare(gb);
+        return String(a.name || "").localeCompare(String(b.name || ""));
+      });
+  },
+
+  render(ctx) {
+    ctx.ensureMirrorDefault();
+
+    const { app, C, state } = ctx;
+    const coreSkills = Core.getCoreSkills(C);
+
+    app.innerHTML = `
+      <div class="card">
+        <h2>Core Learning</h2>
+        <p class="muted">
+          This is the beginner path (all genres share the same fundamentals).
+        </p>
+
+        <div class="row" style="margin:10px 0;">
+          <span class="pill">Hand: ${ctx.handednessLabel()}</span>
+          <span class="pill">Video mirror: ${state.mirrorVideos ? "ON" : "OFF"}</span>
+          ${rolePill(ctx)}
+        </div>
+
+        <div class="card" style="background:#171717;">
+          <h3 style="margin-top:0;">Start Here</h3>
+          <div class="muted" style="font-size:14px;">
+            Pick any skill below. Later we can reorder these into your locked core list.
+          </div>
+        </div>
+
+        <div style="height:10px"></div>
+
+        <div id="core-skill-list"></div>
+
+        <div style="margin-top:16px;" class="row">
+          <button class="secondary" id="back-home">Back</button>
+          <button id="go-practice">Go to Practice</button>
+        </div>
+      </div>
+    `;
+
+    const list = document.getElementById("core-skill-list");
+    list.innerHTML = coreSkills.length
+      ? coreSkills
+          .map(s => {
+            return `
+              <div class="card" style="background:#171717;">
+                <h4 style="margin:0 0 6px 0;">${s.name}</h4>
+                <div class="muted" style="margin-bottom:10px;">${s.summary}</div>
+                <div class="muted" style="font-size:14px;">
+                  Source: ${s.genre} • Drills: ${s.drills.length} • Level: ${s.levelBand}
+                </div>
+                <button data-skill="${s.id}" style="margin-top:10px;">Open Skill</button>
+              </div>
+            `;
+          })
+          .join("")
+      : `<div class="muted">No core skills found yet.</div>`;
+
+    list.querySelectorAll("button[data-skill]").forEach(btn => {
+      btn.onclick = () => ctx.nav.skill(btn.dataset.skill, { backTo: () => Core.render(ctx) });
+    });
+
+    document.getElementById("back-home").onclick = () => {
+      View.set(ctx, "home");
+      renderHome(ctx);
+    };
+    document.getElementById("go-practice").onclick = () => ctx.nav.practice();
   }
-  return state.songs.requirements[songId];
-}
+};
 
-function isSong1Unlocked(state) {
-  const song = SONGS.song1;
-  const req = getSongReqs(state, song.id);
-  return song.requirements.every(r => req[r.id] === true);
-}
-
-function isVariantUnlocked(state, songId, variantId) {
-  const p = getSongProgress(state, songId);
-  if (variantId === "easy") return isSong1Unlocked(state);
-  if (variantId === "medium") return p.easyCompletions >= 2;
-  if (variantId === "hard") return p.mediumCompletions >= 1;
-  return false;
-}
-
-function stopSongTicker() {
-  if (SONG_TICKER) {
-    clearInterval(SONG_TICKER);
-    SONG_TICKER = null;
-  }
-}
-
-function startSongTicker(ctx) {
-  stopSongTicker();
-  SONG_TICKER = setInterval(() => {
-    const s = ctx.state;
-    ensureSongState(s);
-    const sess = s.songs.session;
-
-    if (!sess || sess.running !== true) return;
-
-    const now = Date.now();
-    const startedAt = sess.startedAt || now;
-    const elapsedSec = Math.max(0, Math.floor((now - startedAt) / 1000));
-    sess.elapsedSec = elapsedSec;
-    ctx.persist();
-
-    // Re-render song screen while running
-    renderSong(ctx);
-  }, 1000);
-}
-
-function openSong(ctx, songId, variantId) {
-  ensureSongState(ctx.state);
-  ctx.state.songs.lastSong = { songId, variant: variantId };
-  ctx.persist();
-  setView(ctx, "song");
-  renderHome(ctx);
-}
-
-// ------------------ Settings screen ------------------
+/* ============================================================
+   SECTION 5 — Settings screen
+============================================================ */
 
 function renderSettings(ctx) {
   ctx.ensureMirrorDefault();
@@ -363,529 +362,533 @@ function renderSettings(ctx) {
   };
 
   document.getElementById("back-home").onclick = () => {
-    setView(ctx, "home");
+    View.set(ctx, "home");
     renderHome(ctx);
   };
 }
 
-// ------------------ Core screen ------------------
+/* ============================================================
+   SECTION 6 — Songs engine + screens
+============================================================ */
 
-function renderCore(ctx) {
-  ctx.ensureMirrorDefault();
+const Songs = (function () {
+  let SONG_TICKER = null;
 
-  const { app, C, state } = ctx;
-  const coreSkills = getCoreSkills(C);
+  function ensureSongState(state) {
+    if (!state.songs || typeof state.songs !== "object") state.songs = {};
+    if (!state.songs.progress || typeof state.songs.progress !== "object") state.songs.progress = {};
+    if (!state.songs.requirements || typeof state.songs.requirements !== "object") state.songs.requirements = {};
+    if (!state.songs.session || typeof state.songs.session !== "object") state.songs.session = {};
+    if (!state.songs.lastSong || typeof state.songs.lastSong !== "object") state.songs.lastSong = { songId: "song1", variant: "easy" };
+  }
 
-  app.innerHTML = `
-    <div class="card">
-      <h2>Core Learning</h2>
-      <p class="muted">
-        This is the beginner path (all genres share the same fundamentals).
-      </p>
+  function getSongProgress(state, songId) {
+    ensureSongState(state);
+    if (!state.songs.progress[songId]) {
+      state.songs.progress[songId] = {
+        easyCompletions: 0,
+        mediumCompletions: 0,
+        hardCompletions: 0
+      };
+    }
+    return state.songs.progress[songId];
+  }
 
-      <div class="row" style="margin:10px 0;">
-        <span class="pill">Hand: ${ctx.handednessLabel()}</span>
-        <span class="pill">Video mirror: ${state.mirrorVideos ? "ON" : "OFF"}</span>
-        ${rolePill(ctx)}
-      </div>
+  function getSongReqs(state, songId) {
+    ensureSongState(state);
+    if (!state.songs.requirements[songId]) {
+      state.songs.requirements[songId] = {};
+    }
+    return state.songs.requirements[songId];
+  }
 
-      <div class="card" style="background:#171717;">
-        <h3 style="margin-top:0;">Start Here</h3>
-        <div class="muted" style="font-size:14px;">
-          Pick any skill below. Later we can reorder these into your locked core list.
+  function isSong1Unlocked(state) {
+    const song = SONGS.song1;
+    const req = getSongReqs(state, song.id);
+    return song.requirements.every(r => req[r.id] === true);
+  }
+
+  function isVariantUnlocked(state, songId, variantId) {
+    const p = getSongProgress(state, songId);
+    if (variantId === "easy") return isSong1Unlocked(state);
+    if (variantId === "medium") return p.easyCompletions >= 2;
+    if (variantId === "hard") return p.mediumCompletions >= 1;
+    return false;
+  }
+
+  function stopSongTicker() {
+    if (SONG_TICKER) {
+      clearInterval(SONG_TICKER);
+      SONG_TICKER = null;
+    }
+  }
+
+  function startSongTicker(ctx) {
+    stopSongTicker();
+    SONG_TICKER = setInterval(() => {
+      const s = ctx.state;
+      ensureSongState(s);
+      const sess = s.songs.session;
+
+      if (!sess || sess.running !== true) return;
+
+      const now = Date.now();
+      const startedAt = sess.startedAt || now;
+      const elapsedSec = Math.max(0, Math.floor((now - startedAt) / 1000));
+      sess.elapsedSec = elapsedSec;
+      ctx.persist();
+
+      renderSong(ctx);
+    }, 1000);
+  }
+
+  function openSong(ctx, songId, variantId) {
+    ensureSongState(ctx.state);
+    ctx.state.songs.lastSong = { songId, variant: variantId };
+    ctx.persist();
+    View.set(ctx, "song");
+    renderHome(ctx);
+  }
+
+  function renderSongs(ctx) {
+    ctx.ensureMirrorDefault();
+
+    const { app, state } = ctx;
+    ensureSongState(state);
+
+    const song = SONGS.song1;
+    const unlocked = isSong1Unlocked(state);
+
+    const p = getSongProgress(state, song.id);
+    const easyUnlocked = isVariantUnlocked(state, song.id, "easy");
+    const mediumUnlocked = isVariantUnlocked(state, song.id, "medium");
+    const hardUnlocked = isVariantUnlocked(state, song.id, "hard");
+
+    app.innerHTML = `
+      <div class="card">
+        <h2>Songs</h2>
+        <p class="muted">Songs are the reward. No pressure, no stats.</p>
+
+        <div class="card" style="background:#171717;">
+          <h3 style="margin:0 0 6px 0;">${song.title}</h3>
+          <div class="muted">${song.description}</div>
+
+          <div style="height:10px"></div>
+
+          ${
+            unlocked
+              ? `
+                <div class="kpi" style="margin-top:6px;">Unlocked</div>
+                <div class="muted" style="margin-top:8px; font-size:13px;">
+                  Easy completions: ${p.easyCompletions} • Medium completions: ${p.mediumCompletions} • Hard completions: ${p.hardCompletions}
+                </div>
+
+                <div style="height:10px"></div>
+
+                <div class="row">
+                  <button id="play-easy" ${easyUnlocked ? "" : "disabled"}>Play Easy</button>
+                  <button id="play-medium" class="secondary" ${mediumUnlocked ? "" : "disabled"}>Play Medium</button>
+                  <button id="play-hard" class="secondary" ${hardUnlocked ? "" : "disabled"}>Play Hard</button>
+                </div>
+
+                <div style="height:10px"></div>
+                <button id="song-explain" class="secondary">What am I practicing?</button>
+              `
+              : `
+                <div class="muted" style="margin-top:10px;">
+                  Locked. Complete the three core requirements to unlock.
+                </div>
+                <div style="height:10px"></div>
+                <button id="song-explain">What am I practicing?</button>
+              `
+          }
+        </div>
+
+        <div style="margin-top:16px;" class="row">
+          <button class="secondary" id="back-home">Back</button>
         </div>
       </div>
+    `;
 
-      <div style="height:10px"></div>
+    const explainBtn = document.getElementById("song-explain");
+    if (explainBtn) {
+      explainBtn.onclick = () => {
+        ensureSongState(state);
+        state.songs.explainOpen = !state.songs.explainOpen;
+        ctx.persist();
+        renderSongs(ctx);
+      };
+    }
 
-      <div id="core-skill-list"></div>
+    if (unlocked) {
+      const be = document.getElementById("play-easy");
+      const bm = document.getElementById("play-medium");
+      const bh = document.getElementById("play-hard");
 
-      <div style="margin-top:16px;" class="row">
-        <button class="secondary" id="back-home">Back</button>
-        <button id="go-practice">Go to Practice</button>
-      </div>
-    </div>
-  `;
+      if (be) be.onclick = () => openSong(ctx, song.id, "easy");
+      if (bm) bm.onclick = () => openSong(ctx, song.id, "medium");
+      if (bh) bh.onclick = () => openSong(ctx, song.id, "hard");
+    }
 
-  const list = document.getElementById("core-skill-list");
-  list.innerHTML = coreSkills.length
-    ? coreSkills
-        .map(s => {
+    const explainOpen = !!state.songs.explainOpen;
+    if (explainOpen) {
+      const req = getSongReqs(state, song.id);
+
+      const reqHtml = song.requirements
+        .map(r => {
+          const done = req[r.id] === true;
           return `
-            <div class="card" style="background:#171717;">
-              <h4 style="margin:0 0 6px 0;">${s.name}</h4>
-              <div class="muted" style="margin-bottom:10px;">${s.summary}</div>
-              <div class="muted" style="font-size:14px;">
-                Source: ${s.genre} • Drills: ${s.drills.length} • Level: ${s.levelBand}
-              </div>
-              <button data-skill="${s.id}" style="margin-top:10px;">Open Skill</button>
+            <div class="card" style="background:#111; border:1px solid #222; margin-top:10px;">
+              <div style="font-weight:700;">${r.title}</div>
+              <div class="muted" style="margin-top:6px;">${r.subtitle}</div>
+              <div class="muted" style="margin-top:8px; font-size:13px;">${r.passText}</div>
+              <div style="height:10px"></div>
+              <button data-req="${r.id}" class="${done ? "" : "secondary"}">
+                ${done ? "Marked complete" : "Mark complete"}
+              </button>
             </div>
           `;
         })
-        .join("")
-    : `<div class="muted">No core skills found yet.</div>`;
+        .join("");
 
-  list.querySelectorAll("button[data-skill]").forEach(btn => {
-    btn.onclick = () => ctx.nav.skill(btn.dataset.skill, { backTo: () => renderCore(ctx) });
-  });
+      app.querySelector(".card .card").insertAdjacentHTML(
+        "beforeend",
+        `
+          <div style="height:10px"></div>
+          <div class="card" style="background:#111; border:1px solid #222;">
+            <h3 style="margin-top:0;">Unlock requirements</h3>
+            <div class="muted" style="font-size:13px;">
+              This is a temporary, simple unlock method so you can use Song Mode today.
+              Later we will auto-detect completion from drill sessions.
+            </div>
+            ${reqHtml}
+          </div>
+        `
+      );
 
-  document.getElementById("back-home").onclick = () => {
-    setView(ctx, "home");
-    renderHome(ctx);
-  };
-  document.getElementById("go-practice").onclick = () => ctx.nav.practice();
-}
+      app.querySelectorAll("button[data-req]").forEach(btn => {
+        btn.onclick = () => {
+          const id = btn.getAttribute("data-req");
+          const r = getSongReqs(state, song.id);
+          r[id] = true;
+          ctx.persist();
+          renderSongs(ctx);
+        };
+      });
+    }
 
-// ------------------ Songs list + Song screen ------------------
-
-function renderSongs(ctx) {
-  ctx.ensureMirrorDefault();
-
-  const { app, state } = ctx;
-  ensureSongState(state);
-
-  const song = SONGS.song1;
-  const unlocked = isSong1Unlocked(state);
-
-  const p = getSongProgress(state, song.id);
-  const easyUnlocked = isVariantUnlocked(state, song.id, "easy");
-  const mediumUnlocked = isVariantUnlocked(state, song.id, "medium");
-  const hardUnlocked = isVariantUnlocked(state, song.id, "hard");
-
-  app.innerHTML = `
-    <div class="card">
-      <h2>Songs</h2>
-      <p class="muted">Songs are the reward. No pressure, no stats.</p>
-
-      <div class="card" style="background:#171717;">
-        <h3 style="margin:0 0 6px 0;">${song.title}</h3>
-        <div class="muted">${song.description}</div>
-
-        <div style="height:10px"></div>
-
-        ${
-          unlocked
-            ? `
-              <div class="kpi" style="margin-top:6px;">Unlocked</div>
-              <div class="muted" style="margin-top:8px; font-size:13px;">
-                Easy completions: ${p.easyCompletions} • Medium completions: ${p.mediumCompletions} • Hard completions: ${p.hardCompletions}
-              </div>
-
-              <div style="height:10px"></div>
-
-              <div class="row">
-                <button id="play-easy" ${easyUnlocked ? "" : "disabled"}>Play Easy</button>
-                <button id="play-medium" class="secondary" ${mediumUnlocked ? "" : "disabled"}>Play Medium</button>
-                <button id="play-hard" class="secondary" ${hardUnlocked ? "" : "disabled"}>Play Hard</button>
-              </div>
-
-              <div style="height:10px"></div>
-              <button id="song-explain" class="secondary">What am I practicing?</button>
-            `
-            : `
-              <div class="muted" style="margin-top:10px;">
-                Locked. Complete the three core requirements to unlock.
-              </div>
-              <div style="height:10px"></div>
-              <button id="song-explain">What am I practicing?</button>
-            `
-        }
-      </div>
-
-      <div style="margin-top:16px;" class="row">
-        <button class="secondary" id="back-home">Back</button>
-      </div>
-    </div>
-  `;
-
-  const explainBtn = document.getElementById("song-explain");
-  if (explainBtn) {
-    explainBtn.onclick = () => {
-      ensureSongState(state);
-      state.songs.explainOpen = !state.songs.explainOpen;
-      ctx.persist();
-      renderSongs(ctx);
+    document.getElementById("back-home").onclick = () => {
+      View.set(ctx, "home");
+      renderHome(ctx);
     };
   }
 
-  if (unlocked) {
-    const be = document.getElementById("play-easy");
-    const bm = document.getElementById("play-medium");
-    const bh = document.getElementById("play-hard");
+  function renderSong(ctx) {
+    ctx.ensureMirrorDefault();
 
-    if (be) be.onclick = () => openSong(ctx, song.id, "easy");
-    if (bm) bm.onclick = () => openSong(ctx, song.id, "medium");
-    if (bh) bh.onclick = () => openSong(ctx, song.id, "hard");
-  }
+    const { app, C, state } = ctx;
+    ensureSongState(state);
 
-  const explainOpen = !!state.songs.explainOpen;
-  if (explainOpen) {
-    // Inject requirements panel below (simple + user-controlled for now)
-    const req = getSongReqs(state, song.id);
+    const songId = state.songs.lastSong?.songId || "song1";
+    const variantId = state.songs.lastSong?.variant || "easy";
 
-    const reqHtml = song.requirements
-      .map(r => {
-        const done = req[r.id] === true;
+    const song = SONGS[songId];
+    if (!song) {
+      View.set(ctx, "songs");
+      return renderHome(ctx);
+    }
+
+    if (variantId !== "easy" && !isVariantUnlocked(state, songId, variantId)) {
+      state.songs.lastSong.variant = "easy";
+      ctx.persist();
+    }
+
+    if (!isSong1Unlocked(state)) {
+      View.set(ctx, "songs");
+      return renderHome(ctx);
+    }
+
+    const variant = song.variants[variantId] || song.variants.easy;
+
+    const track = C.backingTracks ? C.backingTracks[variant.backingTrackId] : null;
+    const safe = track ? safeYoutubeEmbed(track.youtubeEmbed) : null;
+    const iframeSrc = safe ? withCb(safe, `song_${songId}_${variantId}`) : null;
+
+    const sess = state.songs.session || {};
+    const isRunning = sess.running === true && sess.songId === songId && sess.variantId === variantId;
+    const elapsedSec = isRunning ? (sess.elapsedSec || 0) : 0;
+
+    const showCounts = !!variant.showCountMarkers;
+
+    const chordRow = song.chordBlocks
+      .map(b => {
         return `
-          <div class="card" style="background:#111; border:1px solid #222; margin-top:10px;">
-            <div style="font-weight:700;">${r.title}</div>
-            <div class="muted" style="margin-top:6px;">${r.subtitle}</div>
-            <div class="muted" style="margin-top:8px; font-size:13px;">${r.passText}</div>
-            <div style="height:10px"></div>
-            <button data-req="${r.id}" class="${done ? "" : "secondary"}">
-              ${done ? "Marked complete" : "Mark complete"}
-            </button>
+          <div style="flex:1; min-width:90px; background:#111; border:1px solid #222; border-radius:12px; padding:12px; text-align:center;">
+            <div style="font-size:20px; font-weight:800;">${b.chord}</div>
+            <div class="muted" style="margin-top:6px; font-size:14px;">${b.beatsPerBar}</div>
+            ${showCounts ? `<div class="muted" style="margin-top:8px; font-size:12px;">1 2 3 4</div>` : ""}
           </div>
         `;
       })
       .join("");
 
-    app.querySelector(".card .card").insertAdjacentHTML(
-      "beforeend",
-      `
-        <div style="height:10px"></div>
-        <div class="card" style="background:#111; border:1px solid #222;">
-          <h3 style="margin-top:0;">Unlock requirements</h3>
-          <div class="muted" style="font-size:13px;">
-            This is a temporary, simple unlock method so you can use Song Mode today.
-            Later we will auto-detect completion from drill sessions.
+    const guidanceOpen = !!state.songs.guidanceOpen;
+
+    const completedOverlay = !!state.songs.completedOverlay;
+    const overlayHtml = completedOverlay
+      ? `
+        <div class="card" style="background:#0b0b0b; border:1px solid #2a2a2a; margin-top:14px;">
+          <h3 style="margin-top:0;">${variant.completionTitle}</h3>
+          <div class="muted" style="white-space:pre-line;">${variant.completionBody}</div>
+
+          <div style="height:12px"></div>
+
+          <div class="row">
+            <button id="song-play-again">Play Again</button>
+            <button id="song-next-step" class="secondary">Next Step</button>
           </div>
-          ${reqHtml}
         </div>
       `
-    );
+      : "";
 
-    app.querySelectorAll("button[data-req]").forEach(btn => {
-      btn.onclick = () => {
-        const id = btn.getAttribute("data-req");
-        const r = getSongReqs(state, song.id);
-        r[id] = true;
-        ctx.persist();
-        renderSongs(ctx);
-      };
-    });
-  }
+    app.innerHTML = `
+      <div class="card">
+        <h2>${song.title}</h2>
 
-  document.getElementById("back-home").onclick = () => {
-    setView(ctx, "home");
-    renderHome(ctx);
-  };
-}
-
-function renderSong(ctx) {
-  ctx.ensureMirrorDefault();
-
-  const { app, C, state } = ctx;
-  ensureSongState(state);
-
-  const songId = state.songs.lastSong?.songId || "song1";
-  const variantId = state.songs.lastSong?.variant || "easy";
-
-  const song = SONGS[songId];
-  if (!song) {
-    setView(ctx, "songs");
-    return renderHome(ctx);
-  }
-
-  if (variantId !== "easy" && !isVariantUnlocked(state, songId, variantId)) {
-    state.songs.lastSong.variant = "easy";
-    ctx.persist();
-  }
-
-  // If base song is not unlocked, bounce to Songs list
-  if (!isSong1Unlocked(state)) {
-    setView(ctx, "songs");
-    return renderHome(ctx);
-  }
-
-  const variant = song.variants[variantId] || song.variants.easy;
-
-  const track = C.backingTracks ? C.backingTracks[variant.backingTrackId] : null;
-  const safe = track ? safeYoutubeEmbed(track.youtubeEmbed) : null;
-  const iframeSrc = safe ? withCb(safe, `song_${songId}_${variantId}`) : null;
-
-  // Session state
-  const sess = state.songs.session || {};
-  const isRunning = sess.running === true && sess.songId === songId && sess.variantId === variantId;
-  const elapsedSec = isRunning ? (sess.elapsedSec || 0) : 0;
-  const stopCount = isRunning ? (sess.stopCount || 0) : (sess.stopCount || 0);
-
-  const showCounts = !!variant.showCountMarkers;
-
-  const chordRow = song.chordBlocks
-    .map(b => {
-      return `
-        <div style="flex:1; min-width:90px; background:#111; border:1px solid #222; border-radius:12px; padding:12px; text-align:center;">
-          <div style="font-size:20px; font-weight:800;">${b.chord}</div>
-          <div class="muted" style="margin-top:6px; font-size:14px;">${b.beatsPerBar}</div>
-          ${
-            showCounts
-              ? `<div class="muted" style="margin-top:8px; font-size:12px;">1 2 3 4</div>`
-              : ""
-          }
+        <div class="muted" style="margin-top:6px;">
+          Difficulty: <b>${variant.label}</b> • Style: <b>${song.style}</b>
         </div>
-      `;
-    })
-    .join("");
+        <div class="muted" style="margin-top:8px;">${variant.subtext}</div>
 
-  const guidanceOpen = !!state.songs.guidanceOpen;
+        <div style="height:14px"></div>
 
-  const completedOverlay = !!state.songs.completedOverlay;
-  const overlayHtml = completedOverlay
-    ? `
-      <div class="card" style="background:#0b0b0b; border:1px solid #2a2a2a; margin-top:14px;">
-        <h3 style="margin-top:0;">${variant.completionTitle}</h3>
-        <div class="muted" style="white-space:pre-line;">${variant.completionBody}</div>
+        <h3 style="margin-top:0;">Chord Pattern</h3>
+        <div class="muted" style="font-size:13px; margin-bottom:10px;">
+          Big blocks. No notation. Just keep going.
+        </div>
 
-        <div style="height:12px"></div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          ${chordRow}
+        </div>
+
+        <div style="height:14px"></div>
+
+        <h3 style="margin-top:0;">Backing Track</h3>
+        <div class="muted" style="font-size:13px;">
+          ${track ? `${track.name}${track.recommendedBpm ? ` • ~${track.recommendedBpm} bpm` : ""}` : "No track configured."}
+        </div>
+
+        <div style="height:10px"></div>
+
+        <button id="toggle-track" class="${state.songs.showTrack ? "" : "secondary"}">
+          ${state.songs.showTrack ? "Hide backing track" : "Start backing track"}
+        </button>
+
+        ${
+          state.songs.showTrack && iframeSrc
+            ? `
+              <div style="height:10px"></div>
+              <div class="videoWrap">
+                <iframe
+                  src="${iframeSrc}"
+                  title="Backing track"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowfullscreen
+                ></iframe>
+              </div>
+              <div class="muted" style="font-size:12px; margin-top:8px;">
+                Use the YouTube controls in the player to play/pause.
+              </div>
+            `
+            : ""
+        }
+
+        <div style="height:14px"></div>
+
+        <h3 style="margin-top:0;">Metronome</h3>
+        <div class="muted" style="font-size:13px;">Optional. Default is OFF. Backing track is the timekeeper.</div>
+
+        <div style="height:10px"></div>
+
+        <button id="song-metro" class="secondary">
+          ${ctx.metro.isRunning() ? "Stop metronome" : "Start metronome"}
+        </button>
+
+        <div style="height:14px"></div>
+
+        <h3 style="margin-top:0;">Play Mode</h3>
+        <div class="muted" style="font-size:13px;">
+          Start playing. Keep going. No scoring.
+        </div>
+
+        <div style="height:10px"></div>
 
         <div class="row">
-          <button id="song-play-again">Play Again</button>
-          <button id="song-next-step" class="secondary">Next Step</button>
+          <button id="song-start" ${isRunning ? "disabled" : ""}>Start Playing</button>
+          <button id="song-stop" class="secondary" ${isRunning ? "" : "disabled"}>Stop</button>
+        </div>
+
+        ${isRunning ? `<div class="muted" style="margin-top:10px; font-size:13px;">Session running.</div>` : ""}
+
+        <div style="height:14px"></div>
+
+        <button id="toggle-guidance" class="secondary">
+          ${guidanceOpen ? "Hide guidance" : "How to play this song"}
+        </button>
+
+        ${
+          guidanceOpen
+            ? `
+              <div class="card" style="background:#171717; margin-top:10px;">
+                <div style="opacity:.95">• Strum steadily. Don’t stop.</div>
+                <div style="opacity:.95">• Switch chords every 4 counts.</div>
+                <div style="opacity:.95">• If you lose the chord, keep strumming muted strings.</div>
+                <div style="opacity:.95">• This is about time, not correctness.</div>
+              </div>
+            `
+            : ""
+        }
+
+        ${overlayHtml}
+
+        <div style="margin-top:16px;" class="row">
+          <button class="secondary" id="back-songs">Back</button>
         </div>
       </div>
-    `
-    : "";
+    `;
 
-  app.innerHTML = `
-    <div class="card">
-      <h2>${song.title}</h2>
-
-      <div class="muted" style="margin-top:6px;">
-        Difficulty: <b>${variant.label}</b> • Style: <b>${song.style}</b>
-      </div>
-      <div class="muted" style="margin-top:8px;">${variant.subtext}</div>
-
-      <div style="height:14px"></div>
-
-      <h3 style="margin-top:0;">Chord Pattern</h3>
-      <div class="muted" style="font-size:13px; margin-bottom:10px;">
-        Big blocks. No notation. Just keep going.
-      </div>
-
-      <div style="display:flex; gap:10px; flex-wrap:wrap;">
-        ${chordRow}
-      </div>
-
-      <div style="height:14px"></div>
-
-      <h3 style="margin-top:0;">Backing Track</h3>
-      <div class="muted" style="font-size:13px;">
-        ${track ? `${track.name}${track.recommendedBpm ? ` • ~${track.recommendedBpm} bpm` : ""}` : "No track configured."}
-      </div>
-
-      <div style="height:10px"></div>
-
-      <button id="toggle-track" class="${state.songs.showTrack ? "" : "secondary"}">
-        ${state.songs.showTrack ? "Hide backing track" : "Start backing track"}
-      </button>
-
-      ${
-        state.songs.showTrack && iframeSrc
-          ? `
-            <div style="height:10px"></div>
-            <div class="videoWrap">
-              <iframe
-                src="${iframeSrc}"
-                title="Backing track"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowfullscreen
-              ></iframe>
-            </div>
-            <div class="muted" style="font-size:12px; margin-top:8px;">
-              Use the YouTube controls in the player to play/pause.
-            </div>
-          `
-          : ""
-      }
-
-      <div style="height:14px"></div>
-
-      <h3 style="margin-top:0;">Metronome</h3>
-      <div class="muted" style="font-size:13px;">Optional. Default is OFF. Backing track is the timekeeper.</div>
-
-      <div style="height:10px"></div>
-
-      <button id="song-metro" class="secondary">
-        ${ctx.metro.isRunning() ? "Stop metronome" : "Start metronome"}
-      </button>
-
-      <div style="height:14px"></div>
-
-      <h3 style="margin-top:0;">Play Mode</h3>
-      <div class="muted" style="font-size:13px;">
-        Start playing. Keep going. No scoring.
-      </div>
-
-      <div style="height:10px"></div>
-
-      <div class="row">
-        <button id="song-start" ${isRunning ? "disabled" : ""}>Start Playing</button>
-        <button id="song-stop" class="secondary" ${isRunning ? "" : "disabled"}>Stop</button>
-      </div>
-
-      ${isRunning ? `<div class="muted" style="margin-top:10px; font-size:13px;">Session running.</div>` : ""}
-
-      <div style="height:14px"></div>
-
-      <button id="toggle-guidance" class="secondary">
-        ${guidanceOpen ? "Hide guidance" : "How to play this song"}
-      </button>
-
-      ${
-        guidanceOpen
-          ? `
-            <div class="card" style="background:#171717; margin-top:10px;">
-              <div style="opacity:.95">• Strum steadily. Don’t stop.</div>
-              <div style="opacity:.95">• Switch chords every 4 counts.</div>
-              <div style="opacity:.95">• If you lose the chord, keep strumming muted strings.</div>
-              <div style="opacity:.95">• This is about time, not correctness.</div>
-            </div>
-          `
-          : ""
-      }
-
-      ${overlayHtml}
-
-      <div style="margin-top:16px;" class="row">
-        <button class="secondary" id="back-songs">Back</button>
-      </div>
-    </div>
-  `;
-
-  // Track toggle
-  document.getElementById("toggle-track").onclick = () => {
-    state.songs.showTrack = !state.songs.showTrack;
-    ctx.persist();
-    renderSong(ctx);
-  };
-
-  // Guidance toggle
-  document.getElementById("toggle-guidance").onclick = () => {
-    state.songs.guidanceOpen = !state.songs.guidanceOpen;
-    ctx.persist();
-    renderSong(ctx);
-  };
-
-  // Metronome toggle (simple, uses current bpm if possible)
-  document.getElementById("song-metro").onclick = () => {
-    if (ctx.metro.isRunning()) {
-      ctx.metro.stop();
+    document.getElementById("toggle-track").onclick = () => {
+      state.songs.showTrack = !state.songs.showTrack;
+      ctx.persist();
       renderSong(ctx);
-      return;
-    }
-    // Use backing bpm if present; otherwise 80 for easy, 95 medium, 100 hard
-    const fallback =
-      variantId === "easy" ? 80 : variantId === "medium" ? 95 : 100;
-    const bpm = track && track.recommendedBpm ? track.recommendedBpm : fallback;
-    ctx.metro.start(bpm);
-    renderSong(ctx);
-  };
-
-  // Play mode start/stop
-  document.getElementById("song-start").onclick = () => {
-    ensureSongState(state);
-    state.songs.completedOverlay = false;
-
-    state.songs.session = {
-      running: true,
-      songId,
-      variantId,
-      startedAt: Date.now(),
-      elapsedSec: 0,
-      stopCount: 0
     };
 
-    ctx.persist();
-    startSongTicker(ctx);
-    renderSong(ctx);
-  };
-
-  document.getElementById("song-stop").onclick = () => {
-    ensureSongState(state);
-    const s = state.songs.session || {};
-    if (s.running === true) {
-      s.stopCount = (s.stopCount || 0) + 1;
-      s.running = false;
-      state.songs.session = s;
+    document.getElementById("toggle-guidance").onclick = () => {
+      state.songs.guidanceOpen = !state.songs.guidanceOpen;
       ctx.persist();
-    }
-    stopSongTicker();
-    renderSong(ctx);
-  };
+      renderSong(ctx);
+    };
 
-  // Completion check (invisible to user; only shows overlay on pass)
-  // We check on each render when running.
-  if (isRunning) {
-    const target = variant.targetSeconds || 90;
-    const stopLimit = typeof variant.stopLimit === "number" ? variant.stopLimit : 1;
+    document.getElementById("song-metro").onclick = () => {
+      if (ctx.metro.isRunning()) {
+        ctx.metro.stop();
+        renderSong(ctx);
+        return;
+      }
+      const fallback = variantId === "easy" ? 80 : variantId === "medium" ? 95 : 100;
+      const bpm = track && track.recommendedBpm ? track.recommendedBpm : fallback;
+      ctx.metro.start(bpm);
+      renderSong(ctx);
+    };
 
-    const passesTime = elapsedSec >= target;
-    const passesStops = (sess.stopCount || 0) <= stopLimit;
+    document.getElementById("song-start").onclick = () => {
+      ensureSongState(state);
+      state.songs.completedOverlay = false;
 
-    if (passesTime && passesStops) {
-      // Mark completion, unlock next
+      state.songs.session = {
+        running: true,
+        songId,
+        variantId,
+        startedAt: Date.now(),
+        elapsedSec: 0,
+        stopCount: 0
+      };
+
+      ctx.persist();
+      startSongTicker(ctx);
+      renderSong(ctx);
+    };
+
+    document.getElementById("song-stop").onclick = () => {
+      ensureSongState(state);
+      const s = state.songs.session || {};
+      if (s.running === true) {
+        s.stopCount = (s.stopCount || 0) + 1;
+        s.running = false;
+        state.songs.session = s;
+        ctx.persist();
+      }
       stopSongTicker();
-      sess.running = false;
-      state.songs.session = sess;
-
-      const prog = getSongProgress(state, songId);
-      if (variantId === "easy") prog.easyCompletions += 1;
-      if (variantId === "medium") prog.mediumCompletions += 1;
-      if (variantId === "hard") prog.hardCompletions += 1;
-
-      state.songs.completedOverlay = true;
-      ctx.persist();
-      renderSong(ctx);
-      return;
-    }
-  }
-
-  // Overlay buttons
-  const playAgainBtn = document.getElementById("song-play-again");
-  if (playAgainBtn) {
-    playAgainBtn.onclick = () => {
-      ensureSongState(state);
-      state.songs.completedOverlay = false;
-      state.songs.session = { running: false, songId, variantId, startedAt: 0, elapsedSec: 0, stopCount: 0 };
-      ctx.persist();
       renderSong(ctx);
     };
-  }
 
-  const nextStepBtn = document.getElementById("song-next-step");
-  if (nextStepBtn) {
-    nextStepBtn.onclick = () => {
-      // Controlled next step: go back to Core
-      ensureSongState(state);
-      state.songs.completedOverlay = false;
+    // Completion check
+    if (isRunning) {
+      const target = variant.targetSeconds || 90;
+      const stopLimit = typeof variant.stopLimit === "number" ? variant.stopLimit : 1;
+
+      const passesTime = elapsedSec >= target;
+      const passesStops = (sess.stopCount || 0) <= stopLimit;
+
+      if (passesTime && passesStops) {
+        stopSongTicker();
+        sess.running = false;
+        state.songs.session = sess;
+
+        const prog = getSongProgress(state, songId);
+        if (variantId === "easy") prog.easyCompletions += 1;
+        if (variantId === "medium") prog.mediumCompletions += 1;
+        if (variantId === "hard") prog.hardCompletions += 1;
+
+        state.songs.completedOverlay = true;
+        ctx.persist();
+        renderSong(ctx);
+        return;
+      }
+    }
+
+    const playAgainBtn = document.getElementById("song-play-again");
+    if (playAgainBtn) {
+      playAgainBtn.onclick = () => {
+        ensureSongState(state);
+        state.songs.completedOverlay = false;
+        state.songs.session = { running: false, songId, variantId, startedAt: 0, elapsedSec: 0, stopCount: 0 };
+        ctx.persist();
+        renderSong(ctx);
+      };
+    }
+
+    const nextStepBtn = document.getElementById("song-next-step");
+    if (nextStepBtn) {
+      nextStepBtn.onclick = () => {
+        ensureSongState(state);
+        state.songs.completedOverlay = false;
+        ctx.persist();
+        View.set(ctx, "core");
+        renderHome(ctx);
+      };
+    }
+
+    document.getElementById("back-songs").onclick = () => {
+      stopSongTicker();
+      if (state.songs.session) state.songs.session.running = false;
       ctx.persist();
-      setView(ctx, "core");
+      View.set(ctx, "songs");
       renderHome(ctx);
     };
   }
 
-  document.getElementById("back-songs").onclick = () => {
-    stopSongTicker();
-    if (state.songs.session) state.songs.session.running = false;
-    ctx.persist();
-    setView(ctx, "songs");
-    renderHome(ctx);
+  return {
+    ensureSongState,
+    renderSongs,
+    renderSong
   };
-}
+})();
 
-// ------------------ Screens ------------------
+/* ============================================================
+   SECTION 7 — Screens (Home / Genre / Practice / Skill)
+============================================================ */
 
 export function renderHome(ctx) {
   ctx.ensureMirrorDefault();
 
   const { app, C, state } = ctx;
 
-  const view = getView(state);
+  const view = View.get(state);
   if (view === "settings") return renderSettings(ctx);
-  if (view === "core") return renderCore(ctx);
-  if (view === "songs") return renderSongs(ctx);
-  if (view === "song") return renderSong(ctx);
+  if (view === "core") return Core.render(ctx);
+  if (view === "songs") return Songs.renderSongs(ctx);
+  if (view === "song") return Songs.renderSong(ctx);
 
   const genres = Object.values(C.genres || {});
   const activeGenre = C.genres ? C.genres[state.genre] : null;
@@ -901,7 +904,9 @@ export function renderHome(ctx) {
     })
     .join("");
 
-  const activeDesc = activeGenre?.description ? activeGenre.description : "Select a genre to access backing tracks and genre-specific material.";
+  const activeDesc = activeGenre?.description
+    ? activeGenre.description
+    : "Select a genre to access backing tracks and genre-specific material.";
 
   app.innerHTML = `
     <div class="card">
@@ -953,17 +958,17 @@ export function renderHome(ctx) {
   }
 
   document.getElementById("open-settings").onclick = () => {
-    setView(ctx, "settings");
+    View.set(ctx, "settings");
     renderHome(ctx);
   };
 
   document.getElementById("open-core").onclick = () => {
-    setView(ctx, "core");
+    View.set(ctx, "core");
     renderHome(ctx);
   };
 
   document.getElementById("open-songs").onclick = () => {
-    setView(ctx, "songs");
+    View.set(ctx, "songs");
     renderHome(ctx);
   };
 
@@ -980,7 +985,7 @@ export function renderGenre(ctx, genreId) {
 
   const skills = genre.starterSkillIds.map(id => C.skills[id]).filter(Boolean);
   const btsAll = genre.backingTrackIds.map(id => C.backingTracks[id]).filter(Boolean);
-  const bts = filterTracksByRole(ctx, btsAll);
+  const bts = Backing.filterTracksByRole(ctx, btsAll);
 
   app.innerHTML = `
     <div class="card">
@@ -1017,7 +1022,7 @@ export function renderGenre(ctx, genreId) {
   `;
 
   document.getElementById("go-core").onclick = () => {
-    setView(ctx, "core");
+    View.set(ctx, "core");
     renderHome(ctx);
   };
 
@@ -1025,13 +1030,13 @@ export function renderGenre(ctx, genreId) {
   skillList.innerHTML = skills
     .map(
       s => `
-    <div class="card" style="background:#171717;">
-      <h4 style="margin:0 0 6px 0;">${s.name}</h4>
-      <div class="muted" style="margin-bottom:10px;">${s.summary}</div>
-      <div class="muted" style="font-size:14px;">Drills: ${s.drills.length} • Level: ${s.levelBand}</div>
-      <button data-skill="${s.id}" style="margin-top:10px;">Open Skill</button>
-    </div>
-  `
+      <div class="card" style="background:#171717;">
+        <h4 style="margin:0 0 6px 0;">${s.name}</h4>
+        <div class="muted" style="margin-bottom:10px;">${s.summary}</div>
+        <div class="muted" style="font-size:14px;">Drills: ${s.drills.length} • Level: ${s.levelBand}</div>
+        <button data-skill="${s.id}" style="margin-top:10px;">Open Skill</button>
+      </div>
+    `
     )
     .join("");
 
@@ -1040,8 +1045,8 @@ export function renderGenre(ctx, genreId) {
   });
 
   const btArea = document.getElementById("bt-area");
-  btArea.innerHTML = backingUI(ctx, bts, () => renderGenre(ctx, genreId));
-  wireBackingDropdown(ctx, bts, () => renderGenre(ctx, genreId));
+  btArea.innerHTML = Backing.ui(ctx, bts, () => renderGenre(ctx, genreId));
+  Backing.wireDropdown(ctx, bts, () => renderGenre(ctx, genreId));
 
   document.getElementById("back-home").onclick = () => ctx.nav.home();
   document.getElementById("go-practice").onclick = () => ctx.nav.practice();
@@ -1056,7 +1061,7 @@ export function renderPractice(ctx) {
 
   const skills = genre.starterSkillIds.map(id => C.skills[id]).filter(Boolean);
   const btsAll = genre.backingTrackIds.map(id => C.backingTracks[id]).filter(Boolean);
-  const bts = filterTracksByRole(ctx, btsAll);
+  const bts = Backing.filterTracksByRole(ctx, btsAll);
 
   app.innerHTML = `
     <div class="card">
@@ -1094,25 +1099,25 @@ export function renderPractice(ctx) {
   `;
 
   document.getElementById("go-core").onclick = () => {
-    setView(ctx, "core");
+    View.set(ctx, "core");
     renderHome(ctx);
   };
 
   const btArea = document.getElementById("bt-area");
-  btArea.innerHTML = backingUI(ctx, bts, () => renderPractice(ctx));
-  wireBackingDropdown(ctx, bts, () => renderPractice(ctx));
+  btArea.innerHTML = Backing.ui(ctx, bts, () => renderPractice(ctx));
+  Backing.wireDropdown(ctx, bts, () => renderPractice(ctx));
 
   const skillList = document.getElementById("skill-list");
   skillList.innerHTML = skills
     .map(
       s => `
-    <div class="card" style="background:#171717;">
-      <h4 style="margin:0 0 6px 0;">${s.name}</h4>
-      <div class="muted" style="margin-bottom:10px;">${s.summary}</div>
-      <div class="muted" style="font-size:14px;">Drills: ${s.drills.length} • Level: ${s.levelBand}</div>
-      <button data-skill="${s.id}" style="margin-top:10px;">Open Skill</button>
-    </div>
-  `
+      <div class="card" style="background:#171717;">
+        <h4 style="margin:0 0 6px 0;">${s.name}</h4>
+        <div class="muted" style="margin-bottom:10px;">${s.summary}</div>
+        <div class="muted" style="font-size:14px;">Drills: ${s.drills.length} • Level: ${s.levelBand}</div>
+        <button data-skill="${s.id}" style="margin-top:10px;">Open Skill</button>
+      </div>
+    `
     )
     .join("");
 
@@ -1123,6 +1128,10 @@ export function renderPractice(ctx) {
   document.getElementById("back-home").onclick = () => ctx.nav.home();
   document.getElementById("genre-details").onclick = () => ctx.nav.genre(genre.id);
 }
+
+/* ============================================================
+   SECTION 8 — Skill screen
+============================================================ */
 
 // helper: pick ONE video url per drill (videoUrl OR media)
 function pickOneVideoUrl(d) {
@@ -1189,60 +1198,60 @@ export function renderSkill(ctx, skillId, opts = {}) {
           const oneUrl = rawUrl ? withCb(rawUrl, `${skill.id}_${d.id}`) : null;
 
           return `
-          <div class="card" style="background:#171717;">
-            <h4 style="margin:0 0 6px 0;">${d.name}</h4>
+            <div class="card" style="background:#171717;">
+              <h4 style="margin:0 0 6px 0;">${d.name}</h4>
 
-            <div class="muted" style="font-size:14px;">
-              Suggested BPM: ${cfg.start} to ${cfg.target} (step ${cfg.step})
-              • Duration: ~${Math.max(1, Math.round(d.durationSec / 60))} min
-            </div>
-
-            ${showLevelUp ? `<div class="kpi" style="margin-top:10px;">${levelUpMsg}</div>` : ""}
-
-            <div class="statline">
-              <div class="kpi"><b>Current:</b> ${p.bpm} bpm</div>
-              <div class="kpi"><b>Clean reps:</b> ${p.cleanStreak}/3</div>
-              <div class="kpi"><b>Best:</b> ${p.bestBpm} bpm</div>
-            </div>
-
-            <div class="controls">
-              <button class="secondary small" data-bpm-down="${d.id}">- ${cfg.step}</button>
-              <button class="secondary small" data-bpm-up="${d.id}">+ ${cfg.step}</button>
-
-              <button class="small" data-clean="${d.id}">Clean rep</button>
-              <button class="secondary small" data-sloppy="${d.id}">Sloppy rep</button>
-
-              <button class="secondary small" data-reset="${d.id}">Reset</button>
-
-              <button class="${metroRunning ? "" : "secondary"} small" data-metro="${d.id}">
-                ${metroRunning ? "Stop metronome" : "Start metronome"}
-              </button>
-
-              <span class="pill">${metroRunning ? `Metronome: ON (${ctx.metro.getBpm()} bpm)` : "Metronome: OFF"}</span>
-            </div>
-
-            <div class="hr"></div>
-
-            <div style="margin-top:10px;">
-              ${d.instructions.map(line => `<div style="opacity:.95">• ${line}</div>`).join("")}
-            </div>
-
-            <div style="margin-top:14px;">
-              <div class="row" style="justify-content:space-between;">
-                <h4 style="margin:0;">Video Example</h4>
-                <button class="secondary small" data-toggle-mirror="1">
-                  ${state.mirrorVideos ? "Mirroring ON" : "Mirroring OFF"}
-                </button>
+              <div class="muted" style="font-size:14px;">
+                Suggested BPM: ${cfg.start} to ${cfg.target} (step ${cfg.step})
+                • Duration: ~${Math.max(1, Math.round(d.durationSec / 60))} min
               </div>
 
-              ${
-                oneUrl
-                  ? `<div style="margin-top:10px;">${ctx.videoBlock("Example", oneUrl, state.mirrorVideos)}</div>`
-                  : `<div class="muted" style="margin-top:8px;">No video set for this drill yet.</div>`
-              }
+              ${showLevelUp ? `<div class="kpi" style="margin-top:10px;">${levelUpMsg}</div>` : ""}
+
+              <div class="statline">
+                <div class="kpi"><b>Current:</b> ${p.bpm} bpm</div>
+                <div class="kpi"><b>Clean reps:</b> ${p.cleanStreak}/3</div>
+                <div class="kpi"><b>Best:</b> ${p.bestBpm} bpm</div>
+              </div>
+
+              <div class="controls">
+                <button class="secondary small" data-bpm-down="${d.id}">- ${cfg.step}</button>
+                <button class="secondary small" data-bpm-up="${d.id}">+ ${cfg.step}</button>
+
+                <button class="small" data-clean="${d.id}">Clean rep</button>
+                <button class="secondary small" data-sloppy="${d.id}">Sloppy rep</button>
+
+                <button class="secondary small" data-reset="${d.id}">Reset</button>
+
+                <button class="${metroRunning ? "" : "secondary"} small" data-metro="${d.id}">
+                  ${metroRunning ? "Stop metronome" : "Start metronome"}
+                </button>
+
+                <span class="pill">${metroRunning ? `Metronome: ON (${ctx.metro.getBpm()} bpm)` : "Metronome: OFF"}</span>
+              </div>
+
+              <div class="hr"></div>
+
+              <div style="margin-top:10px;">
+                ${d.instructions.map(line => `<div style="opacity:.95">• ${line}</div>`).join("")}
+              </div>
+
+              <div style="margin-top:14px;">
+                <div class="row" style="justify-content:space-between;">
+                  <h4 style="margin:0;">Video Example</h4>
+                  <button class="secondary small" data-toggle-mirror="1">
+                    ${state.mirrorVideos ? "Mirroring ON" : "Mirroring OFF"}
+                  </button>
+                </div>
+
+                ${
+                  oneUrl
+                    ? `<div style="margin-top:10px;">${ctx.videoBlock("Example", oneUrl, state.mirrorVideos)}</div>`
+                    : `<div class="muted" style="margin-top:8px;">No video set for this drill yet.</div>`
+                }
+              </div>
             </div>
-          </div>
-        `;
+          `;
         })
         .join("")}
 
