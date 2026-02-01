@@ -7,10 +7,11 @@ import { shouldShowLevelUp } from "./progress.js";
 import { SONGS } from "./songs.js";
 
 import { getView, setView } from "./state/viewState.js";
-import { withCb, safeYoutubeEmbed } from "./ui/video.js";
-import { createSongsUI } from "./ui/songs.js";
+import { withCb } from "./ui/video.js";
 
-import { backingUI, wireBackingDropdown, filterTracksByRole } from "./ui/backing.js";
+import { createSongsUI } from "./ui/songs.js";
+import { filterTracksByRole, backingUI, wireBackingDropdown } from "./ui/backing.js";
+import { createCoreUI } from "./ui/core.js";
 
 /* ============================================================
    SECTION 0 — Small shared guards
@@ -26,91 +27,7 @@ function rolePill(ctx) {
 }
 
 /* ============================================================
-   SECTION 1 — Core Learning aggregation
-============================================================ */
-
-const Core = {
-  getCoreSkills(C) {
-    const all = Object.values(C.skills || {});
-    return all
-      .filter(s => s && s.levelBand === "beginner" && Array.isArray(s.drills) && s.drills.length)
-      .sort((a, b) => {
-        const ga = String(a.genre || "");
-        const gb = String(b.genre || "");
-        if (ga !== gb) return ga.localeCompare(gb);
-        return String(a.name || "").localeCompare(String(b.name || ""));
-      });
-  },
-
-  render(ctx) {
-    ctx.ensureMirrorDefault();
-
-    const { app, C, state } = ctx;
-    const coreSkills = Core.getCoreSkills(C);
-
-    app.innerHTML = `
-      <div class="card">
-        <h2>Core Learning</h2>
-        <p class="muted">
-          This is the beginner path (all genres share the same fundamentals).
-        </p>
-
-        <div class="row" style="margin:10px 0;">
-          <span class="pill">Hand: ${ctx.handednessLabel()}</span>
-          <span class="pill">Video mirror: ${state.mirrorVideos ? "ON" : "OFF"}</span>
-          ${rolePill(ctx)}
-        </div>
-
-        <div class="card" style="background:#171717;">
-          <h3 style="margin-top:0;">Start Here</h3>
-          <div class="muted" style="font-size:14px;">
-            Pick any skill below. Later we can reorder these into your locked core list.
-          </div>
-        </div>
-
-        <div style="height:10px"></div>
-
-        <div id="core-skill-list"></div>
-
-        <div style="margin-top:16px;" class="row">
-          <button class="secondary" id="back-home">Back</button>
-          <button id="go-practice">Go to Practice</button>
-        </div>
-      </div>
-    `;
-
-    const list = document.getElementById("core-skill-list");
-    list.innerHTML = coreSkills.length
-      ? coreSkills
-          .map(s => {
-            return `
-              <div class="card" style="background:#171717;">
-                <h4 style="margin:0 0 6px 0;">${s.name}</h4>
-                <div class="muted" style="margin-bottom:10px;">${s.summary}</div>
-                <div class="muted" style="font-size:14px;">
-                  Source: ${s.genre} • Drills: ${s.drills.length} • Level: ${s.levelBand}
-                </div>
-                <button data-skill="${s.id}" style="margin-top:10px;">Open Skill</button>
-              </div>
-            `;
-          })
-          .join("")
-      : `<div class="muted">No core skills found yet.</div>`;
-
-    list.querySelectorAll("button[data-skill]").forEach(btn => {
-      btn.onclick = () => ctx.nav.skill(btn.dataset.skill, { backTo: () => Core.render(ctx) });
-    });
-
-    document.getElementById("back-home").onclick = () => {
-      setView(ctx, "home");
-      renderHome(ctx);
-    };
-    document.getElementById("go-practice").onclick = () => ctx.nav.practice();
-  }
-};
-
-/* ============================================================
-   SECTION 2 — Settings screen
+   SECTION 1 — Settings screen (still local; we can extract next)
 ============================================================ */
 
 function renderSettings(ctx) {
@@ -227,17 +144,23 @@ function renderSettings(ctx) {
 }
 
 /* ============================================================
-   SECTION 3 — Songs UI (external module)
+   SECTION 2 — External UIs (Songs + Core)
 ============================================================ */
 
 const SongsUI = createSongsUI(SONGS, {
+  // songs.js already exists in your repo — keep using it
   withCb,
-  safeYoutubeEmbed,
   View: { set: setView }
 });
 
+// core.js extracted — use it now
+const CoreUI = createCoreUI({
+  rolePill,
+  setView
+});
+
 /* ============================================================
-   SECTION 4 — Screens (Home / Genre / Practice / Skill)
+   SECTION 3 — Home / Genre / Practice / Skill
 ============================================================ */
 
 export function renderHome(ctx) {
@@ -247,7 +170,7 @@ export function renderHome(ctx) {
 
   const view = getView(state);
   if (view === "settings") return renderSettings(ctx);
-  if (view === "core") return Core.render(ctx);
+  if (view === "core") return CoreUI.render(ctx, renderHome);
   if (view === "songs") return SongsUI.renderSongs(ctx, renderHome);
   if (view === "song") return SongsUI.renderSong(ctx, renderHome);
 
@@ -491,7 +414,7 @@ export function renderPractice(ctx) {
 }
 
 /* ============================================================
-   SECTION 5 — Skill screen
+   SECTION 4 — Skill screen
 ============================================================ */
 
 // helper: pick ONE video url per drill (videoUrl OR media)
@@ -690,4 +613,4 @@ export function renderSkill(ctx, skillId, opts = {}) {
   });
 
   document.getElementById("back").onclick = backTo;
-}
+     }
