@@ -9,10 +9,10 @@ import { SONGS } from "./songs.js";
 import { getView, setView } from "./state/viewState.js";
 import { withCb } from "./ui/video.js";
 
-import { createSongsUI } from "./ui/songs.js";
-import { filterTracksByRole, backingUI, wireBackingDropdown } from "./ui/backing.js";
+import { backingUI, wireBackingDropdown, filterTracksByRole } from "./ui/backing.js";
 import { createCoreUI } from "./ui/core.js";
 import { createSettingsUI } from "./ui/settings.js";
+import { createSongsUI } from "./ui/songs.js";
 
 /* ============================================================
    SECTION 0 — Small shared guards
@@ -28,13 +28,8 @@ function rolePill(ctx) {
 }
 
 /* ============================================================
-   SECTION 1 — External UIs (Songs + Core + Settings)
+   SECTION 1 — External UIs
 ============================================================ */
-
-const SongsUI = createSongsUI(SONGS, {
-  withCb,
-  View: { set: setView }
-});
 
 const CoreUI = createCoreUI({
   rolePill,
@@ -44,6 +39,12 @@ const CoreUI = createCoreUI({
 const SettingsUI = createSettingsUI({
   rolePill,
   setView
+});
+
+// NOTE: your ui/songs.js already exists; it should return { renderSongs, renderSong }
+const SongsUI = createSongsUI(SONGS, {
+  withCb,
+  View: { set: setView }
 });
 
 /* ============================================================
@@ -301,7 +302,7 @@ export function renderPractice(ctx) {
 }
 
 /* ============================================================
-   SECTION 3 — Skill screen
+   SECTION 3 — Skill screen (still in render.js for now)
 ============================================================ */
 
 // helper: pick ONE video url per drill (videoUrl OR media)
