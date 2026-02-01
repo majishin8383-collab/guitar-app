@@ -12,6 +12,7 @@ import { withCb } from "./ui/video.js";
 import { createSongsUI } from "./ui/songs.js";
 import { filterTracksByRole, backingUI, wireBackingDropdown } from "./ui/backing.js";
 import { createCoreUI } from "./ui/core.js";
+import { createSettingsUI } from "./ui/settings.js";
 
 /* ============================================================
    SECTION 0 — Small shared guards
@@ -27,140 +28,26 @@ function rolePill(ctx) {
 }
 
 /* ============================================================
-   SECTION 1 — Settings screen (still local; we can extract next)
-============================================================ */
-
-function renderSettings(ctx) {
-  ctx.ensureMirrorDefault();
-
-  const { app, state } = ctx;
-
-  const roleCard = hasRole(ctx)
-    ? `
-      <div class="card" style="background:#171717;">
-        <h3 style="margin-top:0;">Your Focus</h3>
-        <p class="muted">Pick what you're practicing most right now.</p>
-        <div class="row">
-          <button id="role-rhythm">Rhythm</button>
-          <button id="role-lead">Lead</button>
-          ${rolePill(ctx)}
-        </div>
-      </div>
-    `
-    : "";
-
-  app.innerHTML = `
-    <div class="card">
-      <h2>Settings</h2>
-      <p class="muted">These apply across the whole app.</p>
-
-      ${roleCard}
-
-      <div class="card" style="background:#171717; margin-top:10px;">
-        <h3 style="margin-top:0;">Playing Hand</h3>
-        <p class="muted">All instructions use <b>fretting hand</b> + <b>picking hand</b>.</p>
-        <div class="row">
-          <button id="hand-right">Right-handed</button>
-          <button id="hand-left">Left-handed</button>
-          <span class="pill">Current: ${ctx.handednessLabel()}</span>
-        </div>
-      </div>
-
-      <div class="card" style="background:#171717; margin-top:10px;">
-        <h3 style="margin-top:0;">Video Orientation</h3>
-        <p class="muted">Mirroring is a viewing preference only.</p>
-        <div class="row">
-          <button id="toggle-mirror" class="${state.mirrorVideos ? "" : "secondary"}">
-            ${state.mirrorVideos ? "Mirroring: ON" : "Mirroring: OFF"}
-          </button>
-          <span class="pill">Applies to drill videos</span>
-        </div>
-      </div>
-
-      <div style="margin-top:16px;" class="row">
-        <button class="secondary" id="back-home">Back</button>
-      </div>
-    </div>
-  `;
-
-  if (hasRole(ctx)) {
-    const rr = document.getElementById("role-rhythm");
-    const rl = document.getElementById("role-lead");
-
-    if (state.role === "lead") {
-      rl.classList.remove("secondary");
-      rr.classList.add("secondary");
-    } else {
-      rr.classList.remove("secondary");
-      rl.classList.add("secondary");
-    }
-
-    rr.onclick = () => {
-      state.role = "rhythm";
-      ctx.persist();
-      renderSettings(ctx);
-    };
-    rl.onclick = () => {
-      state.role = "lead";
-      ctx.persist();
-      renderSettings(ctx);
-    };
-  }
-
-  const rightBtn = document.getElementById("hand-right");
-  const leftBtn = document.getElementById("hand-left");
-
-  if (state.handedness === "right") {
-    rightBtn.classList.remove("secondary");
-    leftBtn.classList.add("secondary");
-  } else {
-    rightBtn.classList.add("secondary");
-    leftBtn.classList.remove("secondary");
-  }
-
-  rightBtn.onclick = () => {
-    state.handedness = "right";
-    ctx.persist();
-    renderSettings(ctx);
-  };
-
-  leftBtn.onclick = () => {
-    state.handedness = "left";
-    if (!state.mirrorVideos) state.mirrorVideos = true;
-    ctx.persist();
-    renderSettings(ctx);
-  };
-
-  document.getElementById("toggle-mirror").onclick = () => {
-    state.mirrorVideos = !state.mirrorVideos;
-    ctx.persist();
-    renderSettings(ctx);
-  };
-
-  document.getElementById("back-home").onclick = () => {
-    setView(ctx, "home");
-    renderHome(ctx);
-  };
-}
-
-/* ============================================================
-   SECTION 2 — External UIs (Songs + Core)
+   SECTION 1 — External UIs (Songs + Core + Settings)
 ============================================================ */
 
 const SongsUI = createSongsUI(SONGS, {
-  // songs.js already exists in your repo — keep using it
   withCb,
   View: { set: setView }
 });
 
-// core.js extracted — use it now
 const CoreUI = createCoreUI({
   rolePill,
   setView
 });
 
+const SettingsUI = createSettingsUI({
+  rolePill,
+  setView
+});
+
 /* ============================================================
-   SECTION 3 — Home / Genre / Practice / Skill
+   SECTION 2 — Screens (Home / Genre / Practice / Skill)
 ============================================================ */
 
 export function renderHome(ctx) {
@@ -169,7 +56,7 @@ export function renderHome(ctx) {
   const { app, C, state } = ctx;
 
   const view = getView(state);
-  if (view === "settings") return renderSettings(ctx);
+  if (view === "settings") return SettingsUI.render(ctx, renderHome);
   if (view === "core") return CoreUI.render(ctx, renderHome);
   if (view === "songs") return SongsUI.renderSongs(ctx, renderHome);
   if (view === "song") return SongsUI.renderSong(ctx, renderHome);
@@ -414,7 +301,7 @@ export function renderPractice(ctx) {
 }
 
 /* ============================================================
-   SECTION 4 — Skill screen
+   SECTION 3 — Skill screen
 ============================================================ */
 
 // helper: pick ONE video url per drill (videoUrl OR media)
@@ -613,4 +500,4 @@ export function renderSkill(ctx, skillId, opts = {}) {
   });
 
   document.getElementById("back").onclick = backTo;
-     }
+}
