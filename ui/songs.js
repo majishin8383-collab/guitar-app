@@ -760,4 +760,4 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
     renderSong,
     stopSongTicker
   };
-          }
+}
