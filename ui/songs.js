@@ -11,6 +11,11 @@
 //    - easy → medium → hard
 //    - hard → next core skills (if any) else next song (if configured) else songs list
 // 8) Stores a "resume target" so Core can send the user back to the next song later
+//
+// PATCH (today):
+// - Default showTrack = true (restore “backing track shows up” behavior)
+// - Accept multiple track URL fields (youtubeEmbed / youtube / embed / url / href)
+// - Don’t show “No backing track…” when embed is simply hidden
 
 export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
   let SONG_TICKER = null;
@@ -177,7 +182,9 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
     if (!state.songs.lastSong || typeof state.songs.lastSong !== "object")
       state.songs.lastSong = { songId: "song1", variant: "easy" };
 
-    if (!("showTrack" in state.songs)) state.songs.showTrack = false;
+    // ✅ restore “backing track shows” by default
+    if (!("showTrack" in state.songs)) state.songs.showTrack = true;
+
     if (!("guidanceOpen" in state.songs)) state.songs.guidanceOpen = false;
     if (!("explainOpen" in state.songs)) state.songs.explainOpen = false;
     if (!("completedOverlay" in state.songs)) state.songs.completedOverlay = false;
@@ -186,7 +193,6 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
     if (!("autoStartTrack" in state.songs)) state.songs.autoStartTrack = false;
 
     // ✅ progression support: if Core needs to send user back into Songs
-    // Core UI can optionally look at this later.
     if (!("resumeAfterCore" in state.songs)) state.songs.resumeAfterCore = null;
   }
 
@@ -379,10 +385,6 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
     renderHome(ctx);
   }
 
-  // After hard, decide what comes next:
-  // - If song defines nextCoreIds (and has items) => go to core, store resume target
-  // - Else if song defines nextSongId => go to that song (easy)
-  // - Else => songs list
   function handlePostHardProgression(ctx, renderHome, songIdJustCompleted) {
     const state = ctx.state;
     ensureSongState(state);
@@ -395,7 +397,6 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
     const nextCoreView = song.nextCoreView || "core";
 
     if (nextCoreIds.length) {
-      // Store where Core should return the user afterwards
       state.songs.resumeAfterCore = {
         songId: nextSongId || null,
         variant: "easy",
@@ -600,7 +601,11 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
 
     const track = C.backingTracks ? C.backingTracks[variant.backingTrackId] : null;
 
-    const rawUrl = track ? track.youtubeEmbed : null;
+    // ✅ Accept multiple possible field names (restores older backingTracks shape)
+    const rawUrl = track
+      ? (track.youtubeEmbed || track.youtube || track.embed || track.url || track.href || null)
+      : null;
+
     const safeBaseEmbed = normalizeToEmbedUrl(rawUrl);
     const apiUrl = safeBaseEmbed ? addJsApiParams(safeBaseEmbed) : null;
     const iframeSrc = apiUrl ? withCb(apiUrl, `song_${songId}_${variantId}`) : null;
@@ -681,25 +686,33 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
         </button>
 
         ${
-          state.songs.showTrack && iframeSrc
-            ? `
-              <div style="height:10px"></div>
-              <div class="videoWrap">
-                <iframe
-                  id="song-yt-iframe"
-                  src="${iframeSrc}"
-                  title="Backing track"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  allowfullscreen
-                ></iframe>
-              </div>
-              <div class="muted" style="font-size:12px; margin-top:8px;">
-                Tip: press Play in the player to start the timer automatically.
-              </div>
-            `
+          iframeSrc
+            ? (
+              state.songs.showTrack
+                ? `
+                  <div style="height:10px"></div>
+                  <div class="videoWrap">
+                    <iframe
+                      id="song-yt-iframe"
+                      src="${iframeSrc}"
+                      title="Backing track"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowfullscreen
+                    ></iframe>
+                  </div>
+                  <div class="muted" style="font-size:12px; margin-top:8px;">
+                    Tip: press Play in the player to start the timer automatically.
+                  </div>
+                `
+                : `
+                  <div class="muted" style="margin-top:10px;">
+                    Backing track ready. Tap <b>Start backing track</b>.
+                  </div>
+                `
+            )
             : `
               <div class="muted" style="margin-top:10px;">
-                No backing track embed configured for this variant yet.
+                No backing track configured for this variant yet.
               </div>
             `
         }
@@ -885,7 +898,6 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
         }
 
         // ✅ 2) If hard completed (or no next variant), progress to core/next song
-        // We treat "no nextVariant" as "post-hard" step.
         handlePostHardProgression(ctx, renderHome, songId);
       };
     }
@@ -906,3 +918,4 @@ export function createSongsUI(SONGS, { withCb, safeYoutubeEmbed, View }) {
     stopSongTicker
   };
 }
+```0
