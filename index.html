@@ -28,23 +28,17 @@
   <script src="content/base.js?v=GT-001"></script>
 
   <!-- =====================================================
-       PATCH: add SONGS bucket + allow CONTENT_ADD to merge songs
-       (keeps your existing CONTENT_ADD pattern)
+       SONG REGISTRY (PARALLEL TO GENRES)
   ====================================================== -->
   <script>
-    window.CONTENT = (window.CONTENT && typeof window.CONTENT === "object") ? window.CONTENT : {};
+    // Ensure songs bucket exists
     window.CONTENT.songs = window.CONTENT.songs || {};
 
-    // Extend existing CONTENT_ADD to also merge { songs: {...} }
-    (function () {
-      const prev = window.CONTENT_ADD;
-      window.CONTENT_ADD = function (part) {
-        if (typeof prev === "function") prev(part);
-        if (part && typeof part === "object" && part.songs) {
-          Object.assign(window.CONTENT.songs, part.songs);
-        }
-      };
-    })();
+    // Song-specific helper (mirrors CONTENT_ADD pattern)
+    window.CONTENT_ADD_SONG = function addSong(song) {
+      if (!song || !song.id) return;
+      window.CONTENT.songs[song.id] = song;
+    };
   </script>
 
   <!-- =====================================================
@@ -57,11 +51,11 @@
 
   <!-- =====================================================
        SONG PACKS (ONE FILE PER SONG)
-       IMPORTANT: load backing tracks BEFORE the song that references them
+       IMPORTANT: load tracks FIRST, then song definition
   ====================================================== -->
   <script src="content/songs/song1_tracks.js?v=GT-001"></script>
   <script src="content/songs/song1.js?v=GT-001"></script>
-  <!-- song2_tracks.js then song2.js, etc -->
+  <!-- song2_tracks.js + song2.js, etc -->
 
   <!-- =====================================================
        APP ENTRY
