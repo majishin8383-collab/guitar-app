@@ -1,25 +1,32 @@
+// content/songs/song1_tracks.js
+// Backing tracks for song1 variants (must match backingTrackId in song1.js)
+
 CONTENT_ADD({
   backingTracks: {
     bt_song1_easy: {
       id: "bt_song1_easy",
-      name: "Song 1 — Easy (80 BPM)",
+      name: "Blues in A — 80 bpm (easy)",
       key: "A",
       recommendedBpm: 80,
-      youtubeEmbed: "https://www.youtube.com/embed/dlPoPLJBCxY"
+      youtubeEmbed: "https://www.youtube.com/embed/y6ssAMKXPog"
     },
+
+    // NOTE: This one is a temporary “A groove” at ~95bpm so Medium is not pop/acoustic.
+    // If you want STRICT A↔D blues harmony only, we can swap this ID once you pick the exact track.
     bt_song1_medium: {
       id: "bt_song1_medium",
-      name: "Song 1 — Medium (95 BPM)",
+      name: "Groove in A — ~95 bpm (medium)",
       key: "A",
       recommendedBpm: 95,
-      youtubeEmbed: "https://www.youtube.com/embed/cQhqQTv8J5I"
+      youtubeEmbed: "https://www.youtube.com/embed/MEX1mOyvTQA"
     },
+
     bt_song1_hard: {
       id: "bt_song1_hard",
-      name: "Song 1 — Hard (110 BPM)",
-      key: "A / Am",
+      name: "Blues in A — 110 bpm (hard)",
+      key: "A",
       recommendedBpm: 110,
-      youtubeEmbed: "https://www.youtube.com/embed/wwPMLTQ7h24"
+      youtubeEmbed: "https://www.youtube.com/embed/gT_HLlEDwwg"
     }
   }
 });
