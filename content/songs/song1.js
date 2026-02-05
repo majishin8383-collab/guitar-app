@@ -17,9 +17,13 @@ CONTENT_ADD({
         }
       ],
 
+      // ✅ Correct progression (4-bar loop):
+      // A / A / D / A
       chordBlocks: [
-        { chord: "A", beatsPerBar: "4 beats" },
-        { chord: "D", beatsPerBar: "4 beats" }
+        { chord: "A", beatsPerBar: 4 },
+        { chord: "A", beatsPerBar: 4 },
+        { chord: "D", beatsPerBar: 4 },
+        { chord: "A", beatsPerBar: 4 }
       ],
 
       variants: {
