@@ -634,4 +634,3 @@ export function createSongsUI(SONGS_SOURCE, { withCb, safeYoutubeEmbed, View }) 
     stopSongTicker: () => stopSongTicker()
   };
 }
-```0
