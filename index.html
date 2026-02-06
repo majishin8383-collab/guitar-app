@@ -6,10 +6,10 @@
   <title>Guitar Trainer</title>
 
   <script>
-    window.__BUILD__ = "GT-001";
+    window.__BUILD__ = "GT-002";
   </script>
 
-  <link rel="stylesheet" href="styles.css?v=GT-001" />
+  <link rel="stylesheet" href="styles.css?v=GT-002" />
 </head>
 <body>
   <header>
@@ -25,16 +25,14 @@
   <!-- =====================================================
        BASE CONTENT (creates window.CONTENT)
   ====================================================== -->
-  <script src="content/base.js?v=GT-001"></script>
+  <script src="content/base.js?v=GT-002"></script>
 
   <!-- =====================================================
        SONG REGISTRY (PARALLEL TO GENRES)
   ====================================================== -->
   <script>
-    // Ensure songs bucket exists
     window.CONTENT.songs = window.CONTENT.songs || {};
 
-    // Song-specific helper (mirrors CONTENT_ADD pattern)
     window.CONTENT_ADD_SONG = function addSong(song) {
       if (!song || !song.id) return;
       window.CONTENT.songs[song.id] = song;
@@ -44,22 +42,22 @@
   <!-- =====================================================
        GENRE PACKS
   ====================================================== -->
-  <script src="content/genres/blues.js?v=GT-001"></script>
-  <script src="content/genres/funk.js?v=GT-001"></script>
-  <script src="content/genres/rock.js?v=GT-001"></script>
-  <script src="content/genres/metal.js?v=GT-001"></script>
+  <script src="content/genres/blues.js?v=GT-002"></script>
+  <script src="content/genres/funk.js?v=GT-002"></script>
+  <script src="content/genres/rock.js?v=GT-002"></script>
+  <script src="content/genres/metal.js?v=GT-002"></script>
 
   <!-- =====================================================
-       SONG PACKS (ONE FILE PER SONG)
-       IMPORTANT: load tracks FIRST, then song definition
+       SONG PACKS
+       IMPORTANT: backing tracks FIRST, then song definition
   ====================================================== -->
-  <script src="content/songs/song1_tracks.js?v=GT-001"></script>
-  <script src="content/songs/song1.js?v=GT-001"></script>
-  <!-- song2_tracks.js + song2.js, etc -->
+  <script src="content/songs/song1.tracks.js?v=GT-002"></script>
+  <script src="content/songs/song1.js?v=GT-002"></script>
+  <!-- song2.tracks.js + song2.js, etc -->
 
   <!-- =====================================================
        APP ENTRY
   ====================================================== -->
-  <script type="module" src="app.js?v=GT-001"></script>
+  <script type="module" src="app.js?v=GT-002"></script>
 </body>
 </html>
