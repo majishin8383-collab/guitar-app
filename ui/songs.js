@@ -1,6 +1,9 @@
 // ui/songs.js
 // Songs engine + screens (renderSongs + renderSong)
-// Hard fix: always provide a working Back to Home escape.
+// Hard fix:
+// 1) Back buttons ALWAYS escape correctly (even if state.view is stuck on "songs").
+// 2) More robust YouTube URL normalization (handles missing scheme like "www.youtube.com/..." and "youtu.be/...").
+// 3) Track resolution remains: backingTracks bucket first, then variant fallbacks.
 
 export function createSongsUI(SONGS_SOURCE, { withCb, safeYoutubeEmbed, View }) {
   let SONG_TICKER = null;
@@ -105,6 +108,7 @@ export function createSongsUI(SONGS_SOURCE, { withCb, safeYoutubeEmbed, View }) 
 
   /* ============================================================
      URL normalization
+     Fix: support missing scheme ("www.youtube.com/...", "youtube.com/...", "youtu.be/...")
   ============================================================ */
 
   function safeEmbedFallback(url) {
@@ -118,23 +122,56 @@ export function createSongsUI(SONGS_SOURCE, { withCb, safeYoutubeEmbed, View }) 
 
   const safeEmbed = typeof safeYoutubeEmbed === "function" ? safeYoutubeEmbed : safeEmbedFallback;
 
+  function normalizeYoutubeInputLoose(url) {
+    if (!url || typeof url !== "string") return null;
+    let s = url.trim();
+    if (!s) return null;
+
+    // allow protocol-relative
+    if (s.startsWith("//")) s = "https:" + s;
+
+    // allow missing scheme like "www.youtube.com/..." or "youtu.be/..."
+    if (!/^https?:\/\//i.test(s)) {
+      if (
+        s.startsWith("www.youtube.com/") ||
+        s.startsWith("youtube.com/") ||
+        s.startsWith("m.youtube.com/")
+      ) {
+        s = "https://" + s;
+      } else if (s.startsWith("youtu.be/")) {
+        s = "https://" + s;
+      }
+    }
+    return s;
+  }
+
   function normalizeToEmbedUrl(url) {
     if (!url || typeof url !== "string") return null;
 
+    // already embed?
     const alreadySafe = safeEmbedFallback(url);
     if (alreadySafe) return alreadySafe;
 
+    // try provided helper (may convert watch/youtu.be → embed)
     const maybe = safeEmbed(url);
     if (maybe && safeEmbedFallback(maybe)) return maybe;
 
+    // last resort: parse more loosely (missing scheme, etc.)
+    const s = normalizeYoutubeInputLoose(url);
+    if (!s) return null;
+
+    // after loose normalize, try helper again
+    const maybe2 = safeEmbed(s);
+    if (maybe2 && safeEmbedFallback(maybe2)) return maybe2;
+
     try {
-      const u = new URL(url);
+      const u = new URL(s);
       const host = u.hostname.replace(/^www\./, "");
       let videoId = null;
 
       if (host === "youtu.be") {
         videoId = u.pathname.replace("/", "").trim();
-      } else if (host === "youtube.com" || host === "m.youtube.com" || host === "www.youtube.com") {
+      } else if (host === "youtube.com" || host === "m.youtube.com") {
         if (u.pathname === "/watch") videoId = u.searchParams.get("v");
         else if (u.pathname.startsWith("/embed/")) videoId = u.pathname.split("/embed/")[1] || null;
         else if (u.pathname.startsWith("/shorts/")) videoId = u.pathname.split("/shorts/")[1] || null;
@@ -421,8 +458,13 @@ export function createSongsUI(SONGS_SOURCE, { withCb, safeYoutubeEmbed, View }) 
       };
     });
 
-    // ✅ Escape hatch that cannot fail (ignores view state)
-    document.getElementById("back-home").onclick = () => ctx.nav.home();
+    // ✅ Must actually leave "songs" view (nav.home alone does NOT change state.view)
+    document.getElementById("back-home").onclick = () => {
+      destroyYoutubePlayer();
+      stopSongTicker();
+      View.set(ctx, "home");
+      renderHome(ctx);
+    };
   }
 
   function resolveTrack(ctx, variant) {
@@ -576,7 +618,6 @@ export function createSongsUI(SONGS_SOURCE, { withCb, safeYoutubeEmbed, View }) 
       renderSong(ctx, renderHome);
     };
 
-    // ✅ Always return to songs list, and songs list always has Back to Home
     document.getElementById("back-songs").onclick = () => {
       state.songs.showTrack = false;
       ctx.persist();
@@ -593,3 +634,4 @@ export function createSongsUI(SONGS_SOURCE, { withCb, safeYoutubeEmbed, View }) 
     stopSongTicker: () => stopSongTicker()
   };
 }
+```0
