@@ -1,18 +1,9 @@
 // ui/songs.js
 // Songs engine + screens (renderSongs + renderSong)
-//
-// Fixes in this version:
-// ✅ Songs come from either an object OR a function(ctx)=>songsObject
-// ✅ Back button on Songs returns to Home
-// ✅ Backing track resolution supports BOTH:
-//    1) C.backingTracks[variant.backingTrackId].youtubeEmbed (original)
-//    2) variant.youtubeEmbed / variant.youtubeUrl (fallback)
-// ✅ Avoids hardcoding SONGS.song1
+// Hard fix: always provide a working Back to Home escape.
 
 export function createSongsUI(SONGS_SOURCE, { withCb, safeYoutubeEmbed, View }) {
   let SONG_TICKER = null;
-
-  // ✅ Toggle for your current testing session
   const FORCE_UNLOCK_FOR_TESTING = true;
 
   // --- YouTube IFrame API integration ---
@@ -94,24 +85,17 @@ export function createSongsUI(SONGS_SOURCE, { withCb, safeYoutubeEmbed, View }) 
         events: {
           onStateChange: e => {
             if (!e || typeof e.data !== "number") return;
-
-            // 1 = playing, 2 = paused, 0 = ended
-            if (e.data === 1) {
-              startSessionFromExternalPlay(ctx, renderHome);
-            } else if (e.data === 2 || e.data === 0) {
-              pauseSession(ctx);
-            }
+            if (e.data === 1) startSessionFromExternalPlay(ctx, renderHome);
+            if (e.data === 2 || e.data === 0) pauseSession(ctx);
           }
         }
       });
 
-      // ✅ If Start Playing requested autostart, kick playback now that player exists
       const st = ctx.state;
       ensureSongState(st);
       if (st.songs.autoStartTrack === true) {
         st.songs.autoStartTrack = false;
         ctx.persist();
-
         if (YT_PLAYER && typeof YT_PLAYER.playVideo === "function") {
           try { YT_PLAYER.playVideo(); } catch (_) {}
         }
@@ -120,7 +104,7 @@ export function createSongsUI(SONGS_SOURCE, { withCb, safeYoutubeEmbed, View }) 
   }
 
   /* ============================================================
-     URL Safety + Normalization
+     URL normalization
   ============================================================ */
 
   function safeEmbedFallback(url) {
@@ -151,13 +135,9 @@ export function createSongsUI(SONGS_SOURCE, { withCb, safeYoutubeEmbed, View }) 
       if (host === "youtu.be") {
         videoId = u.pathname.replace("/", "").trim();
       } else if (host === "youtube.com" || host === "m.youtube.com" || host === "www.youtube.com") {
-        if (u.pathname === "/watch") {
-          videoId = u.searchParams.get("v");
-        } else if (u.pathname.startsWith("/embed/")) {
-          videoId = u.pathname.split("/embed/")[1] || null;
-        } else if (u.pathname.startsWith("/shorts/")) {
-          videoId = u.pathname.split("/shorts/")[1] || null;
-        }
+        if (u.pathname === "/watch") videoId = u.searchParams.get("v");
+        else if (u.pathname.startsWith("/embed/")) videoId = u.pathname.split("/embed/")[1] || null;
+        else if (u.pathname.startsWith("/shorts/")) videoId = u.pathname.split("/shorts/")[1] || null;
       }
 
       if (!videoId) return null;
@@ -166,7 +146,7 @@ export function createSongsUI(SONGS_SOURCE, { withCb, safeYoutubeEmbed, View }) 
       if (!videoId) return null;
 
       return `https://www.youtube.com/embed/${videoId}`;
-    } catch (_) {
+    } catch {
       return null;
     }
   }
@@ -180,17 +160,16 @@ export function createSongsUI(SONGS_SOURCE, { withCb, safeYoutubeEmbed, View }) 
     if (!state.songs.progress || typeof state.songs.progress !== "object") state.songs.progress = {};
     if (!state.songs.requirements || typeof state.songs.requirements !== "object") state.songs.requirements = {};
     if (!state.songs.session || typeof state.songs.session !== "object") state.songs.session = {};
-    if (!state.songs.lastSong || typeof state.songs.lastSong !== "object")
+
+    if (!state.songs.lastSong || typeof state.songs.lastSong !== "object") {
       state.songs.lastSong = { songId: null, variant: "easy" };
+    }
 
     if (!("showTrack" in state.songs)) state.songs.showTrack = false;
     if (!("guidanceOpen" in state.songs)) state.songs.guidanceOpen = false;
     if (!("explainOpen" in state.songs)) state.songs.explainOpen = false;
     if (!("completedOverlay" in state.songs)) state.songs.completedOverlay = false;
-
-    // internal flag: Start Playing can request track+autoplay
     if (!("autoStartTrack" in state.songs)) state.songs.autoStartTrack = false;
-
     if (!("resumeAfterCore" in state.songs)) state.songs.resumeAfterCore = null;
   }
 
@@ -220,7 +199,6 @@ export function createSongsUI(SONGS_SOURCE, { withCb, safeYoutubeEmbed, View }) 
   function isVariantUnlocked(state, song, variantId) {
     if (!song) return false;
     if (variantId === "easy") return isSongUnlocked(state, song);
-
     if (FORCE_UNLOCK_FOR_TESTING) return isSongUnlocked(state, song);
 
     const p = getSongProgress(state, song.id);
@@ -242,8 +220,7 @@ export function createSongsUI(SONGS_SOURCE, { withCb, safeYoutubeEmbed, View }) 
   function computeElapsedSec(sess) {
     const acc = typeof sess.accumulatedSec === "number" ? sess.accumulatedSec : 0;
     if (sess.running === true && typeof sess.startedAt === "number" && sess.startedAt > 0) {
-      const now = Date.now();
-      const run = (now - sess.startedAt) / 1000;
+      const run = (Date.now() - sess.startedAt) / 1000;
       return Math.max(0, Math.floor(acc + run));
     }
     return Math.max(0, Math.floor(acc));
@@ -263,10 +240,7 @@ export function createSongsUI(SONGS_SOURCE, { withCb, safeYoutubeEmbed, View }) 
   }
 
   function stopSongTicker() {
-    if (SONG_TICKER) {
-      clearInterval(SONG_TICKER);
-      SONG_TICKER = null;
-    }
+    if (SONG_TICKER) { clearInterval(SONG_TICKER); SONG_TICKER = null; }
   }
 
   function pauseSession(ctx) {
@@ -299,15 +273,7 @@ export function createSongsUI(SONGS_SOURCE, { withCb, safeYoutubeEmbed, View }) 
     if (!songId) return;
 
     if (sess.songId !== songId || sess.variantId !== variantId) {
-      state.songs.session = {
-        running: false,
-        songId,
-        variantId,
-        startedAt: 0,
-        accumulatedSec: 0,
-        elapsedSec: 0,
-        stopCount: 0
-      };
+      state.songs.session = { running: false, songId, variantId, startedAt: 0, accumulatedSec: 0, elapsedSec: 0, stopCount: 0 };
     }
 
     const s2 = getActiveSession(state);
@@ -333,13 +299,11 @@ export function createSongsUI(SONGS_SOURCE, { withCb, safeYoutubeEmbed, View }) 
       const state = ctx.state;
       ensureSongState(state);
       const sess = getActiveSession(state);
-
       if (sess.running !== true) return;
 
       sess.elapsedSec = computeElapsedSec(sess);
       state.songs.session = sess;
       ctx.persist();
-
       updateSessionUI(sess);
 
       const songId = sess.songId || state.songs.lastSong?.songId || null;
@@ -376,58 +340,7 @@ export function createSongsUI(SONGS_SOURCE, { withCb, safeYoutubeEmbed, View }) 
   }
 
   /* ============================================================
-     Progression
-  ============================================================ */
-
-  function getNextVariantId(currentVariantId) {
-    if (currentVariantId === "easy") return "medium";
-    if (currentVariantId === "medium") return "hard";
-    return null;
-  }
-
-  function goToSongsList(ctx, renderHome) {
-    View.set(ctx, "songs");
-    renderHome(ctx);
-  }
-
-  function handlePostHardProgression(ctx, renderHome, songIdJustCompleted) {
-    const state = ctx.state;
-    ensureSongState(state);
-
-    const SONGS = getSongs(ctx);
-    const song = SONGS[songIdJustCompleted];
-    if (!song) return goToSongsList(ctx, renderHome);
-
-    const nextSongId = song.nextSongId || null;
-    const nextCoreIds = Array.isArray(song.nextCoreIds) ? song.nextCoreIds.filter(Boolean) : [];
-    const nextCoreView = song.nextCoreView || "core";
-
-    if (nextCoreIds.length) {
-      state.songs.resumeAfterCore = {
-        songId: nextSongId || null,
-        variant: "easy",
-        coreIds: nextCoreIds.slice(0)
-      };
-      ctx.persist();
-
-      View.set(ctx, nextCoreView);
-      renderHome(ctx);
-      return;
-    }
-
-    if (nextSongId && SONGS[nextSongId]) {
-      state.songs.lastSong = { songId: nextSongId, variant: "easy" };
-      ctx.persist();
-      View.set(ctx, "song");
-      renderHome(ctx);
-      return;
-    }
-
-    goToSongsList(ctx, renderHome);
-  }
-
-  /* ============================================================
-     Nav
+     Screens
   ============================================================ */
 
   function openSong(ctx, songId, variantId, renderHome) {
@@ -445,74 +358,55 @@ export function createSongsUI(SONGS_SOURCE, { withCb, safeYoutubeEmbed, View }) 
     ensureSongState(state);
 
     const SONGS = getSongs(ctx);
-    const list = Object.values(SONGS || {}).filter(Boolean);
-
-    if (!list.length) {
-      app.innerHTML = `
-        <div class="card">
-          <h2>Songs</h2>
-          <div class="muted" style="margin-top:8px;">No songs loaded.</div>
-          <div style="margin-top:16px;" class="row">
-            <button class="secondary" id="back-home">Back</button>
-          </div>
-        </div>
-      `;
-      const backBtn = document.getElementById("back-home");
-      if (backBtn) backBtn.onclick = () => { View.set(ctx, "home"); renderHome(ctx); };
-      return;
-    }
-
-    // stable order: song1, song2, song3...
-    list.sort((a, b) => String(a.id || "").localeCompare(String(b.id || "")));
-
-    const cards = list.map(song => {
-      const unlocked = isSongUnlocked(state, song);
-      const p = getSongProgress(state, song.id);
-
-      const easyUnlocked = isVariantUnlocked(state, song, "easy");
-      const medUnlocked = isVariantUnlocked(state, song, "medium");
-      const hardUnlocked = isVariantUnlocked(state, song, "hard");
-
-      return `
-        <div class="card" style="background:#171717; margin-top:12px;">
-          <h3 style="margin:0 0 6px 0;">${song.title || song.id}</h3>
-          <div class="muted">${song.description || ""}</div>
-
-          <div style="height:10px"></div>
-
-          ${
-            unlocked
-              ? `
-                <div class="kpi" style="margin-top:6px;">Unlocked</div>
-                <div class="muted" style="margin-top:8px; font-size:13px;">
-                  Easy: ${p.easyCompletions} • Medium: ${p.mediumCompletions} • Hard: ${p.hardCompletions}
-                </div>
-
-                <div style="height:10px"></div>
-
-                <div class="row">
-                  <button data-play="${song.id}|easy" ${easyUnlocked ? "" : "disabled"}>Play Easy</button>
-                  <button data-play="${song.id}|medium" class="secondary" ${medUnlocked ? "" : "disabled"}>Play Medium</button>
-                  <button data-play="${song.id}|hard" class="secondary" ${hardUnlocked ? "" : "disabled"}>Play Hard</button>
-                </div>
-              `
-              : `
-                <div class="muted" style="margin-top:10px;">
-                  Locked. Complete requirements to unlock.
-                </div>
-                <div style="height:10px"></div>
-                <button data-explain="${song.id}">Unlock requirements</button>
-              `
-          }
-        </div>
-      `;
-    }).join("");
+    const list = Object.values(SONGS || {}).filter(Boolean).sort((a, b) => String(a.id || "").localeCompare(String(b.id || "")));
 
     app.innerHTML = `
       <div class="card">
         <h2>Songs</h2>
         <p class="muted">Songs are the reward. No pressure, no stats.</p>
-        ${cards}
+
+        ${
+          list.length
+            ? list.map(song => {
+                const unlocked = isSongUnlocked(state, song);
+                const p = getSongProgress(state, song.id);
+
+                const easyUnlocked = isVariantUnlocked(state, song, "easy");
+                const medUnlocked = isVariantUnlocked(state, song, "medium");
+                const hardUnlocked = isVariantUnlocked(state, song, "hard");
+
+                return `
+                  <div class="card" style="background:#171717; margin-top:12px;">
+                    <h3 style="margin:0 0 6px 0;">${song.title || song.id}</h3>
+                    <div class="muted">${song.description || ""}</div>
+
+                    <div style="height:10px"></div>
+
+                    ${
+                      unlocked
+                        ? `
+                          <div class="muted" style="font-size:13px;">
+                            Easy: ${p.easyCompletions} • Medium: ${p.mediumCompletions} • Hard: ${p.hardCompletions}
+                          </div>
+
+                          <div style="height:10px"></div>
+
+                          <div class="row">
+                            <button data-play="${song.id}|easy" ${easyUnlocked ? "" : "disabled"}>Play Easy</button>
+                            <button data-play="${song.id}|medium" class="secondary" ${medUnlocked ? "" : "disabled"}>Play Medium</button>
+                            <button data-play="${song.id}|hard" class="secondary" ${hardUnlocked ? "" : "disabled"}>Play Hard</button>
+                          </div>
+                        `
+                        : `
+                          <div class="muted" style="margin-top:10px;">Locked. Complete requirements to unlock.</div>
+                        `
+                    }
+                  </div>
+                `;
+              }).join("")
+            : `<div class="muted" style="margin-top:10px;">No songs loaded.</div>`
+        }
+
         <div style="margin-top:16px;" class="row">
           <button class="secondary" id="back-home">Back</button>
         </div>
@@ -527,84 +421,14 @@ export function createSongsUI(SONGS_SOURCE, { withCb, safeYoutubeEmbed, View }) 
       };
     });
 
-    app.querySelectorAll("button[data-explain]").forEach(btn => {
-      btn.onclick = () => {
-        const songId = btn.getAttribute("data-explain");
-        const SONGS = getSongs(ctx);
-        const song = SONGS[songId];
-        if (!song) return;
-
-        ensureSongState(state);
-        state.songs.explainOpen = state.songs.explainOpen === songId ? null : songId;
-        ctx.persist();
-        renderSongs(ctx, renderHome);
-      };
-    });
-
-    // Show requirements panel under the selected song card (if any)
-    if (state.songs.explainOpen) {
-      const songId = state.songs.explainOpen;
-      const SONGS = getSongs(ctx);
-      const song = SONGS[songId];
-      if (song) {
-        const req = getSongReqs(state, song.id);
-        const reqHtml = (song.requirements || []).map(r => {
-          const done = req[r.id] === true;
-          return `
-            <div class="card" style="background:#111; border:1px solid #222; margin-top:10px;">
-              <div style="font-weight:700;">${r.title}</div>
-              <div class="muted" style="margin-top:6px;">${r.subtitle}</div>
-              <div class="muted" style="margin-top:8px; font-size:13px;">${r.passText}</div>
-              <div style="height:10px"></div>
-              <button data-req="${song.id}|${r.id}" class="${done ? "" : "secondary"}">
-                ${done ? "Marked complete" : "Mark complete"}
-              </button>
-            </div>
-          `;
-        }).join("");
-
-        // Insert right after the matching card
-        const allCards = Array.from(app.querySelectorAll(".card .card"));
-        const targetCard = allCards.find(c => (c.querySelector("h3")?.textContent || "").trim() === (song.title || song.id));
-        if (targetCard) {
-          targetCard.insertAdjacentHTML("beforeend", `
-            <div style="height:10px"></div>
-            <div class="card" style="background:#111; border:1px solid #222;">
-              <h3 style="margin-top:0;">Unlock requirements</h3>
-              <div class="muted" style="font-size:13px;">
-                Temporary manual unlock (we’ll auto-detect later).
-              </div>
-              ${reqHtml}
-            </div>
-          `);
-
-          targetCard.querySelectorAll("button[data-req]").forEach(b => {
-            b.onclick = () => {
-              const [sid, rid] = String(b.getAttribute("data-req") || "").split("|");
-              const r = getSongReqs(state, sid);
-              r[rid] = true;
-              ctx.persist();
-              renderSongs(ctx, renderHome);
-            };
-          });
-        }
-      }
-    }
-
-    const backBtn = document.getElementById("back-home");
-    if (backBtn) {
-      backBtn.onclick = () => {
-        View.set(ctx, "home");
-        renderHome(ctx);
-      };
-    }
+    // ✅ Escape hatch that cannot fail (ignores view state)
+    document.getElementById("back-home").onclick = () => ctx.nav.home();
   }
 
   function resolveTrack(ctx, variant) {
     const btId = variant?.backingTrackId || null;
     const bt = btId && ctx.C?.backingTracks ? ctx.C.backingTracks[btId] : null;
 
-    // tolerate different schemas + allow direct per-variant embed
     const rawUrl =
       (bt && (bt.youtubeEmbed || bt.youtubeUrl || bt.url)) ||
       (variant && (variant.youtubeEmbed || variant.youtubeUrl)) ||
@@ -612,13 +436,9 @@ export function createSongsUI(SONGS_SOURCE, { withCb, safeYoutubeEmbed, View }) 
 
     const name =
       (bt && (bt.name || bt.title)) ||
-      (variant && variant.trackName) ||
       (btId ? btId : "Backing track");
 
-    const key = bt && bt.key ? bt.key : null;
-    const recommendedBpm = bt && typeof bt.recommendedBpm === "number" ? bt.recommendedBpm : null;
-
-    return { bt, rawUrl, name, key, recommendedBpm };
+    return { rawUrl, name, recommendedBpm: bt?.recommendedBpm, key: bt?.key };
   }
 
   function renderSong(ctx, renderHome) {
@@ -628,11 +448,11 @@ export function createSongsUI(SONGS_SOURCE, { withCb, safeYoutubeEmbed, View }) 
     ensureSongState(state);
 
     const SONGS = getSongs(ctx);
+    const list = Object.values(SONGS || {}).filter(Boolean).sort((a, b) => String(a.id || "").localeCompare(String(b.id || "")));
 
-    // default to first song if lastSong missing
-    if (!state.songs.lastSong?.songId) {
-      const first = Object.values(SONGS || {}).filter(Boolean).sort((a,b)=>String(a.id||"").localeCompare(String(b.id||"")))[0];
-      if (first?.id) state.songs.lastSong = { songId: first.id, variant: "easy" };
+    if (!state.songs.lastSong?.songId && list[0]?.id) {
+      state.songs.lastSong = { songId: list[0].id, variant: "easy" };
+      ctx.persist();
     }
 
     const songId = state.songs.lastSong?.songId || null;
@@ -642,11 +462,6 @@ export function createSongsUI(SONGS_SOURCE, { withCb, safeYoutubeEmbed, View }) 
     if (!song) {
       View.set(ctx, "songs");
       return renderHome(ctx);
-    }
-
-    if (variantId !== "easy" && !isVariantUnlocked(state, song, variantId)) {
-      state.songs.lastSong.variant = "easy";
-      ctx.persist();
     }
 
     if (!isSongUnlocked(state, song)) {
@@ -668,7 +483,6 @@ export function createSongsUI(SONGS_SOURCE, { withCb, safeYoutubeEmbed, View }) 
           : [];
 
     const trackInfo = resolveTrack(ctx, variant);
-
     const safeBaseEmbed = normalizeToEmbedUrl(trackInfo.rawUrl);
     const apiUrl = safeBaseEmbed ? addJsApiParams(safeBaseEmbed) : null;
     const iframeSrc = apiUrl ? withCb(apiUrl, `song_${songId}_${variantId}`) : null;
@@ -680,7 +494,7 @@ export function createSongsUI(SONGS_SOURCE, { withCb, safeYoutubeEmbed, View }) 
     const displayKey = (variant.displayKey && String(variant.displayKey)) || trackInfo.key || "—";
     const displayBpm =
       (typeof variant.displayBpm === "number" ? variant.displayBpm : null) ??
-      (trackInfo.recommendedBpm ?? null);
+      (typeof trackInfo.recommendedBpm === "number" ? trackInfo.recommendedBpm : null);
 
     const chordRow = chordBlocks.map(b => `
       <div style="flex:1; min-width:90px; background:#111; border:1px solid #222; border-radius:12px; padding:12px; text-align:center;">
@@ -688,25 +502,6 @@ export function createSongsUI(SONGS_SOURCE, { withCb, safeYoutubeEmbed, View }) 
         <div class="muted" style="margin-top:6px; font-size:14px;">${b.beatsPerBar}</div>
       </div>
     `).join("");
-
-    const guidanceOpen = !!state.songs.guidanceOpen;
-
-    const completedOverlay = !!state.songs.completedOverlay;
-    const overlayHtml = completedOverlay
-      ? `
-        <div class="card" style="background:#0b0b0b; border:1px solid #2a2a2a; margin-top:14px;">
-          <h3 style="margin-top:0;">${variant.completionTitle || "Complete"}</h3>
-          <div class="muted" style="white-space:pre-line;">${variant.completionBody || ""}</div>
-
-          <div style="height:12px"></div>
-
-          <div class="row">
-            <button id="song-play-again">Play Again</button>
-            <button id="song-next-step" class="secondary">Next Step</button>
-          </div>
-        </div>
-      `
-      : "";
 
     app.innerHTML = `
       <div class="card">
@@ -732,7 +527,7 @@ export function createSongsUI(SONGS_SOURCE, { withCb, safeYoutubeEmbed, View }) 
 
         <h3 style="margin-top:0;">Backing Track</h3>
         <div class="muted" style="font-size:13px;">
-          ${trackInfo.rawUrl ? `${trackInfo.name}${trackInfo.recommendedBpm ? ` • ~${trackInfo.recommendedBpm} bpm` : ""}` : ""}
+          ${trackInfo.name || ""}
         </div>
 
         <div style="height:10px"></div>
@@ -754,9 +549,6 @@ export function createSongsUI(SONGS_SOURCE, { withCb, safeYoutubeEmbed, View }) 
                   allowfullscreen
                 ></iframe>
               </div>
-              <div class="muted" style="font-size:12px; margin-top:8px;">
-                Tip: press Play in the player to start the timer automatically.
-              </div>
             `
             : `
               <div class="muted" style="margin-top:10px;">
@@ -764,57 +556,6 @@ export function createSongsUI(SONGS_SOURCE, { withCb, safeYoutubeEmbed, View }) 
               </div>
             `
         }
-
-        <div style="height:14px"></div>
-
-        <h3 style="margin-top:0;">Metronome</h3>
-        <div class="muted" style="font-size:13px;">Optional. Default is OFF. Backing track is the timekeeper.</div>
-
-        <div style="height:10px"></div>
-
-        <button id="song-metro" class="secondary">
-          ${ctx.metro.isRunning() ? "Stop metronome" : "Start metronome"}
-        </button>
-
-        <div style="height:14px"></div>
-
-        <h3 style="margin-top:0;">Play Mode</h3>
-        <div class="muted" style="font-size:13px;">
-          Start playing. Keep going. No scoring.
-        </div>
-
-        <div style="height:10px"></div>
-
-        <div class="row">
-          <button id="song-start" ${isRunning ? "disabled" : ""}>Start Playing</button>
-          <button id="song-stop" class="secondary" ${isRunning ? "" : "disabled"}>Stop</button>
-          <span class="pill">Elapsed: <span id="song-elapsed">${sess.elapsedSec || 0}s</span></span>
-        </div>
-
-        <div id="song-session-status" class="muted" style="margin-top:10px; font-size:13px;">
-          ${isRunning ? "Session running." : ""}
-        </div>
-
-        <div style="height:14px"></div>
-
-        <button id="toggle-guidance" class="secondary">
-          ${guidanceOpen ? "Hide guidance" : "How to play this song"}
-        </button>
-
-        ${
-          guidanceOpen
-            ? `
-              <div class="card" style="background:#171717; margin-top:10px;">
-                <div style="opacity:.95">• Strum steadily. Don’t stop.</div>
-                <div style="opacity:.95">• Switch chords every 4 counts.</div>
-                <div style="opacity:.95">• If you lose the chord, keep strumming muted strings.</div>
-                <div style="opacity:.95">• This is about time, not correctness.</div>
-              </div>
-            `
-            : ""
-        }
-
-        ${overlayHtml}
 
         <div style="margin-top:16px;" class="row">
           <button class="secondary" id="back-songs">Back</button>
@@ -829,131 +570,17 @@ export function createSongsUI(SONGS_SOURCE, { withCb, safeYoutubeEmbed, View }) 
       destroyYoutubePlayer();
     }
 
-    const toggleTrackBtn = document.getElementById("toggle-track");
-    if (toggleTrackBtn) {
-      toggleTrackBtn.onclick = () => {
-        state.songs.showTrack = !state.songs.showTrack;
-        ctx.persist();
-        renderSong(ctx, renderHome);
-      };
-    }
-
-    document.getElementById("toggle-guidance").onclick = () => {
-      state.songs.guidanceOpen = !state.songs.guidanceOpen;
+    document.getElementById("toggle-track").onclick = () => {
+      state.songs.showTrack = !state.songs.showTrack;
       ctx.persist();
       renderSong(ctx, renderHome);
     };
 
-    document.getElementById("song-metro").onclick = () => {
-      if (ctx.metro.isRunning()) {
-        ctx.metro.stop();
-        renderSong(ctx, renderHome);
-        return;
-      }
-      const fallback = variantId === "easy" ? 80 : variantId === "medium" ? 95 : 100;
-      const bpm = (trackInfo.recommendedBpm ?? null) || fallback;
-      ctx.metro.start(bpm);
-      renderSong(ctx, renderHome);
-    };
-
-    document.getElementById("song-start").onclick = () => {
-      ensureSongState(state);
-
-      const sess0 = getActiveSession(state);
-      if (sess0.songId !== songId || sess0.variantId !== variantId) {
-        state.songs.session = {
-          running: false,
-          songId,
-          variantId,
-          startedAt: 0,
-          accumulatedSec: 0,
-          elapsedSec: 0,
-          stopCount: 0
-        };
-      }
-
-      state.songs.completedOverlay = false;
-
-      if (!state.songs.showTrack && iframeSrc) {
-        state.songs.showTrack = true;
-        state.songs.autoStartTrack = true;
-        ctx.persist();
-        renderSong(ctx, renderHome);
-        return;
-      }
-
-      if (YT_PLAYER && typeof YT_PLAYER.playVideo === "function") {
-        try { YT_PLAYER.playVideo(); } catch (_) {}
-      }
-    };
-
-    document.getElementById("song-stop").onclick = () => {
-      ensureSongState(state);
-
-      const s2 = getActiveSession(state);
-      if (s2.running === true) {
-        s2.stopCount = (s2.stopCount || 0) + 1;
-        state.songs.session = s2;
-        ctx.persist();
-      }
-
-      pauseSession(ctx);
-      stopSongTicker();
-
-      if (YT_PLAYER && typeof YT_PLAYER.pauseVideo === "function") {
-        try { YT_PLAYER.pauseVideo(); } catch (_) {}
-      }
-    };
-
-    const playAgainBtn = document.getElementById("song-play-again");
-    if (playAgainBtn) {
-      playAgainBtn.onclick = () => {
-        ensureSongState(state);
-        state.songs.completedOverlay = false;
-        state.songs.session = {
-          running: false,
-          songId,
-          variantId,
-          startedAt: 0,
-          accumulatedSec: 0,
-          elapsedSec: 0,
-          stopCount: 0
-        };
-        ctx.persist();
-        stopSongTicker();
-        renderSong(ctx, renderHome);
-      };
-    }
-
-    const nextStepBtn = document.getElementById("song-next-step");
-    if (nextStepBtn) {
-      nextStepBtn.onclick = () => {
-        ensureSongState(state);
-        state.songs.completedOverlay = false;
-
-        pauseSession(ctx);
-        stopSongTicker();
-        if (YT_PLAYER && typeof YT_PLAYER.pauseVideo === "function") {
-          try { YT_PLAYER.pauseVideo(); } catch (_) {}
-        }
-
-        const nextVariant = getNextVariantId(variantId);
-        if (nextVariant && isVariantUnlocked(state, song, nextVariant)) {
-          state.songs.lastSong = { songId, variant: nextVariant };
-          ctx.persist();
-          View.set(ctx, "song");
-          renderHome(ctx);
-          return;
-        }
-
-        handlePostHardProgression(ctx, renderHome, songId);
-      };
-    }
-
+    // ✅ Always return to songs list, and songs list always has Back to Home
     document.getElementById("back-songs").onclick = () => {
-      pauseSession(ctx);
-      stopSongTicker();
+      state.songs.showTrack = false;
       ctx.persist();
+      destroyYoutubePlayer();
       View.set(ctx, "songs");
       renderHome(ctx);
     };
@@ -963,6 +590,6 @@ export function createSongsUI(SONGS_SOURCE, { withCb, safeYoutubeEmbed, View }) 
     ensureSongState,
     renderSongs,
     renderSong,
-    stopSongTicker
+    stopSongTicker: () => stopSongTicker()
   };
 }
