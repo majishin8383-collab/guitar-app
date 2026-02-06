@@ -1,32 +1,31 @@
-// content/songs/song1_tracks.js
-// Backing tracks for song1 variants (must match backingTrackId in song1.js)
+// content/songs/song1.tracks.js
+// Song 1 backing tracks (Key of A)
 
 CONTENT_ADD({
   backingTracks: {
     bt_song1_easy: {
       id: "bt_song1_easy",
-      name: "Blues in A — 80 bpm (easy)",
+      name: "Midnight Blues (A Major) — 80 BPM",
       key: "A",
       recommendedBpm: 80,
-      youtubeEmbed: "https://www.youtube.com/embed/y6ssAMKXPog"
+      // watch URL is fine; ui/songs.js normalizes to embed
+      youtubeEmbed: "https://www.youtube.com/watch?v=edHpcXRLk4A"
     },
 
-    // NOTE: This one is a temporary “A groove” at ~95bpm so Medium is not pop/acoustic.
-    // If you want STRICT A↔D blues harmony only, we can swap this ID once you pick the exact track.
     bt_song1_medium: {
       id: "bt_song1_medium",
-      name: "Groove in A — ~95 bpm (medium)",
+      name: "Bass Jam Track (A Major) — 95 BPM",
       key: "A",
       recommendedBpm: 95,
-      youtubeEmbed: "https://www.youtube.com/embed/MEX1mOyvTQA"
+      youtubeEmbed: "https://www.youtube.com/watch?v=-fvmZAXJydY"
     },
 
     bt_song1_hard: {
       id: "bt_song1_hard",
-      name: "Blues in A — 110 bpm (hard)",
+      name: "Jazzy Hendrix Blues Jam (A) — 110 BPM",
       key: "A",
       recommendedBpm: 110,
-      youtubeEmbed: "https://www.youtube.com/embed/gT_HLlEDwwg"
+      youtubeEmbed: "https://www.youtube.com/watch?v=sjOUFMasOQs"
     }
   }
 });
