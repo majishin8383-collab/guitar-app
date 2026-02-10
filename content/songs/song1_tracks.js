@@ -12,28 +12,31 @@
   }
 
   // ✅ IDs MUST MATCH song1.js variants backingTrackId exactly
+
+  // EASY — Key A — ~80 bpm (blues)
   addTrack({
     id: "bt_song1_easy",
-    name: "Song 1 — Easy (Key A) ~80 bpm",
+    name: "Song 1 — Easy (Key A) ~80 bpm — Blues",
     key: "A",
     recommendedBpm: 80,
-    // MUST be an embed URL (not watch, not youtu.be)
-    youtubeEmbed: "https://www.youtube.com/embed/PASTE_VIDEO_ID_FOR_EASY"
+    youtubeEmbed: "https://www.youtube.com/embed/QUZOJF_czqU"
   });
 
+  // MEDIUM — Key A — ~95 bpm (blues/rock feel)
   addTrack({
     id: "bt_song1_medium",
-    name: "Song 1 — Medium (Key A) ~95 bpm",
+    name: "Song 1 — Medium (Key A) ~95 bpm — Blues/Rock",
     key: "A",
     recommendedBpm: 95,
-    youtubeEmbed: "https://www.youtube.com/embed/PASTE_VIDEO_ID_FOR_MEDIUM"
+    youtubeEmbed: "https://www.youtube.com/embed/5Iq-IA2KDJE"
   });
 
+  // HARD — A7-D7-E7 — 110 bpm (blues changes; fits A/D song vibe)
   addTrack({
     id: "bt_song1_hard",
-    name: "Song 1 — Hard (Key A) ~110 bpm",
+    name: "Song 1 — Hard (A7-D7-E7) 110 bpm — Blues",
     key: "A",
     recommendedBpm: 110,
-    youtubeEmbed: "https://www.youtube.com/embed/PASTE_VIDEO_ID_FOR_HARD"
+    youtubeEmbed: "https://www.youtube.com/embed/5eKtiKg5vBQ"
   });
 })();
