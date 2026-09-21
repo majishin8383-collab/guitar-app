@@ -2,7 +2,7 @@
 // Tempo ladder + rep tracking helpers (Dose 1.1)
 // Micro-fix: show a "level up" message when streak resets.
 
-import { nowTs, clamp } from "./storage.js";
+import { nowTs, clamp } from "./storage.js?v=GT-003";
 
 const LEVELUP_FLASH_MS = 3500;
 
@@ -11,7 +11,7 @@ export function getOrInitDrillProgress(state, drill, save) {
   const cfg = drill.suggestedBpm || { start: 60, step: 5, target: 120 };
   const existing = state.progress?.[id];
 
-  if (existing && typeof existing.bpm === "number") return existing;
+  if (existing && Number.isFinite(existing.bpm)) return existing;
 
   if (!state.progress) state.progress = {};
 
@@ -33,6 +33,7 @@ export function getOrInitDrillProgress(state, drill, save) {
 }
 
 export function setDrillBpm(state, drill, nextBpm, save) {
+  if (!Number.isFinite(nextBpm)) return;
   const cfg = drill.suggestedBpm || { start: 60, step: 5, target: 120 };
   const p = getOrInitDrillProgress(state, drill, save);
 
@@ -56,20 +57,20 @@ export function markCleanRep(state, drill, save) {
   if (p.cleanStreak >= 3) {
     const from = p.bpm || cfg.start;
     const step = cfg.step || 5;
-    const to = from + step;
+    const to = Math.min(from + step, cfg.target);
 
     // Reset streak (this is the "it resets" behavior)
     p.cleanStreak = 0;
 
     // Store a short-lived level-up message
-    p.lastLevelUpTs = nowTs();
+    p.lastLevelUpTs = to > from ? nowTs() : 0;
     p.lastLevelUpFrom = from;
     p.lastLevelUpTo = to;
 
     setDrillBpm(state, drill, to, save);
     save();
 
-    return { leveledUp: true, from, to };
+    return { leveledUp: to > from, from, to };
   }
 
   save();

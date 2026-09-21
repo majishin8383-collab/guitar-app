@@ -1,42 +1,20 @@
-// content/songs/song1_tracks.js
-// Must load BEFORE content/songs/song1.js
-
+// Titles, BPM and embed eligibility checked against YouTube on 2026-09-20.
+// Drums avoid pitched changes conflicting with Song 1's A/A/D/A loop.
 (function () {
-  // Ensure CONTENT exists
-  window.CONTENT = (window.CONTENT && typeof window.CONTENT === "object") ? window.CONTENT : {};
-  window.CONTENT.backingTracks = window.CONTENT.backingTracks || {};
-
-  function addTrack(t) {
-    if (!t || !t.id) return;
-    window.CONTENT.backingTracks[t.id] = t;
+  const sources = [["easy",80,"nm7neHuVuic"],["medium",95,"7QdfK0Vs1nM"],["hard",110,"dYzQfWD8bGk"]];
+  const tracks = {};
+  for (const [level, bpm, id] of sources) {
+    const trackId = `bt_song1_${level}`;
+    tracks[trackId] = {
+      id: trackId, name: `Blues shuffle drums · ${bpm} BPM`, key: "A", keyAppliesTo: "exercise",
+      recommendedBpm: bpm, accompaniment: "drums-only", youtubeEmbed: `https://www.youtube.com/embed/${id}`
+    };
   }
-
-  // ✅ IDs MUST MATCH song1.js variants backingTrackId exactly
-
-  // EASY — Key A — ~80 bpm (blues)
-  addTrack({
-    id: "bt_song1_easy",
-    name: "Song 1 — Easy (Key A) ~80 bpm — Blues",
-    key: "A",
-    recommendedBpm: 80,
+  tracks.bt_song1_full_band = {
+    id: "bt_song1_full_band", genre: "blues", name: "Fat Funky Blues · A · 80 BPM",
+    key: "A", recommendedBpm: 80, mix: "both", feel: "funky blues",
+    note: "Full-band jam. Follow the changes in the video; this is a different progression from First Groove. For lead, start with a short A minor pentatonic phrase.",
     youtubeEmbed: "https://www.youtube.com/embed/QUZOJF_czqU"
-  });
-
-  // MEDIUM — Key A — ~95 bpm (blues/rock feel)
-  addTrack({
-    id: "bt_song1_medium",
-    name: "Song 1 — Medium (Key A) ~95 bpm — Blues/Rock",
-    key: "A",
-    recommendedBpm: 95,
-    youtubeEmbed: "https://www.youtube.com/embed/5Iq-IA2KDJE"
-  });
-
-  // HARD — A7-D7-E7 — 110 bpm (blues changes; fits A/D song vibe)
-  addTrack({
-    id: "bt_song1_hard",
-    name: "Song 1 — Hard (A7-D7-E7) 110 bpm — Blues",
-    key: "A",
-    recommendedBpm: 110,
-    youtubeEmbed: "https://www.youtube.com/embed/5eKtiKg5vBQ"
-  });
+  };
+  window.CONTENT_ADD({ backingTracks: tracks });
 })();

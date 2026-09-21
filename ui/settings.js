@@ -10,6 +10,7 @@ export function createSettingsUI(deps = {}) {
   const setView = typeof deps.setView === "function" ? deps.setView : () => {};
 
   function render(ctx, renderHome) {
+    ctx.enterScreen("settings");
     ctx.ensureMirrorDefault();
 
     const { app, state } = ctx;
@@ -34,6 +35,11 @@ export function createSettingsUI(deps = {}) {
         <p class="muted">These apply across the whole app.</p>
 
         ${roleCard}
+        <div class="card" style="background:#171717;">
+          <label for="guitar-select">Guitar for tone suggestions</label>
+          <select id="guitar-select"><option value="strat" ${state.guitar !== "les-paul" ? "selected" : ""}>Strat</option><option value="les-paul" ${state.guitar === "les-paul" ? "selected" : ""}>Les Paul</option></select>
+          <p class="muted">Amp starting points use your Mustang GTX50.</p>
+        </div>
 
         <div class="card" style="background:#171717; margin-top:10px;">
           <h3 style="margin-top:0;">Playing Hand</h3>
@@ -61,6 +67,10 @@ export function createSettingsUI(deps = {}) {
         </div>
       </div>
     `;
+
+    document.getElementById("guitar-select").onchange = event => {
+      state.guitar = event.target.value; ctx.persist();
+    };
 
     // Role focus
     if (hasRole(ctx)) {
@@ -102,13 +112,14 @@ export function createSettingsUI(deps = {}) {
 
     rightBtn.onclick = () => {
       state.handedness = "right";
+      state.mirrorVideos = false;
       ctx.persist();
       render(ctx, renderHome);
     };
 
     leftBtn.onclick = () => {
       state.handedness = "left";
-      if (!state.mirrorVideos) state.mirrorVideos = true; // your rule
+      state.mirrorVideos = true;
       ctx.persist();
       render(ctx, renderHome);
     };

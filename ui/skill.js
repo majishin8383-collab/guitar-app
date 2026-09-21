@@ -2,7 +2,7 @@
 // Skill screen UI extracted from render.js
 //
 // Usage:
-//   import { createSkillUI } from "./ui/skill.js";
+//   import { createSkillUI } from "./ui/skill.js?v=GT-003";
 //   const SkillUI = createSkillUI({ rolePill, shouldShowLevelUp, withCb });
 //   SkillUI.render(ctx, skillId, opts);
 //
@@ -10,6 +10,11 @@
 // - Uses ctx.videoBlock(title, url, mirrorBool)
 // - Uses ctx.progress + ctx.metro helpers already present in app
 // - Keeps deterministic, mobile-safe cache-busting via withCb()
+
+import { sessionMarkup, wireSession } from "./session.js?v=GT-003";
+import { chordDiagrams, toneCard } from "./chords.js?v=GT-003";
+import { videoBlock, escapeHtml } from "./video.js?v=GT-003";
+import { ensureSongState, nextStep } from "../state/songProgress.js?v=GT-003";
 
 export function createSkillUI(deps) {
   const rolePill = deps?.rolePill || (() => "");
@@ -26,6 +31,7 @@ export function createSkillUI(deps) {
   }
 
   function render(ctx, skillId, opts = {}) {
+    ctx.enterScreen(`skill:${skillId}`);
     ctx.ensureMirrorDefault();
 
     const { app, C, state } = ctx;
@@ -42,6 +48,48 @@ export function createSkillUI(deps) {
       document.getElementById("back").onclick = backTo;
       return;
     }
+
+if (skill.sessionSeconds) {
+  ensureSongState(state);
+  app.innerHTML = `<div class="card">
+    <div class="row screenTop"><span class="pill">${ctx.handednessLabel()} · ${skill.practiceBpm} BPM</span><button id="back" class="secondary small">Back</button><button id="skill-home" class="secondary small">Home</button></div>
+    <h2>${escapeHtml(skill.name)}</h2><p>${escapeHtml(skill.summary)}</p>
+    ${state.coreCompleted[skill.id] ? '<p class="success">✓ Completed. You can practice again or continue.</p><button id="core-continue">Continue</button>' : ''}
+    <ol>${skill.instructions.map(line=>`<li>${escapeHtml(line)}</li>`).join("")}</ol>
+    ${chordDiagrams(skill.chordNames, state.handedness)}
+    <div class="row"><button id="core-metro" class="secondary">Start metronome · ${skill.practiceBpm} BPM</button></div>
+    ${sessionMarkup(skill.sessionSeconds)}
+    <div id="core-result" role="status"></div>
+    <details class="card"><summary>Watch the lesson</summary>${videoBlock(skill.lessonTitle, skill.lessonUrl, state.mirrorVideos)}<p class="muted">Use the diagrams above for this exercise’s small shapes.</p></details>
+    ${toneCard(state)}
+  </div>`;
+  app.querySelector(".practiceRun .muted").textContent = "Start the metronome if you want a beat, then start your run. You judge your playing; the app does not listen.";
+  const next = () => {
+    const song = C.songs[state.coreReturnSong] || C.songs.song1;
+    const step = nextStep(state, song, C.songs, C.skills);
+    if (step.type === "skill") ctx.nav.skill(step.id);
+    else if (step.type === "song") {
+      state.songs.lastSong = { songId: step.id, variant: step.variant };
+      ctx.nav.view("song");
+    } else ctx.nav.practice();
+  };
+  const cleanup = wireSession(ctx, skill.sessionSeconds, () => {
+    state.coreCompleted[skill.id] = true;
+    const saved = ctx.persist(); ctx.metro.stop(); ctx.metroState.drillId = null;
+    app.querySelector("#core-metro").textContent = `Start metronome · ${skill.practiceBpm} BPM`;
+    app.querySelector("#core-result").innerHTML = `<div class="card success"><h3>${saved === false ? 'Completed for this session.' : 'Saved. Keep going.'}</h3><button id="core-next">Continue</button></div>`;
+    app.querySelector("#core-next").onclick = next;
+  });
+  ctx.setScreenCleanup(cleanup);
+  app.querySelector("#core-metro").onclick = () => {
+    ctx.metroToggle(skill.id, skill.practiceBpm);
+    app.querySelector("#core-metro").textContent = `${ctx.metro.isRunning() ? 'Stop' : 'Start'} metronome · ${skill.practiceBpm} BPM`;
+  };
+  app.querySelector("#core-continue")?.addEventListener("click", next);
+  app.querySelector("#back").onclick = backTo;
+  app.querySelector("#skill-home").onclick = ctx.nav.home;
+  return;
+}
 
     const handedNote =
       state.handedness === "left"

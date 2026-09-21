@@ -3,15 +3,17 @@
 // Guarded: Role UI only appears if ctx provides role APIs.
 // Backing tracks: YouTube embed ONLY. Dropdown controls what displays (no Stop/Play buttons).
 
-import { getView, setView } from "./state/viewState.js";
-import { withCb, safeYoutubeEmbed } from "./ui/video.js";
+import { getView, setView } from "./state/viewState.js?v=GT-003";
+import { withCb, safeYoutubeEmbed } from "./ui/video.js?v=GT-003";
 
-import { backingUI, wireBackingDropdown, filterTracksByRole } from "./ui/backing.js";
-import { createCoreUI } from "./ui/core.js";
-import { createSettingsUI } from "./ui/settings.js";
-import { createSongsUI } from "./ui/songs.js";
-import { createSkillUI } from "./ui/skill.js";
-import { shouldShowLevelUp } from "./progress.js";
+import { backingUI, wireBackingDropdown, filterTracksByRole } from "./ui/backing.js?v=GT-003";
+import { createCoreUI } from "./ui/core.js?v=GT-003";
+import { createSettingsUI } from "./ui/settings.js?v=GT-003";
+import { createSongsUI } from "./ui/songs.js?v=GT-003";
+import { createSkillUI } from "./ui/skill.js?v=GT-003";
+import { shouldShowLevelUp } from "./progress.js?v=GT-003";
+import { nextStep, isComplete } from "./state/songProgress.js?v=GT-003";
+import { toneCard } from "./ui/chords.js?v=GT-003";
 
 /* ============================================================
    SECTION 0 — Small shared guards
@@ -24,19 +26,6 @@ function hasRole(ctx) {
 function rolePill(ctx) {
   if (!hasRole(ctx)) return "";
   return `<span class="pill">Role: ${ctx.roleLabel()}</span>`;
-}
-
-/* ============================================================
-   SECTION 1 — Re-render hook (fixes Songs nav)
-   Songs UI may call View.set(...) without re-rendering.
-   We inject a View.set wrapper that always re-renders the current screen.
-============================================================ */
-
-let RERENDER_HOME = null;
-
-function setViewAndRerender(ctx, viewName) {
-  setView(ctx, viewName);
-  if (typeof RERENDER_HOME === "function") RERENDER_HOME();
 }
 
 /* ============================================================
@@ -78,7 +67,7 @@ function getSongsUI(ctx) {
   const ui = createSongsUI(songsObj, {
     withCb,
     safeYoutubeEmbed, // ✅ REQUIRED so renderSong doesn't crash
-    View: { set: (c, v) => setViewAndRerender(c, v) }
+    View: { set: setView }
   });
 
   ui.__songsRef = songsObj;
@@ -91,9 +80,6 @@ function getSongsUI(ctx) {
 ============================================================ */
 
 export function renderHome(ctx) {
-  // keep a stable "rerender this screen" hook for child modules
-  RERENDER_HOME = () => renderHome(ctx);
-
   ctx.ensureMirrorDefault();
 
   const { app, C, state } = ctx;
@@ -108,6 +94,15 @@ export function renderHome(ctx) {
   if (view === "songs") return SongsUI.renderSongs(ctx, renderHome);
   if (view === "song") return SongsUI.renderSong(ctx, renderHome);
 
+  if (view === "practice") return renderPractice(ctx);
+  if (view === "genre") return renderGenre(ctx, state.genre);
+  if (view === "skill" && C.skills[state.skillId]) return renderSkill(ctx, state.skillId);
+  ctx.enterScreen("home");
+
+  const firstSong = C.songs.song1;
+  const next = nextStep(state, firstSong, C.songs, C.skills);
+  const nextLabel = next.type === "skill" ? C.skills[next.id].name : next.type === "song" ? `${C.songs[next.id].title} · ${C.songs[next.id].variants[next.variant].label}` : "Blues jam";
+  const completed = ["easy", "medium", "hard"].filter(v => isComplete(state, "song1", v)).length;
   const genres = Object.values(C.genres || {});
   const activeGenre = C.genres ? C.genres[state.genre] : null;
 
@@ -128,8 +123,14 @@ export function renderHome(ctx) {
 
   app.innerHTML = `
     <div class="card">
-      <h2>Home</h2>
-      <p class="muted">Core learning first. Genres later for backing tracks, styles, and songs.</p>
+      <h2>Today’s blues practice</h2>
+      <p class="muted">Pick up your guitar. Your next step is ready.</p>
+      <div class="card practiceNext">
+        <span class="pill">First Groove · ${completed}/3 levels completed</span>
+        <h3>${nextLabel}</h3>
+        <button id="continue-practice">${completed ? "Continue practice" : "Start here"}</button>
+        <p class="muted">${next.type === "skill" ? "A 60-second run. Small shapes, steady time." : "Play, save your run, and pick up here next time."}</p>
+      </div>
 
       <div class="card" style="background:#171717;">
         <div class="muted" style="font-size:14px;">Genre</div>
@@ -159,12 +160,14 @@ export function renderHome(ctx) {
         <div style="height:10px"></div>
         <button id="open-songs">Songs</button>
         <div style="height:10px"></div>
-        <button id="start-practice" class="secondary">Practice (Genre)</button>
+        <button id="start-practice" class="secondary">Blues jam</button>
         <div style="height:10px"></div>
         <button id="view-genre" class="secondary">Genre Details</button>
       </div>
     </div>
   `;
+
+  document.getElementById("continue-practice").onclick = () => SongsUI.follow(ctx, firstSong, renderHome);
 
   const genreSelect = document.getElementById("genre-select");
   if (genreSelect) {
@@ -195,6 +198,7 @@ export function renderHome(ctx) {
 }
 
 export function renderGenre(ctx, genreId) {
+  ctx.enterScreen("genre");
   ctx.ensureMirrorDefault();
 
   const { app, C, state } = ctx;
@@ -226,9 +230,10 @@ export function renderGenre(ctx, genreId) {
         </div>
       </div>
 
-      <h3 style="margin-top:16px;">Starter Skills (temporary)</h3>
+      <h3 style="margin-top:16px;">Blues lessons</h3>
       <div id="skill-list"></div>
 
+      ${toneCard(state)}
       <h3 style="margin-top:16px;">Backing Tracks</h3>
       <div id="bt-area"></div>
 
@@ -271,6 +276,7 @@ export function renderGenre(ctx, genreId) {
 }
 
 export function renderPractice(ctx) {
+  ctx.enterScreen("practice");
   ctx.ensureMirrorDefault();
 
   const { app, C, state } = ctx;
@@ -283,7 +289,7 @@ export function renderPractice(ctx) {
 
   app.innerHTML = `
     <div class="card">
-      <h2>Practice (Genre)</h2>
+      <h2>Blues jam</h2>
       <p><strong>Genre:</strong> ${genre.name}</p>
       <p class="muted">${genre.description}</p>
 
@@ -303,10 +309,11 @@ export function renderPractice(ctx) {
         </div>
       </div>
 
+      ${toneCard(state)}
       <h3 style="margin-top:16px;">Backing Tracks</h3>
       <div id="bt-area"></div>
 
-      <h3 style="margin-top:16px;">Starter Skills (temporary)</h3>
+      <h3 style="margin-top:16px;">Blues lessons</h3>
       <div id="skill-list"></div>
 
       <div style="margin-top:16px;" class="row">

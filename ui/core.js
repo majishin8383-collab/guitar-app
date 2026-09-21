@@ -2,7 +2,7 @@
 // Core Learning UI extracted from render.js
 //
 // Usage:
-//   import { createCoreUI } from "./ui/core.js";
+//   import { createCoreUI } from "./ui/core.js?v=GT-003";
 //   const CoreUI = createCoreUI({ hasRole, rolePill, setView });
 //   CoreUI.render(ctx, renderHome);
 
@@ -13,8 +13,9 @@ export function createCoreUI(deps) {
   function getCoreSkills(C) {
     const all = Object.values(C.skills || {});
     return all
-      .filter(s => s && s.levelBand === "beginner" && Array.isArray(s.drills) && s.drills.length)
+      .filter(s => s && s.levelBand === "beginner" && Array.isArray(s.drills) && (s.drills.length || s.sessionSeconds))
       .sort((a, b) => {
+        if ((a.order ?? 99) !== (b.order ?? 99)) return (a.order ?? 99) - (b.order ?? 99);
         const ga = String(a.genre || "");
         const gb = String(b.genre || "");
         if (ga !== gb) return ga.localeCompare(gb);
@@ -23,6 +24,7 @@ export function createCoreUI(deps) {
   }
 
   function render(ctx, renderHome) {
+    ctx.enterScreen("core");
     ctx.ensureMirrorDefault();
 
     const { app, C, state } = ctx;
@@ -44,7 +46,7 @@ export function createCoreUI(deps) {
         <div class="card" style="background:#171717;">
           <h3 style="margin-top:0;">Start Here</h3>
           <div class="muted" style="font-size:14px;">
-            Pick any skill below. Later we can reorder these into your locked core list.
+            Start with Steady Time. Then play First Groove in Songs. Other lessons are here when you need them.
           </div>
         </div>
 
@@ -68,7 +70,7 @@ export function createCoreUI(deps) {
                 <h4 style="margin:0 0 6px 0;">${s.name}</h4>
                 <div class="muted" style="margin-bottom:10px;">${s.summary}</div>
                 <div class="muted" style="font-size:14px;">
-                  Source: ${s.genre} • Drills: ${s.drills.length} • Level: ${s.levelBand}
+                  ${state.coreCompleted?.[s.id] ? "✓ Completed" : s.sessionSeconds ? "60-second practice run" : `Drills: ${s.drills.length}`}
                 </div>
                 <button data-skill="${s.id}" style="margin-top:10px;">Open Skill</button>
               </div>
@@ -78,7 +80,7 @@ export function createCoreUI(deps) {
       : `<div class="muted">No core skills found yet.</div>`;
 
     list.querySelectorAll("button[data-skill]").forEach(btn => {
-      btn.onclick = () => ctx.nav.skill(btn.dataset.skill, { backTo: () => render(ctx, renderHome) });
+      btn.onclick = () => ctx.nav.skill(btn.dataset.skill, { backTo: () => ctx.nav.view("core") });
     });
 
     document.getElementById("back-home").onclick = () => {
