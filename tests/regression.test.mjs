@@ -74,3 +74,23 @@ test("lefty chord layout reverses strings without reversing text",()=>{
   assert.match(left,/x="144" y="172">E/);assert.match(right,/x="24" y="172">E/);
   assert.match(left,/Mini-barre/);assert.doesNotMatch(left,/scaleX/);
 });
+test("a practice run cannot save early, survive a full stop, or continue in the background",()=>{
+  const elements=Object.fromEntries(["run-start","run-restart","run-save","run-time","run-progress","run-message"].map(id=>[id,{}]));
+  let now=0, interval=null, visibility=null, completions=0;
+  const document={hidden:false,addEventListener:(_,fn)=>{visibility=fn;},removeEventListener:()=>{visibility=null;}};
+  const sandbox={document,performance:{now:()=>now},setInterval:fn=>{interval=fn;return 1;},clearInterval:()=>{interval=null;}};
+  vm.createContext(sandbox);
+  const source=fs.readFileSync(new URL("../ui/session.js",import.meta.url),"utf8").replace("export { sessionMarkup, wireSession };", "this.startTest = wireSession;");
+  vm.runInContext(source,sandbox);
+  const cleanup=sandbox.startTest({app:{querySelector:id=>elements[id.slice(1)]}},60,()=>completions++);
+  const start=elements['run-start'],restart=elements['run-restart'],save=elements['run-save'];
+  save.onclick();assert.equal(completions,0);
+  start.onclick();now=30000;interval();assert.equal(save.disabled,true);
+  restart.onclick();assert.equal(interval,null);assert.equal(elements['run-time'].textContent,'60s');
+  start.onclick();now=40000;interval();document.hidden=true;visibility();
+  assert.equal(interval,null);assert.equal(save.disabled,true);assert.equal(elements['run-time'].textContent,'60s');
+  document.hidden=false;start.onclick();now=99999;interval();assert.equal(save.disabled,true);
+  now=100000;interval();assert.equal(save.disabled,false);
+  save.onclick();save.onclick();assert.equal(completions,1);
+  cleanup();assert.equal(interval,null);assert.equal(visibility,null);
+});

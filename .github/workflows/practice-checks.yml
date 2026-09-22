@@ -1,0 +1,36 @@
+name: Practice checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  practice:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check content and progress
+        run: node --test tests/regression.test.mjs
+      - name: Install the browser test tools outside the app
+        run: |
+          npm install --prefix "$RUNNER_TEMP/guitar-browser" --no-save --package-lock=false playwright@1.63.0
+          "$RUNNER_TEMP/guitar-browser/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Check the phone practice flow
+        env:
+          PLAYWRIGHT_MODULE: ${{ runner.temp }}/guitar-browser/node_modules/playwright/index.mjs
+        run: node tests/browser-check.mjs
+      - name: Save browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: practice-browser-evidence
+          path: test-results/
+          retention-days: 7
