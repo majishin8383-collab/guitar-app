@@ -6,7 +6,7 @@ CONTENT_ADD({
       id: "song1",
       title: "First Groove",
       style: "Strumming • Time Feel",
-      description: "Your first real song. One pattern. Stay in time.",
+      description: "An original four-bar practice groove. Small A and D shapes; keep the beat.",
 
       requirements: [
         {
@@ -35,7 +35,7 @@ CONTENT_ADD({
           displayKey: "A",
           displayBpm: 80,
           targetSeconds: 60,
-          stopLimit: 2,
+          stopLimit: 0,
           completionTitle: "Nice.",
           completionBody: "You stayed in time. That’s the job."
         },
@@ -48,7 +48,7 @@ CONTENT_ADD({
           displayKey: "A",
           displayBpm: 95,
           targetSeconds: 75,
-          stopLimit: 1,
+          stopLimit: 0,
           completionTitle: "Locked in.",
           completionBody: "You’re starting to groove."
         },

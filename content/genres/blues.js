@@ -19,21 +19,8 @@ window.CONTENT_ADD({
         "blues_bends_vibrato"
       ],
       backingTrackIds: [
-        // Shuffle (rhythm + lead mixes)
-        "bt_shuffle_A_rhythm",
-        "bt_shuffle_A_lead",
-        "bt_shuffle_E_rhythm",
-        "bt_shuffle_E_lead",
-        "bt_shuffle_G_rhythm",
-        "bt_shuffle_G_lead",
-
-        // Slow blues (rhythm + lead mixes)
-        "bt_slow_E_rhythm",
-        "bt_slow_E_lead",
-        "bt_slow_A_rhythm",
-        "bt_slow_A_lead",
-        "bt_slow_C_rhythm",
-        "bt_slow_C_lead"
+        "bt_song1_full_band", "bt_shuffle_A_lead", "bt_slow_A_lead",
+        "bt_slow_E_rhythm", "bt_slow_C_lead", "bt_shuffle_A_rhythm"
       ]
     }
   },
@@ -122,7 +109,7 @@ window.CONTENT_ADD({
           needsDiagram: true,
 
           instructions: [
-            "Play Box 1 up and down clean.",
+            "Play just two notes on the high e string: frets 5 and 8 (A and C).",
             "Use alternate picking (down-up).",
             "Keep fretting-hand fingers close to the fretboard.",
             "Aim for even volume between notes."
@@ -148,7 +135,7 @@ window.CONTENT_ADD({
           needsDiagram: true,
 
           instructions: [
-            "Play slowly: two notes per string, then move to the next string.",
+            "Play B-string frets 5 and 8, then high-e frets 5 and 8. Repeat slowly.",
             "Listen for buzzes and uneven volume.",
             "Stay relaxed in both hands.",
             "Stop immediately if tension creeps in—reset posture."
@@ -233,23 +220,23 @@ window.CONTENT_ADD({
     bt_shuffle_A_rhythm: {
       id: "bt_shuffle_A_rhythm",
       genre: "blues",
-      name: "Shuffle 12-Bar (A) — Rhythm Mix",
+      name: "12-Bar Blues Drums · A · 92 BPM",
       key: "A",
       feel: "shuffle",
       recommendedBpm: 92,
       note: "Use the YouTube controls in the player to play/pause.",
-      mix: "rhythm",
+      mix: "both",
       youtubeEmbed: "https://www.youtube.com/embed/3szngdntfyM"
     },
     bt_shuffle_A_lead: {
       id: "bt_shuffle_A_lead",
       genre: "blues",
-      name: "Shuffle 12-Bar (A) — Lead Mix",
+      name: "Quick-change Blues · A · 92 BPM",
       key: "A",
       feel: "shuffle",
       recommendedBpm: 92,
-      note: "Use the YouTube controls in the player to play/pause.",
-      mix: "lead",
+      note: "Quick change: the IV chord arrives in bar 2. Follow the chord display in the video.",
+      mix: "both",
       youtubeEmbed: "https://www.youtube.com/embed/snHUyvxKPEc"
     },
 
@@ -305,12 +292,11 @@ window.CONTENT_ADD({
     bt_slow_E_rhythm: {
       id: "bt_slow_E_rhythm",
       genre: "blues",
-      name: "Slow 12-Bar (E) — Rhythm Mix",
+      name: "Slow 12-Bar Blues · E",
       key: "E",
       feel: "slow blues",
-      recommendedBpm: 66,
       note: "Use the YouTube controls in the player to play/pause.",
-      mix: "rhythm",
+      mix: "both",
       youtubeEmbed: "https://www.youtube.com/embed/5oy6kOxE-uI"
     },
     bt_slow_E_lead: {
@@ -339,12 +325,11 @@ window.CONTENT_ADD({
     bt_slow_A_lead: {
       id: "bt_slow_A_lead",
       genre: "blues",
-      name: "Slow 12-Bar (A) — Lead Mix",
+      name: "Medium-slow 12-Bar Blues · A",
       key: "A",
       feel: "slow blues",
-      recommendedBpm: 64,
-      note: "Use the YouTube controls in the player to play/pause.",
-      mix: "lead",
+      note: "Follow the chord changes in the video. Use A minor pentatonic for a simple lead starting point.",
+      mix: "both",
       youtubeEmbed: "https://www.youtube.com/embed/a2I1nO3uVYU"
     },
 
@@ -362,12 +347,12 @@ window.CONTENT_ADD({
     bt_slow_C_lead: {
       id: "bt_slow_C_lead",
       genre: "blues",
-      name: "Slow 12-Bar (C) — Lead Mix",
+      name: "Slow Blues · C · 62 BPM",
       key: "C",
       feel: "slow blues",
       recommendedBpm: 62,
       note: "Use the YouTube controls in the player to play/pause.",
-      mix: "lead",
+      mix: "both",
       youtubeEmbed: "https://www.youtube.com/embed/IGfyzzcMOKk"
     }
   }
