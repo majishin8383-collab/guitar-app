@@ -66,7 +66,10 @@ function createSongsUI(SONGS_SOURCE, { View }) {
     const cleanup = wireSession(ctx,variant.targetSeconds,() => {
       if (!completeVariant(ctx.state,song,variantId)) return;
       const saved = ctx.persist();
-      ctx.app.querySelector("#song-result").innerHTML = `<div class="card success"><h3>${escapeHtml(variant.completionTitle)}</h3><p>${escapeHtml(variant.completionBody)}</p><p>${saved === false ? 'Completed for this session. Browser storage is unavailable.' : 'Progress saved.'}</p><button id="next-step">${variantId === 'hard' ? 'Continue to the next skill' : 'Continue to '+song.variants[VARIANTS[VARIANTS.indexOf(variantId)+1]].label}</button></div>`;
+      const step = nextStep(ctx.state, song, getSongs(ctx), ctx.C.skills);
+      const nextLabel = step.type === "skill" ? ctx.C.skills[step.id].name
+        : step.type === "song" ? getSongs(ctx)[step.id].variants[step.variant].label : "blues jam";
+      ctx.app.querySelector("#song-result").innerHTML = `<div class="card success"><h3>${escapeHtml(variant.completionTitle)}</h3><p>${escapeHtml(variant.completionBody)}</p><p>${saved === false ? 'Completed for this session. Browser storage is unavailable.' : 'Progress saved.'}</p><button id="next-step">Continue to ${escapeHtml(nextLabel)}</button></div>`;
       ctx.app.querySelector("#next-step").onclick = () => follow(ctx,song,renderHome);
     });
     ctx.setScreenCleanup(cleanup);

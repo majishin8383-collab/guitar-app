@@ -109,7 +109,7 @@ try {
   await button('Continue to Hard').click();
   assert.match(await page.locator('iframe').getAttribute('src'), /dYzQfWD8bGk/);
   await completeRun(90);
-  await button('Continue to the next skill').click();
+  await button('Continue to Small Chord Changes').click();
   await page.getByRole('heading', { name: 'Small Chord Changes', exact: true }).waitFor();
   await completeRun(60);
   await button('Continue').click();
@@ -118,6 +118,13 @@ try {
   check('Easy, Medium, Hard, reload persistence, chord lesson and jam progression');
 
   await button('Back').click();
+  await button('Songs').click();
+  await button('✓ Easy').click();
+  await completeRun(60);
+  await button('Continue to blues jam').click();
+  await page.getByRole('heading', { name: 'Blues jam', exact: true }).waitFor();
+  await button('Back').click();
+  check('Replaying a completed level continues to the actual next activity');
   await button('Settings').click();
   await button('Mirroring: ON').click();
   await page.reload();
@@ -128,6 +135,7 @@ try {
   await page.locator('[data-skill="core_time_steady"]').click();
   await page.getByText('Watch the lesson', { exact: true }).click();
   assert.equal(await page.locator('.mirror').count(), 0);
+  await page.getByText('Guitar & amp starting point', { exact: true }).click();
   assert.match(await page.locator('main').innerText(), /Les Paul/);
   await button('Back').click();
   await page.getByRole('heading', { name: 'Core Learning', exact: true }).waitFor();
