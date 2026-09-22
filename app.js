@@ -77,7 +77,10 @@ let activeScreen = null;
 let screenCleanup = null;
 function enterScreen(key) {
   if (screenCleanup) { screenCleanup(); screenCleanup = null; }
-  if (key !== activeScreen) { metro.stop(); metroState.drillId = null; }
+  if (key !== activeScreen) {
+    metro.stop(); metroState.drillId = null;
+    window.scrollTo(0, 0);
+  }
   activeScreen = key;
 }
 function setScreenCleanup(cleanup) { screenCleanup = cleanup; }

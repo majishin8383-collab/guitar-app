@@ -85,6 +85,7 @@ try {
   await completeRun(60);
   await button('Continue').click();
   await page.getByRole('heading', { name: 'First Groove', exact: true }).waitFor();
+  assert.equal(await page.evaluate(() => scrollY), 0, 'the next activity opens at its instructions');
   await button('Songs').click();
   assert.equal(await button('Easy').isEnabled(), true);
   assert.equal(await button('Medium').isEnabled(), false);
@@ -118,6 +119,7 @@ try {
   check('Easy, Medium, Hard, reload persistence, chord lesson and jam progression');
 
   await button('Back').click();
+  assert.equal(await page.evaluate(() => scrollY), 0, 'Home opens at the top after leaving a long screen');
   await button('Songs').click();
   await button('✓ Easy').click();
   await completeRun(60);
