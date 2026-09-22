@@ -1,13 +1,18 @@
-# Guitar Trainer — GT-003 recovery draft
+# Guitar Trainer — GT-004
 
 ## Goal and scope
 A personal, mobile-friendly blues trainer: YouTube lessons and backing tracks, short runs, small chord shapes, left-handed diagrams, and Mustang GTX50 starting settings. Preserve the existing dark/orange UI and vanilla JavaScript structure.
 
-## Current delivery status — 2026-09-21
-Implementation is preserved in this draft branch. It is NOT published to the live app.
-The execution environment went offline during browser setup. These files were recovered from the recorded edits against the unchanged baseline f4f69813fc9a78acef719162396878027585044d.
+## Delivery and validation — 2026-09-22
+GT-003 was merged through PR #1 and published by the existing GitHub Pages deployment. The live Home and jam screens were opened and verified at https://majishin8383-collab.github.io/guitar-app/.
 
-Six Node regression tests passed before the disconnection. During recovery, JavaScript syntax, content references, sequential song progression, tempo consistency, and accompaniment types were checked again. The restored Node test file still needs a run on this exact commit. No successful mobile screenshot, real browser end-to-end pass, or actual embedded audio playback check has been completed.
+GT-004 fixes the final issue found during live inspection: navigation from a long screen retained the previous scroll position, hiding the next screen's instructions. A different screen now opens at the top; controls that update the current screen retain position. The app entry URL changes to invalidate the previous script cache.
+
+Seven Node regression tests pass, including background reset, early-save prevention, and completion deduplication. The full Chromium browser flow passed at a 390 × 844 touch viewport: fresh Home, warm-up, start/restart/save, Easy/Medium/Hard unlocking, saved progress after reload, next core, jam, replay, persistent mirror OFF, guitar settings, Home/Back, and metronome cleanup. No application exceptions or missing local assets were found. Phone and 1280px desktop screenshots were visually inspected.
+
+Passing browser evidence for PR #1: https://github.com/majishin8383-collab/guitar-app/actions/runs/35795943569. The Practice checks workflow verifies each subsequent pull request and main commit; it saves screenshots and results as a workflow artifact. Browser tests use a disposable profile, an accelerated clock, and an isolated YouTube frame. They do not prove playing quality or actual media playback.
+
+Live YouTube inspection: the jam embed loaded the correct title, controls, and 7:35 duration, but playback did not visibly advance in the cloud browser. Actual audio is unverified. Every player retains its Open on YouTube link. Do not describe audio playback as tested successfully.
 
 ## Source of truth
 - Repository: https://github.com/majishin8383-collab/guitar-app
@@ -17,7 +22,7 @@ Six Node regression tests passed before the disconnection. During recovery, Java
 - Song completion: state.songs.completed[songId][variant].
 - Core completion: state.coreCompleted[skillId].
 
-## Implemented draft behavior
+## Implemented behavior
 1. Home recommends Steady Time, then First Groove Easy / Medium / Hard, then Small Chord Changes, then the blues jam screen.
 2. First Groove stays A / A / D / A, four beats per bar. Same activity across variants: 80 / 95 / 110 BPM and 60 / 75 / 90 seconds.
 3. Small mistakes are allowed. A reported full stop resets the run. Completion is self-assessed after the timer, not microphone detection. Leaving the tab during a run resets it.
@@ -48,13 +53,10 @@ All original blues video IDs returned valid titles via YouTube oEmbed. Every pla
 ## Missing content — do not invent
 The 13-song path was discussed, but ONLY Song 1 exists in this repository, its branches, or its file history. No confirmed list of the other 12 songs was recovered. Song 2 remains a parked pointer, not a working lesson. Do not present 13 songs as implemented. Named blues-song packs and advanced Albert King / Eric Gales modules remain future content. First Groove is an original practice groove.
 
-## Resume here
-1. Check out this branch in an active environment.
-2. Run: node --test tests/regression.test.mjs
-3. Serve: python3 -m http.server 8765
-4. Test on a 390px viewport: fresh Home, Steady Time, start/restart/finish/save, Easy / Medium / Hard locks, reloading saved progress, next-core routing, Home and Back, mirroring OFF persistence, and metronome stopping on navigation.
-5. Verify actual YouTube play/pause and fallback links. Confirm no console errors or local asset 404s. Inspect phone and desktop screenshots.
-6. Fix failures, record results here, then merge and verify the existing live deployment. Do not call the draft ready before these checks.
+## Development and release
+Run `node --test tests/regression.test.mjs` locally. Serve with `python3 -m http.server 8765`; ES modules require HTTP. The Practice checks workflow installs Playwright outside the app and runs `tests/browser-check.mjs` with Chromium. There are no app package dependencies.
 
-## Next workload after this draft ships
+For future edits, verify the affected phone flow and inspect screenshots. After merging, verify the existing Pages deployment and live app. Preserve the same URL and storage key. Avoid test state in the learner's browser; CI uses its own profile.
+
+## Next workload
 Recover or agree the actual next song. Implement one song as one content change with verified key, BPM, chords, lesson, and accompaniment. Keep unrelated projects out of this repository.
